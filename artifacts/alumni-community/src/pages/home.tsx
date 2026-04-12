@@ -19,12 +19,12 @@ export default function Home() {
       
       <div className="relative z-10 bg-background">
         <CategoryHub />
+        <QuickActions />
         <Updates />
         <MediaSpotlight />
         <Gallery />
         <VideoSection />
         <PDFLibrary />
-        <QuickActions />
         <CommunityFeed />
         <Inspiration />
         <Footer />

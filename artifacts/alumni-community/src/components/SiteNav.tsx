@@ -5,8 +5,8 @@ import { contact, navLinks } from "@/content/community";
 
 export default function SiteNav() {
   return (
-    <header className="sticky top-0 z-50 px-3 py-3 md:px-5">
-      <div className="mx-auto flex max-w-7xl items-center justify-between rounded-full border border-white/10 bg-background/72 px-3 py-3 shadow-[0_22px_80px_rgba(0,0,0,0.42)] backdrop-blur-2xl md:px-5">
+    <header className="fixed inset-x-0 top-0 z-50 px-3 py-3 md:px-5">
+      <div className="mx-auto flex max-w-7xl items-center justify-between rounded-full border border-white/10 bg-background/62 px-3 py-3 shadow-[0_22px_90px_rgba(0,0,0,0.52)] backdrop-blur-2xl md:px-5">
         <Link href="/" className="flex min-w-0 items-center gap-3">
           <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full border border-primary/30 bg-gradient-to-b from-white/10 to-primary/10 shadow-[0_0_30px_rgba(245,192,55,0.18)]">
             <img src={logoUrl} alt="מאירים" className="h-10 w-10 object-contain" />

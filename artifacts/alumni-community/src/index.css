@@ -221,12 +221,49 @@
   letter-spacing: -0.04em;
   text-shadow:
     0 2px 0 rgba(0, 0, 0, 0.72),
-    0 0 20px rgba(245, 192, 55, 0.32),
-    0 0 70px rgba(0, 19, 164, 0.28);
+    0 0 24px rgba(245, 192, 55, 0.42),
+    0 0 92px rgba(0, 19, 164, 0.38),
+    0 24px 70px rgba(0, 0, 0, 0.75);
 }
 
 .min-h-inherit {
   min-height: inherit;
+}
+
+.premium-sweep {
+  animation: premium-sweep 8s ease-in-out infinite;
+}
+
+@keyframes premium-sweep {
+  0%, 100% {
+    transform: translateX(42%) rotate(12deg);
+    opacity: 0;
+  }
+  42%, 58% {
+    opacity: 0.44;
+  }
+  70% {
+    transform: translateX(-220%) rotate(12deg);
+    opacity: 0;
+  }
+}
+
+@keyframes cinematic-pan {
+  0%, 100% {
+    transform: scale(1.1) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scale(1.17) translate3d(1.8%, -1.2%, 0);
+  }
+}
+
+@keyframes float-card {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 @theme inline {
