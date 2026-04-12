@@ -3,33 +3,28 @@ import { X, ZoomIn } from "lucide-react";
 
 const photos = [
   {
-    src: "https://images.unsplash.com/photo-1519817650390-64a93db51149?q=80&w=1600&auto=format&fit=crop",
-    title: "ערב איחוד בבית המדרש",
+    src: "/event-gathering2.jpg",
+    title: "ערב מפגש הבוגרים — רגעים של קהילה",
     className: "md:row-span-2",
   },
   {
-    src: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1600&auto=format&fit=crop",
-    title: "רגעים של לימוד וזיכרון",
+    src: "/event-invite.jpg",
+    title: "הזמנה לערב בוגרים",
     className: "",
   },
   {
-    src: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop",
-    title: "מפגש דורות בחצר",
+    src: "/event-table-set.jpg",
+    title: "השולחן ערוך לכבוד מפגש הבוגרים",
     className: "md:row-span-2",
   },
   {
-    src: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=1600&auto=format&fit=crop",
-    title: "חברות שנמשכת שנים",
+    src: "/event-gathering1.jpg",
+    title: "בוגרים מסביב לשולחן — חיבור וחברותא",
     className: "",
   },
   {
-    src: "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?q=80&w=1600&auto=format&fit=crop",
-    title: "שמחת הקהילה",
-    className: "",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1528605248644-14dd04022da1?q=80&w=1600&auto=format&fit=crop",
-    title: "שולחנות של זיכרונות",
+    src: "/event-food.jpg",
+    title: "השולחן הגדוש — ליל הסעודה",
     className: "",
   },
 ];
