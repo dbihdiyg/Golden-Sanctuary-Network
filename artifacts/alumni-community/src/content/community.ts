@@ -130,6 +130,7 @@ export const updates = [
 ];
 
 export const photos = [
+  { src: "/photo-meron-shobevim.jpg", title: "אבי תנועת הקירוב הגרי\"ד גרוסמן שליט\"א — תפילה באתרא קדישא מירון לרגל סיום ימי השובבי\"ם", tag: "מירון", year: "2026" },
   { src: "https://images.unsplash.com/photo-1519817650390-64a93db51149?q=80&w=1600&auto=format&fit=crop", title: "ערב איחוד בבית המדרש", tag: "מפגש שנתי", year: "2026" },
   { src: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1600&auto=format&fit=crop", title: "רגעים של לימוד וזיכרון", tag: "תורה", year: "2026" },
   { src: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop", title: "מפגש דורות בחצר", tag: "קהילה", year: "2025" },
