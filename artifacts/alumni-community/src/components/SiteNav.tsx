@@ -9,10 +9,7 @@ export default function SiteNav() {
     <header className="fixed inset-x-0 top-0 z-50 px-3 py-3 md:px-5">
       <div className="mx-auto flex max-w-7xl items-center justify-between rounded-full border border-white/10 bg-background/62 px-3 py-3 shadow-[0_22px_90px_rgba(0,0,0,0.52)] backdrop-blur-2xl md:px-5">
         <Link href="/" className="flex min-w-0 items-center gap-2">
-          <span className="relative flex h-11 shrink-0 items-center overflow-hidden">
-            <span className="absolute inset-0 rounded-xl bg-primary/10 blur-md" />
-            <img src={logoUrl} alt="מאירים" className="relative h-11 w-auto max-w-[160px] object-contain drop-shadow-[0_0_14px_rgba(245,192,55,0.45)]" />
-          </span>
+          <img src={logoUrl} alt="מאירים" className="h-11 w-auto max-w-[160px] object-contain" />
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex">
