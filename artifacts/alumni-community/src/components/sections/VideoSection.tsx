@@ -4,13 +4,13 @@ const videos = [
   {
     title: "דברי פתיחה למפגש הבוגרים",
     text: "מסר קצר על שורשים, אחריות וחיבור מתמשך.",
-    image: "https://images.unsplash.com/photo-1519682337058-a94d519337bc?q=80&w=1600&auto=format&fit=crop",
+    image: "/rabbi-mic.jpg",
     url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
   },
   {
     title: "סיפורי דרך של בוגרים",
     text: "עדויות אישיות על השנים שעיצבו אמונה, מנהיגות וחברות.",
-    image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=1600&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=1600&auto=format&fit=crop",
     url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
   },
 ];
