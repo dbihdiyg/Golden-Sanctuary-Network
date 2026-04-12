@@ -151,6 +151,7 @@ export const photos = [
 ];
 
 export const videos = [
+  { title: "מדוע ללמוד דווקא גמרא? הרב במענה לשאלת הבוגרים", summary: "תשובת מורנו הרב שליט״א לשאלת הבוגרים על חשיבות לימוד הגמרא.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/azdY5mFGjU0/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=azdY5mFGjU0" },
   { title: "שיעור / אירוע מגדל אור", summary: "סרטון חדש שהועלה לספריית הקהילה.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/_oaNsTAQkWo/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=_oaNsTAQkWo" },
   { title: "שיעור / אירוע מגדל אור", summary: "סרטון חדש שהועלה לספריית הקהילה.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/Cf02bu-432w/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=Cf02bu-432w" },
   { title: "דברי פתיחה למפגש הבוגרים", summary: "מסר קצר על שורשים, אחריות וחיבור מתמשך.", date: "י״ז אייר תשפ״ו", category: "מפגש שנתי", image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1600&auto=format&fit=crop", url: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
