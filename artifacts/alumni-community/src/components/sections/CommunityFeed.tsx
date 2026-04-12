@@ -23,7 +23,7 @@ const feed = [
 
 export default function CommunityFeed() {
   return (
-    <section className="relative overflow-hidden px-6 py-28" id="feed">
+    <section className="relative overflow-hidden px-4 py-12 md:px-6 md:py-24" id="feed">
       <div className="absolute inset-0 bg-grid-pattern opacity-30" />
       <div className="relative mx-auto max-w-4xl space-y-12">
         <div className="space-y-4 text-center">

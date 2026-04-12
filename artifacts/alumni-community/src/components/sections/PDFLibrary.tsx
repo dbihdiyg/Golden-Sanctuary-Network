@@ -9,7 +9,7 @@ const files = [
 
 export default function PDFLibrary() {
   return (
-    <section className="px-6 py-28" id="library">
+    <section className="px-4 py-12 md:px-6 md:py-24" id="library">
       <div className="mx-auto max-w-5xl space-y-10">
         <div className="space-y-4 text-center">
           <p className="text-sm font-bold tracking-[0.28em] text-blue-brand">ספריית מסמכים</p>

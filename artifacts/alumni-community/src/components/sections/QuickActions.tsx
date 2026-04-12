@@ -5,19 +5,42 @@ export default function QuickActions() {
   const visibleActions = quickActions.filter((action) => action.title !== "שלחו תמונה או עדכון");
 
   return (
-    <section className="relative overflow-hidden px-6 pb-24 pt-0">
+    <section className="relative overflow-hidden px-4 pb-12 pt-0 md:px-6 md:pb-24">
       <div className="absolute inset-0 bg-gradient-to-l from-blue-brand/20 via-transparent to-primary/12" />
-      <div className="relative mx-auto max-w-7xl rounded-[2.8rem] border border-primary/18 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(0,19,164,0.12),rgba(245,192,55,0.06))] p-6 shadow-[0_45px_130px_rgba(0,0,0,0.5)] backdrop-blur-xl md:p-10">
-        <div className="mb-9 flex flex-col justify-between gap-5 md:flex-row md:items-end">
-          <div>
-            <p className="text-sm font-black tracking-[0.3em] text-primary">הפעולות החשובות ביותר</p>
-            <h2 className="mt-3 text-4xl font-black text-white md:text-6xl">להתחבר לקהילה עכשיו</h2>
-          </div>
-          <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
-            ארבע דרכי קשר מרכזיות, בולטות ונגישות — כדי שכל בוגר יוכל לפנות, לשאול, להצטרף ולהישאר מחובר.
-          </p>
+      <div className="relative mx-auto max-w-7xl rounded-[2rem] border border-primary/18 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(0,19,164,0.12),rgba(245,192,55,0.06))] p-5 shadow-[0_45px_130px_rgba(0,0,0,0.5)] backdrop-blur-xl md:rounded-[2.8rem] md:p-10">
+        <div className="mb-6 md:mb-9">
+          <p className="text-xs font-black tracking-[0.3em] text-primary md:text-sm">הפעולות החשובות ביותר</p>
+          <h2 className="mt-2 text-2xl font-black text-white md:mt-3 md:text-6xl">להתחבר לקהילה</h2>
         </div>
-        <div className="grid gap-5 md:grid-cols-4">
+
+        {/* Mobile: 2×2 compact grid */}
+        <div className="grid grid-cols-2 gap-3 md:hidden">
+          {visibleActions.map((action, index) => {
+            const Icon = action.icon;
+            const isExternal = action.href.startsWith("http") || action.href.startsWith("mailto:");
+            const className = `group relative flex flex-col gap-3 overflow-hidden rounded-2xl border p-4 transition active:scale-95 ${index === 0 ? "border-primary/45 bg-primary/14" : "border-white/10 bg-background/62"}`;
+            const content = (
+              <>
+                <span className="grid h-10 w-10 place-items-center rounded-xl border border-primary/40 bg-primary/15 text-primary">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="text-sm font-bold leading-tight text-white">{action.title}</span>
+              </>
+            );
+            return isExternal ? (
+              <a key={action.title} href={action.href} target={action.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className={className}>
+                {content}
+              </a>
+            ) : (
+              <Link key={action.title} href={action.href} className={className}>
+                {content}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Desktop: full cards */}
+        <div className="hidden md:grid gap-5 md:grid-cols-4">
           {visibleActions.map((action, index) => {
             const Icon = action.icon;
             const isExternal = action.href.startsWith("http") || action.href.startsWith("mailto:");
@@ -36,7 +59,6 @@ export default function QuickActions() {
                 </span>
               </>
             );
-
             return isExternal ? (
               <a key={action.title} href={action.href} target={action.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className={className}>
                 {content}

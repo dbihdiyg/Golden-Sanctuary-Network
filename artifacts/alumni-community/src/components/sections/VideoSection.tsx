@@ -24,7 +24,7 @@ export default function VideoSection() {
     <>
       {activeUrl && <VideoModal url={activeUrl} onClose={() => setActiveUrl(null)} />}
 
-      <section className="relative overflow-hidden px-6 py-28" id="video">
+      <section className="relative overflow-hidden px-4 py-12 md:px-6 md:py-24" id="video">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(245,192,55,0.16),transparent_32%),radial-gradient(circle_at_80%_20%,rgba(0,19,164,0.28),transparent_28%)]" />
         <div className="relative mx-auto max-w-6xl space-y-12">
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
@@ -42,7 +42,7 @@ export default function VideoSection() {
               <button
                 key={video.title}
                 onClick={() => setActiveUrl(video.url)}
-                className="group relative min-h-[390px] w-full overflow-hidden rounded-[2rem] border border-white/10 bg-card shadow-[0_30px_90px_rgba(0,0,0,0.45)] transition duration-500 hover:-translate-y-2 hover:border-primary/50 reveal-up text-right"
+                className="group relative min-h-[240px] md:min-h-[390px] w-full overflow-hidden rounded-[2rem] border border-white/10 bg-card shadow-[0_30px_90px_rgba(0,0,0,0.45)] transition duration-500 hover:-translate-y-2 hover:border-primary/50 reveal-up text-right"
                 style={{ animationDelay: `${index * 120}ms` }}
               >
                 <img src={video.image} alt={video.title} className="absolute inset-0 h-full w-full object-cover opacity-70 transition duration-700 group-hover:scale-105 group-hover:opacity-90" />

@@ -33,7 +33,7 @@ export default function Gallery() {
   const [selected, setSelected] = useState<(typeof photos)[number] | null>(null);
 
   return (
-    <section className="relative overflow-hidden px-6 py-28" id="gallery">
+    <section className="relative overflow-hidden px-4 py-12 md:px-6 md:py-24" id="gallery">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-l from-transparent via-primary/30 to-transparent" />
       <div className="mx-auto max-w-6xl space-y-12">
         <div className="mx-auto max-w-2xl space-y-4 text-center">
@@ -44,7 +44,7 @@ export default function Gallery() {
           </p>
         </div>
 
-        <div className="grid auto-rows-[220px] grid-cols-1 gap-5 md:grid-cols-3">
+        <div className="grid auto-rows-[160px] md:auto-rows-[220px] grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
           {photos.map((photo, index) => (
             <button
               key={photo.src}
