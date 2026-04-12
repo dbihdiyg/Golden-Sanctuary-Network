@@ -1,4 +1,5 @@
 import Hero from "@/components/sections/Hero";
+import PesachExclusive from "@/components/sections/PesachExclusive";
 import Updates from "@/components/sections/Updates";
 import Gallery from "@/components/sections/Gallery";
 import LiveSection from "@/components/sections/LiveSection";
@@ -18,6 +19,7 @@ export default function Home() {
       <Hero />
       
       <div className="relative z-10 bg-background">
+        <PesachExclusive />
         <CategoryHub />
         <QuickActions />
         <Updates />
