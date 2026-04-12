@@ -1,4 +1,4 @@
-import { Mail, MapPin, MessageCircle, Phone } from "lucide-react";
+import { Mail, MapPin, MessageCircle, Phone, ShieldCheck } from "lucide-react";
 import { Link } from "wouter";
 import { contact, navLinks } from "@/content/community";
 
@@ -47,7 +47,13 @@ export default function Footer() {
       </div>
       <div className="mx-auto mt-12 max-w-6xl border-t border-white/10 pt-6 text-sm text-muted-foreground">
         <div className="flex flex-col items-center justify-between gap-3 md:flex-row">
-          <span>© 2026 קהילת הבוגרים. כל הזכויות שמורות.</span>
+          <div className="flex items-center gap-4">
+            <span>© 2026 קהילת הבוגרים. כל הזכויות שמורות.</span>
+            <Link href="/admin" className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground transition hover:border-primary/40 hover:text-primary">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              כניסת מנהל
+            </Link>
+          </div>
           <a
             href="https://wa.me/972555030580"
             target="_blank"
