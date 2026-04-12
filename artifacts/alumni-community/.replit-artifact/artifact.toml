@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "Meirim"
+title = "בוגרי מאירים"
 version = "1.0.0"
 id = "artifacts/alumni-community"
 router = "path"
