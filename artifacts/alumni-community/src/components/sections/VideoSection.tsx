@@ -6,8 +6,8 @@ const videos = [
   {
     title: "שיעור / אירוע מגדל אור — חדש",
     text: "סרטון חדש שהועלה לספריית הקהילה.",
-    image: "https://img.youtube.com/vi/hzMacELExrU/maxresdefault.jpg",
-    url: "https://www.youtube.com/watch?v=hzMacELExrU",
+    image: "https://img.youtube.com/vi/CaLgv1ZKfeA/maxresdefault.jpg",
+    url: "https://www.youtube.com/watch?v=CaLgv1ZKfeA",
   },
   {
     title: "שיעור / אירוע מגדל אור",

@@ -111,6 +111,7 @@ export const photos = [
 ];
 
 export const videos = [
+  { title: "שיעור / אירוע מגדל אור — חדש 3", summary: "סרטון חדש שהועלה לספריית הקהילה.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/CaLgv1ZKfeA/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=CaLgv1ZKfeA" },
   { title: "שיעור / אירוע מגדל אור — חדש 2", summary: "סרטון חדש שהועלה לספריית הקהילה.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/hzMacELExrU/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=hzMacELExrU" },
   { title: "שיעור / אירוע מגדל אור — חדש", summary: "סרטון חדש שהועלה לספריית הקהילה.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/TPQ-MDNOLu4/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=TPQ-MDNOLu4" },
   { title: "מדוע ללמוד דווקא גמרא? הרב במענה לשאלת הבוגרים", summary: "תשובת מורנו הרב שליט״א לשאלת הבוגרים על חשיבות לימוד הגמרא.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/azdY5mFGjU0/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=azdY5mFGjU0" },
