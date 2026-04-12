@@ -163,18 +163,36 @@ export function UpdatesPage() {
   return (
     <PageShell eyebrow="עדכוני קהילה" title="מה חדש אצל הבוגרים" description="חדשות, אירועים, שמחות, יוזמות והודעות חשובות במקום אחד.">
       <section className="px-6 pb-24">
-        <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2">
-          {updates.map((update) => (
-            <article key={update.id} className="group overflow-hidden rounded-[2rem] border border-white/10 bg-card shadow-2xl transition hover:-translate-y-2 hover:border-primary/40">
-              <img src={update.image} alt={update.title} className="h-64 w-full object-cover opacity-76 transition duration-700 group-hover:scale-105" />
-              <div className="space-y-3 p-6">
-                <span className="text-sm font-bold text-primary">{update.category} · {update.date}</span>
-                <h3 className="font-serif text-3xl font-black text-white">{update.title}</h3>
-                <p className="leading-relaxed text-muted-foreground">{update.excerpt}</p>
-                <button className="inline-flex items-center text-sm font-bold text-primary">קרא עוד <ArrowLeft className="mr-2 h-4 w-4" /></button>
-              </div>
-            </article>
-          ))}
+        <div className="mx-auto max-w-6xl space-y-6">
+          {updates.map((update) =>
+            (update as any).mourning ? (
+              <article key={update.id} className="overflow-hidden rounded-[2rem] border border-white/20 bg-[#0e0e0e] shadow-2xl md:flex">
+                <div className="relative md:w-72 md:shrink-0">
+                  <img src={update.image} alt={update.title} className="h-64 w-full object-cover object-top grayscale md:h-full" />
+                  <div className="absolute inset-0 bg-gradient-to-l from-[#0e0e0e] via-[#0e0e0e]/30 to-transparent md:bg-gradient-to-l" />
+                </div>
+                <div className="flex flex-col justify-center gap-4 p-7">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-block h-2 w-2 rounded-full bg-white/50" />
+                    <span className="text-sm font-black tracking-[0.2em] text-white/70">{update.category} · {update.date}</span>
+                  </div>
+                  <h3 className="font-serif text-3xl font-black text-white md:text-4xl">{update.title}</h3>
+                  <p className="leading-relaxed text-white/62">{update.excerpt}</p>
+                  <p className="text-sm font-bold tracking-widest text-white/40">תהא נשמתו צרורה בצרור החיים</p>
+                </div>
+              </article>
+            ) : (
+              <article key={update.id} className="group overflow-hidden rounded-[2rem] border border-white/10 bg-card shadow-2xl transition hover:-translate-y-2 hover:border-primary/40 md:flex">
+                <img src={update.image} alt={update.title} className="h-56 w-full object-cover opacity-80 transition duration-700 group-hover:scale-105 md:h-auto md:w-72 md:shrink-0" />
+                <div className="flex flex-col justify-center space-y-3 p-6">
+                  <span className="text-sm font-bold text-primary">{update.category} · {update.date}</span>
+                  <h3 className="font-serif text-3xl font-black text-white">{update.title}</h3>
+                  <p className="leading-relaxed text-muted-foreground">{update.excerpt}</p>
+                  <button className="inline-flex items-center text-sm font-bold text-primary">קרא עוד <ArrowLeft className="mr-2 h-4 w-4" /></button>
+                </div>
+              </article>
+            )
+          )}
         </div>
       </section>
     </PageShell>
