@@ -14,7 +14,6 @@ import {
   LibraryPage,
   PhotosPage,
   StoriesPage,
-  UpdatesPage,
   VideosPage,
 } from "@/pages/ContentPages";
 
@@ -27,7 +26,7 @@ function Router() {
       <Route path="/photos" component={PhotosPage} />
       <Route path="/videos" component={VideosPage} />
       <Route path="/library" component={LibraryPage} />
-      <Route path="/updates" component={UpdatesPage} />
+
       <Route path="/ask-rabbi" component={AskRabbiPage} />
       <Route path="/contact" component={ContactPage} />
       <Route path="/join" component={JoinPage} />

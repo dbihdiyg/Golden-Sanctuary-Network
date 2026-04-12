@@ -1,5 +1,5 @@
 import Hero from "@/components/sections/Hero";
-import Updates from "@/components/sections/Updates";
+
 import Gallery from "@/components/sections/Gallery";
 import VideoSection from "@/components/sections/VideoSection";
 import PDFLibrary from "@/components/sections/PDFLibrary";
@@ -20,7 +20,7 @@ export default function Home() {
       <div className="relative z-10 bg-background">
         <CategoryHub />
         <QuickActions />
-        <Updates />
+
         <MediaSpotlight />
         <Gallery />
         <VideoSection />
