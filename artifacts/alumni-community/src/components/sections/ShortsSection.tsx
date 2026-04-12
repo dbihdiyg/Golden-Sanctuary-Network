@@ -1,13 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Play, X, Sparkles } from "lucide-react";
 
-export const shortsData = [
-  { id: "YyjYaoD_eeM", title: "רגע מהקהילה" },
-  { id: "dw-0tv1JCDY", title: "רגע מהקהילה" },
-  { id: "WJR3UNFD-AA", title: "רגע מהקהילה" },
-  { id: "jtECZkvt_WY", title: "רגע מהקהילה" },
-  { id: "fa2zbBBpJto", title: "רגע מהקהילה" },
+const MANUAL_SHORTS = [
+  "YyjYaoD_eeM",
+  "dw-0tv1JCDY",
+  "WJR3UNFD-AA",
+  "jtECZkvt_WY",
+  "fa2zbBBpJto",
 ];
+
+interface Short {
+  id: string;
+  title: string;
+}
 
 function ShortsModal({ id, onClose }: { id: string; onClose: () => void }) {
   return (
@@ -15,7 +20,10 @@ function ShortsModal({ id, onClose }: { id: string; onClose: () => void }) {
       className="fixed inset-0 z-[999] flex items-center justify-center bg-black/92 backdrop-blur-md"
       onClick={onClose}
     >
-      <div className="relative w-full max-w-[360px] mx-4" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="relative w-full max-w-[360px] mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           onClick={onClose}
           className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-white/80 backdrop-blur transition hover:bg-white/20 hover:text-white"
@@ -40,7 +48,13 @@ function ShortsModal({ id, onClose }: { id: string; onClose: () => void }) {
   );
 }
 
-function ShortCard({ short, onClick }: { short: typeof shortsData[0]; onClick: () => void }) {
+function ShortCard({
+  short,
+  onClick,
+}: {
+  short: Short;
+  onClick: () => void;
+}) {
   return (
     <button
       onClick={onClick}
@@ -60,7 +74,9 @@ function ShortCard({ short, onClick }: { short: typeof shortsData[0]; onClick: (
         </span>
       </div>
       <div className="absolute bottom-0 right-0 left-0 p-4 text-right">
-        <p className="font-serif text-base font-black text-white leading-snug drop-shadow-lg">{short.title}</p>
+        <p className="font-serif text-base font-black text-white leading-snug drop-shadow-lg line-clamp-2">
+          {short.title}
+        </p>
         <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-primary/20 px-2 py-0.5 text-xs font-bold text-primary backdrop-blur">
           Shorts
         </span>
@@ -71,10 +87,42 @@ function ShortCard({ short, onClick }: { short: typeof shortsData[0]; onClick: (
 
 export default function ShortsSection() {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [shorts, setShorts] = useState<Short[]>(
+    MANUAL_SHORTS.map((id) => ({ id, title: "רגע מהקהילה" })),
+  );
+
+  useEffect(() => {
+    fetch("/api/youtube")
+      .then((r) => r.json())
+      .then((data) => {
+        const all: { id: string; title: string; category: string }[] =
+          data.videos ?? [];
+        const apiShorts = all.filter((v) => v.category === "shorts");
+        const seen = new Set<string>();
+        const merged: Short[] = [];
+        for (const id of MANUAL_SHORTS) {
+          if (!seen.has(id)) {
+            seen.add(id);
+            const match = apiShorts.find((v) => v.id === id);
+            merged.push({ id, title: match?.title ?? "רגע מהקהילה" });
+          }
+        }
+        for (const v of apiShorts) {
+          if (!seen.has(v.id)) {
+            seen.add(v.id);
+            merged.push({ id: v.id, title: v.title });
+          }
+        }
+        if (merged.length > 0) setShorts(merged);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <>
-      {activeId && <ShortsModal id={activeId} onClose={() => setActiveId(null)} />}
+      {activeId && (
+        <ShortsModal id={activeId} onClose={() => setActiveId(null)} />
+      )}
 
       <section className="relative overflow-hidden px-4 py-12 md:px-6 md:py-20">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(245,192,55,0.12),transparent_60%),radial-gradient(ellipse_at_20%_100%,rgba(0,19,164,0.18),transparent_50%)]" />
@@ -86,16 +134,25 @@ export default function ShortsSection() {
                 <Sparkles className="h-3.5 w-3.5" />
                 רגעים קצרים
               </div>
-              <h2 className="font-serif text-4xl font-black text-white md:text-5xl">קליפים מהקהילה</h2>
+              <h2 className="font-serif text-4xl font-black text-white md:text-5xl">
+                קליפים מהקהילה
+              </h2>
             </div>
             <p className="max-w-sm text-sm leading-relaxed text-muted-foreground md:text-base">
               רגעים, קטעים ומסרים קצרים ישירות מלב הקהילה.
             </p>
           </div>
 
-          <div className="flex gap-5 overflow-x-auto pb-4 md:justify-start" style={{ scrollbarWidth: "none" }}>
-            {shortsData.map((short) => (
-              <ShortCard key={short.id} short={short} onClick={() => setActiveId(short.id)} />
+          <div
+            className="flex gap-5 overflow-x-auto pb-4 md:justify-start"
+            style={{ scrollbarWidth: "none" }}
+          >
+            {shorts.map((short) => (
+              <ShortCard
+                key={short.id}
+                short={short}
+                onClick={() => setActiveId(short.id)}
+              />
             ))}
           </div>
         </div>
