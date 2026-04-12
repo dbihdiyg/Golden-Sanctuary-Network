@@ -104,38 +104,6 @@ export const updates = [
     image: "/yosef-zarihan.jpg",
     mourning: true,
   },
-  {
-    id: 1,
-    category: "אירועים",
-    title: "מפגש בוגרים שנתי 2026",
-    date: "י״ז אייר תשפ״ו",
-    excerpt: "ערב חיבור חגיגי עם שיעור מרכזי, גלריית זיכרונות, מפגש מחזורים ושולחנות שיח.",
-    image: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=1600&auto=format&fit=crop",
-  },
-  {
-    id: 2,
-    category: "יוזמות",
-    title: "נפתחת תכנית חברותא לבוגרים",
-    date: "י׳ אייר תשפ״ו",
-    excerpt: "בוגרים ותיקים ילמדו בחברותא עם בוגרים צעירים בנושאי הלכה, אמונה ומוסר — חיזוק הקשר לתורה ולקהילה.",
-    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1600&auto=format&fit=crop",
-  },
-  {
-    id: 3,
-    category: "תורה",
-    title: "פתיחת שיעור שבועי — הלכה למעשה לבוגרים",
-    date: "ב׳ אייר תשפ״ו",
-    excerpt: "שיעורי עיון שבועיים בנושאי יסוד: תפילה, שבת, קדושת הבית ועוד — מפי רבני הקהילה.",
-    image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1600&auto=format&fit=crop",
-  },
-  {
-    id: 4,
-    category: "קהילה",
-    title: "איסוף תמונות וסיפורים לארכיון הבוגרים",
-    date: "כ״ה ניסן תשפ״ו",
-    excerpt: "מזמינים אתכם לשלוח תמונות, סרטונים וסיפורים קצרים שייכנסו לארכיון הדיגיטלי.",
-    image: "https://images.unsplash.com/photo-1609770231080-e321deccc34c?q=80&w=1600&auto=format&fit=crop",
-  },
 ];
 
 export const photos = [
