@@ -6,6 +6,7 @@ import postsRouter from "./posts";
 import adminRouter from "./admin";
 import profileRouter from "./profile";
 import forumRouter from "./forum";
+import mediaSubmissionsRouter from "./media-submissions";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(postsRouter);
 router.use(adminRouter);
 router.use(profileRouter);
 router.use(forumRouter);
+router.use(mediaSubmissionsRouter);
 
 export default router;

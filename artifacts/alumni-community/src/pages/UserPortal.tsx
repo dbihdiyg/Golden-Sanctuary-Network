@@ -3,7 +3,8 @@ import { useUser, useClerk } from "@clerk/react";
 import {
   Send, Heart, Trash2, BookOpen, LogOut, Sparkles, Star,
   MessageSquare, Award, Users, TrendingUp, ChevronRight,
-  Edit3, CheckCircle, Clock
+  Edit3, CheckCircle, Clock, Upload, ImageIcon, Video,
+  X, Loader2, AlertCircle
 } from "lucide-react";
 import Footer from "@/components/sections/Footer";
 
@@ -48,7 +49,7 @@ interface CommunityStats {
   reactions: number;
 }
 
-type Tab = "board" | "profile" | "questions";
+type Tab = "board" | "profile" | "questions" | "media";
 
 function Avatar({ name, image, size = 10 }: { name: string; image?: string | null; size?: number }) {
   const initials = (name || "א").slice(0, 2);
@@ -437,6 +438,228 @@ function MyQuestions() {
   );
 }
 
+interface Submission { id: number; type: string; title: string; status: string; admin_note: string | null; submitted_at: string; }
+
+const SUBMISSION_STATUS: Record<string, { label: string; color: string; icon: any }> = {
+  pending: { label: "ממתין לאישור", color: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30", icon: Clock },
+  approved: { label: "אושר ✓", color: "text-green-400 bg-green-400/10 border-green-400/30", icon: CheckCircle },
+  rejected: { label: "נדחה", color: "text-red-400 bg-red-400/10 border-red-400/30", icon: AlertCircle },
+};
+
+function SubmitMedia({ userId, userName, userImage }: { userId: string; userName: string; userImage: string }) {
+  const [mediaType, setMediaType] = useState<"photo" | "video">("photo");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("photos");
+  const [fileData, setFileData] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [preview, setPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [subView, setSubView] = useState<"form" | "history">("form");
+
+  useEffect(() => {
+    fetch(`/api/media-submissions/mine?userId=${userId}`)
+      .then(r => r.json())
+      .then(d => setSubmissions(Array.isArray(d) ? d : []))
+      .catch(() => {});
+  }, [userId, success]);
+
+  const pickImage = () => {
+    const input = document.createElement("input");
+    input.type = "file"; input.accept = "image/*,video/*";
+    input.onchange = (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      setLoading(true);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const b64 = ev.target?.result as string;
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX = 1200;
+          let { width, height } = img;
+          if (width > MAX) { height = Math.round(height * MAX / width); width = MAX; }
+          if (height > MAX) { width = Math.round(width * MAX / height); height = MAX; }
+          canvas.width = width; canvas.height = height;
+          canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL("image/jpeg", 0.8);
+          setFileData(compressed); setPreview(compressed); setLoading(false);
+        };
+        img.src = b64;
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  };
+
+  const submit = async () => {
+    setError(""); setSuccess(false);
+    if (!title.trim()) { setError("נא להוסיף כותרת"); return; }
+    if (mediaType === "photo" && !fileData) { setError("נא לבחור תמונה"); return; }
+    if (mediaType === "video" && !videoUrl.trim()) { setError("נא להכניס קישור לסרטון"); return; }
+    setLoading(true);
+    const res = await fetch("/api/media-submissions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userClerkId: userId, userName, userImage,
+        type: mediaType,
+        fileData: mediaType === "photo" ? fileData : null,
+        videoUrl: mediaType === "video" ? videoUrl.trim() : null,
+        title: title.trim(), description: description.trim(), category,
+      }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (!res.ok) { setError(data.error || "שגיאה בשליחה"); return; }
+    setSuccess(true); setTitle(""); setDescription(""); setFileData(null); setPreview(null); setVideoUrl("");
+    setSubView("history");
+  };
+
+  const CATEGORIES = [
+    { value: "photos", label: "גלריית תמונות" },
+    { value: "videos", label: "ספריית וידאו" },
+    { value: "events", label: "אירועים" },
+    { value: "general", label: "כללי" },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-[2rem] border border-white/10 bg-card/60 p-6 md:p-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-black text-white">שלח תוכן לאתר</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">תמונות וסרטונים שתשלח יועברו למנהל לאישור ויופיעו באתר</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => setSubView("form")}
+              className={`rounded-full px-4 py-1.5 text-sm font-bold border transition ${subView === "form" ? "bg-primary border-primary text-primary-foreground" : "border-white/15 text-muted-foreground hover:text-white"}`}>
+              שלח
+            </button>
+            <button onClick={() => setSubView("history")}
+              className={`rounded-full px-4 py-1.5 text-sm font-bold border transition ${subView === "history" ? "bg-primary border-primary text-primary-foreground" : "border-white/15 text-muted-foreground hover:text-white"}`}>
+              ששלחתי ({submissions.length})
+            </button>
+          </div>
+        </div>
+
+        {success && (
+          <div className="rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-400 flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 shrink-0" />
+            הקובץ נשלח בהצלחה! המנהל יבדוק ויאשר בהקדם.
+          </div>
+        )}
+
+        {subView === "form" ? (
+          <div className="space-y-5">
+            <div className="flex gap-3">
+              {(["photo", "video"] as const).map(t => (
+                <button key={t} onClick={() => { setMediaType(t); setFileData(null); setPreview(null); setVideoUrl(""); }}
+                  className={`flex-1 flex items-center justify-center gap-2 rounded-xl border p-3 font-bold text-sm transition ${mediaType === t ? "border-primary bg-primary/10 text-primary" : "border-white/10 text-muted-foreground hover:text-white"}`}>
+                  {t === "photo" ? <><ImageIcon className="h-4 w-4" /> תמונה</> : <><Video className="h-4 w-4" /> סרטון</>}
+                </button>
+              ))}
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-muted-foreground mb-1.5 block">כותרת *</label>
+              <input value={title} onChange={e => setTitle(e.target.value)} maxLength={100}
+                placeholder={mediaType === "photo" ? "שם האירוע / תיאור התמונה" : "שם הסרטון / האירוע"}
+                className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none focus:border-primary/50 placeholder:text-muted-foreground/50 text-sm" />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-muted-foreground mb-1.5 block">תיאור (אופציונלי)</label>
+              <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
+                placeholder="הוסף הסבר קצר..."
+                className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none focus:border-primary/50 resize-none placeholder:text-muted-foreground/50 text-sm" />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-muted-foreground mb-1.5 block">קטגוריה</label>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map(c => (
+                  <button key={c.value} onClick={() => setCategory(c.value)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${category === c.value ? "border-primary bg-primary/10 text-primary" : "border-white/10 text-muted-foreground hover:text-white"}`}>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {mediaType === "photo" ? (
+              <div>
+                <label className="text-xs font-bold text-muted-foreground mb-1.5 block">בחר תמונה *</label>
+                {preview ? (
+                  <div className="relative inline-block">
+                    <img src={preview} alt="preview" className="h-48 w-auto rounded-xl object-cover border border-white/10 max-w-full" />
+                    <button onClick={() => { setFileData(null); setPreview(null); }}
+                      className="absolute -top-2 -right-2 rounded-full bg-red-500 p-1 hover:bg-red-600 transition">
+                      <X className="h-3.5 w-3.5 text-white" />
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={pickImage} disabled={loading}
+                    className="w-full rounded-xl border-2 border-dashed border-white/15 py-10 flex flex-col items-center gap-3 text-muted-foreground hover:border-primary/40 hover:text-primary transition">
+                    {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : <Upload className="h-8 w-8" />}
+                    <span className="text-sm font-bold">{loading ? "טוען..." : "לחץ להעלאת תמונה"}</span>
+                    <span className="text-xs opacity-60">JPG, PNG, WEBP עד 10MB</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div>
+                <label className="text-xs font-bold text-muted-foreground mb-1.5 block">קישור לסרטון (YouTube) *</label>
+                <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} dir="ltr"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none focus:border-primary/50 placeholder:text-muted-foreground/50 text-sm" />
+              </div>
+            )}
+
+            {error && (
+              <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />{error}
+              </p>
+            )}
+
+            <button onClick={submit} disabled={loading}
+              className="w-full rounded-xl bg-primary py-3 font-black text-primary-foreground hover:shadow-[0_0_30px_rgba(245,192,55,0.3)] disabled:opacity-50 transition flex items-center justify-center gap-2 text-sm">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" />שלח למנהל</>}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {submissions.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8 text-sm">עדיין לא שלחת תוכן.</p>
+            ) : submissions.map(s => {
+              const st = SUBMISSION_STATUS[s.status] ?? SUBMISSION_STATUS.pending;
+              return (
+                <div key={s.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`rounded-lg border p-2 ${s.type === "photo" ? "border-blue-400/30 bg-blue-400/10" : "border-purple-400/30 bg-purple-400/10"}`}>
+                      {s.type === "photo" ? <ImageIcon className="h-4 w-4 text-blue-400" /> : <Video className="h-4 w-4 text-purple-400" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-white text-sm truncate">{s.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{new Date(s.submitted_at).toLocaleDateString("he-IL")}</p>
+                      {s.admin_note && <p className="text-xs text-yellow-400 mt-1">הערת מנהל: {s.admin_note}</p>}
+                    </div>
+                    <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-bold ${st.color}`}>{st.label}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function UserPortal() {
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -451,6 +674,7 @@ export default function UserPortal() {
     { key: "board", label: "לוח הקהילה", icon: Sparkles },
     { key: "profile", label: "הפרופיל שלי", icon: Star },
     { key: "questions", label: "השאלות שלי", icon: BookOpen },
+    { key: "media", label: "שלח תוכן", icon: Upload },
   ];
 
   return (
@@ -499,6 +723,9 @@ export default function UserPortal() {
           )}
           {tab === "profile" && <MyProfile userId={user.id} onPostDelete={() => {}} />}
           {tab === "questions" && <MyQuestions />}
+          {tab === "media" && (
+            <SubmitMedia userId={user.id} userName={name} userImage={user.imageUrl || ""} />
+          )}
         </div>
       </div>
 

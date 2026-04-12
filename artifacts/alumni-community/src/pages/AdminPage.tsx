@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   CheckCircle, Clock, MessageSquare, BarChart3, Loader2,
-  Lock, Eye, EyeOff, TrendingUp, LogOut, Users
+  Lock, Eye, EyeOff, TrendingUp, LogOut, Users, ImageIcon,
+  Video, ThumbsUp, ThumbsDown, Inbox
 } from "lucide-react";
 import Footer from "@/components/sections/Footer";
 
@@ -120,12 +121,145 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
+interface MediaSub {
+  id: number; user_name: string; user_image: string | null;
+  type: string; title: string; description: string | null;
+  category: string; status: string; admin_note: string | null;
+  submitted_at: string; video_url: string | null;
+}
+
+function MediaSubmissions({ token }: { token: string }) {
+  const [items, setItems] = useState<MediaSub[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState<number | null>(null);
+  const [filter, setFilter] = useState("pending");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const res = await fetch("/api/media-submissions", { headers: { Authorization: `Bearer ${token}` } });
+    setItems(await res.json()); setLoading(false);
+  }, [token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const updateStatus = async (id: number, status: string, adminNote = "") => {
+    await fetch(`/api/media-submissions/${id}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ status, adminNote }),
+    });
+    setItems(prev => prev.map(s => s.id === id ? { ...s, status, admin_note: adminNote || null } : s));
+  };
+
+  const loadPreview = async (id: number) => {
+    if (previewLoading === id) return;
+    setPreviewLoading(id);
+    const res = await fetch(`/api/media-submissions/${id}/full`, { headers: { Authorization: `Bearer ${token}` } });
+    const d = await res.json();
+    setPreviewImage(d.file_data ?? null);
+    setPreviewLoading(null);
+  };
+
+  const filtered = filter === "all" ? items : items.filter(s => s.status === filter);
+
+  const pendingCount = items.filter(s => s.status === "pending").length;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-black text-white flex items-center gap-2">
+          <Inbox className="h-5 w-5 text-primary" /> תוכן ממשתמשים
+          {pendingCount > 0 && <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-black text-white">{pendingCount}</span>}
+        </h2>
+      </div>
+      <div className="flex gap-2 flex-wrap mb-5">
+        {[["pending","ממתין"], ["approved","מאושר"], ["rejected","נדחה"], ["all","הכל"]].map(([v, l]) => (
+          <button key={v} onClick={() => setFilter(v)}
+            className={`rounded-full border px-4 py-1.5 text-sm font-bold transition ${filter === v ? "border-primary bg-primary text-primary-foreground" : "border-white/15 bg-white/5 text-muted-foreground hover:text-white"}`}>
+            {l}{v !== "all" && <span className="mr-1.5 opacity-60">({items.filter(s => s.status === v).length})</span>}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : filtered.length === 0 ? (
+        <p className="text-center text-muted-foreground py-12">אין פריטים בקטגוריה זו.</p>
+      ) : (
+        <div className="space-y-4">
+          {filtered.map(s => (
+            <div key={s.id} className="rounded-[1.5rem] border border-white/10 bg-card p-5 hover:border-white/20 transition">
+              <div className="flex gap-4 flex-col md:flex-row">
+                <div className="flex items-center gap-3 md:flex-col md:items-start md:w-36 shrink-0">
+                  <div className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${s.type === "photo" ? "border-blue-400/30 bg-blue-400/10 text-blue-400" : "border-purple-400/30 bg-purple-400/10 text-purple-400"}`}>
+                    {s.type === "photo" ? <ImageIcon className="h-3 w-3" /> : <Video className="h-3 w-3" />}
+                    {s.type === "photo" ? "תמונה" : "סרטון"}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{new Date(s.submitted_at).toLocaleDateString("he-IL")}</span>
+                  <span className="font-bold text-white text-xs">{s.user_name}</span>
+                </div>
+                <div className="flex-1 min-w-0 space-y-2">
+                  <p className="font-black text-white">{s.title}</p>
+                  {s.description && <p className="text-sm text-muted-foreground">{s.description}</p>}
+                  {s.video_url && (
+                    <a href={s.video_url} target="_blank" rel="noreferrer"
+                      className="text-sm text-primary underline break-all" dir="ltr">{s.video_url}</a>
+                  )}
+                  <span className="inline-block rounded-full bg-white/5 border border-white/10 px-2.5 py-0.5 text-xs text-muted-foreground">{s.category}</span>
+                  {s.type === "photo" && (
+                    <div>
+                      <button onClick={() => loadPreview(s.id)}
+                        className="flex items-center gap-1.5 text-xs text-primary underline hover:text-primary/80">
+                        {previewLoading === s.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
+                        צפה בתמונה
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {s.status === "pending" ? (
+                  <div className="flex flex-row md:flex-col gap-2 shrink-0">
+                    <button onClick={() => updateStatus(s.id, "approved")}
+                      className="flex items-center gap-1.5 rounded-full border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm font-bold text-green-400 hover:bg-green-500/20 transition">
+                      <ThumbsUp className="h-4 w-4" /> אשר
+                    </button>
+                    <button onClick={() => updateStatus(s.id, "rejected")}
+                      className="flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-400 hover:bg-red-500/20 transition">
+                      <ThumbsDown className="h-4 w-4" /> דחה
+                    </button>
+                  </div>
+                ) : (
+                  <div className="shrink-0">
+                    <span className={`rounded-full border px-3 py-1.5 text-xs font-bold ${s.status === "approved" ? "border-green-500/40 bg-green-500/10 text-green-400" : "border-red-500/40 bg-red-500/10 text-red-400"}`}>
+                      {s.status === "approved" ? "✓ אושר" : "✗ נדחה"}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {previewImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setPreviewImage(null)}>
+          <div className="relative">
+            <img src={previewImage} alt="preview" className="max-h-[80vh] max-w-[90vw] rounded-2xl border border-white/20 object-contain" />
+            <button onClick={() => setPreviewImage(null)} className="absolute -top-3 -right-3 rounded-full bg-white/10 p-1.5 hover:bg-white/20">
+              <TrendingUp className="h-4 w-4 text-white rotate-45" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("הכל");
-  const [tab, setTab] = useState<"questions" | "contacts">("questions");
+  const [tab, setTab] = useState<"questions" | "media">("questions");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -189,7 +323,18 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         )}
 
-        <div>
+        <div className="flex gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1 mb-2">
+          {([["questions", "שאלות לרב", MessageSquare], ["media", "תוכן ממשתמשים", Inbox]] as const).map(([k, l, Icon]) => (
+            <button key={k} onClick={() => setTab(k as any)}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition ${tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-white"}`}>
+              <Icon className="h-4 w-4" />{l}
+            </button>
+          ))}
+        </div>
+
+        {tab === "media" && <MediaSubmissions token={sessionStorage.getItem(TOKEN_KEY) ?? ""} />}
+
+        {tab === "questions" && <div>
           <h2 className="text-xl font-black text-white mb-4">שאלות לרבני הקהילה</h2>
 
           <div className="flex gap-2 flex-wrap mb-5">
@@ -260,7 +405,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               ))}
             </div>
           )}
-        </div>
+        </div>}
       </div>
       <Footer />
     </main>
