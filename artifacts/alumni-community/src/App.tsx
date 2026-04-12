@@ -63,16 +63,7 @@ function PortalRoute() {
 }
 
 function AdminRoute() {
-  return (
-    <>
-      <Show when="signed-in">
-        <AdminPage />
-      </Show>
-      <Show when="signed-out">
-        <Redirect to="/sign-in" />
-      </Show>
-    </>
-  );
+  return <AdminPage />;
 }
 
 function ClerkCacheInvalidator() {

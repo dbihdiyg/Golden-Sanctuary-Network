@@ -1,20 +1,65 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
+import { createHmac, timingSafeEqual } from "crypto";
 import { pool } from "@workspace/db";
 
 const router = Router();
 
-const ADMIN_IDS = (process.env["ADMIN_CLERK_USER_IDS"] ?? "").split(",").filter(Boolean);
+function getAdminSecret(): string {
+  return process.env["ADMIN_SECRET"] ?? "fallback-secret-change-me";
+}
+
+function computeToken(password: string): string {
+  return createHmac("sha256", getAdminSecret()).update(password).digest("hex");
+}
+
+function getExpectedToken(): string {
+  const password = process.env["ADMIN_PASSWORD"] ?? "";
+  return computeToken(password);
+}
+
+function validateToken(token: string): boolean {
+  const expected = getExpectedToken();
+  try {
+    return timingSafeEqual(Buffer.from(token, "hex"), Buffer.from(expected, "hex"));
+  } catch {
+    return false;
+  }
+}
 
 function requireAdmin(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
-  if (ADMIN_IDS.length > 0 && !ADMIN_IDS.includes(auth.userId)) {
-    return res.status(403).json({ error: "Forbidden" });
+  const auth = req.headers["authorization"] as string | undefined;
+  const token = auth?.replace("Bearer ", "").trim() ?? "";
+  if (!token || !validateToken(token)) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
-  req.userId = auth.userId;
   next();
 }
+
+router.post("/admin/login", (req, res) => {
+  const { password } = req.body ?? {};
+  if (!password) return res.status(400).json({ error: "נדרשת סיסמה" });
+
+  const adminPassword = process.env["ADMIN_PASSWORD"] ?? "";
+  if (!adminPassword) return res.status(503).json({ error: "לא הוגדרה סיסמת מנהל" });
+
+  let match = false;
+  try {
+    match = timingSafeEqual(Buffer.from(password), Buffer.from(adminPassword));
+  } catch {
+    match = false;
+  }
+
+  if (!match) {
+    return res.status(401).json({ error: "סיסמה שגויה" });
+  }
+
+  const token = computeToken(adminPassword);
+  return res.json({ token });
+});
+
+router.get("/admin/verify", requireAdmin, (_req, res) => {
+  return res.json({ valid: true });
+});
 
 router.get("/admin/questions", requireAdmin, async (_req, res) => {
   try {
