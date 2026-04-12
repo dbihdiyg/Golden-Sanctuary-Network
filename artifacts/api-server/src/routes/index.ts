@@ -4,6 +4,7 @@ import youtubeRouter from "./youtube";
 import askRabbiRouter from "./ask-rabbi";
 import postsRouter from "./posts";
 import adminRouter from "./admin";
+import profileRouter from "./profile";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use(youtubeRouter);
 router.use(askRabbiRouter);
 router.use(postsRouter);
 router.use(adminRouter);
+router.use(profileRouter);
 
 export default router;
