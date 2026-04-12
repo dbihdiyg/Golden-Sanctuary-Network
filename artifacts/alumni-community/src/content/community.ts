@@ -41,7 +41,7 @@ export const categories = [
     description: "שיעורים, ברכות, דברי פתיחה וסיפורי בוגרים.",
     href: "/videos",
     icon: Video,
-    image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1200&auto=format&fit=crop",
+    image: "/rabbi-mic2.jpg",
   },
   {
     title: "עלוני PDF",
