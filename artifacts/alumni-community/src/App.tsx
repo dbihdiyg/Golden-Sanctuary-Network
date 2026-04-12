@@ -20,6 +20,8 @@ import {
   StoriesPage,
   VideosPage,
 } from "@/pages/ContentPages";
+import ForumPage from "@/pages/ForumPage";
+import ThreadPage from "@/pages/ThreadPage";
 
 const queryClient = new QueryClient();
 
@@ -101,6 +103,8 @@ function AppRoutes() {
       <Route path="/join" component={JoinPage} />
       <Route path="/stories" component={StoriesPage} />
       <Route path="/events" component={EventsPage} />
+      <Route path="/forum/:id" component={ThreadPage} />
+      <Route path="/forum" component={ForumPage} />
       <Route component={NotFound} />
     </Switch>
   );

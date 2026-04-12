@@ -19,6 +19,7 @@ export const contact = {
 
 export const navLinks = [
   { label: "בית", href: "/" },
+  { label: "פורום", href: "/forum" },
   { label: "תמונות", href: "/photos" },
   { label: "וידאו", href: "/videos" },
   { label: "עלונים", href: "/library" },

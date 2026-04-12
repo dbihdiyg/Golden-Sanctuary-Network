@@ -5,6 +5,7 @@ import askRabbiRouter from "./ask-rabbi";
 import postsRouter from "./posts";
 import adminRouter from "./admin";
 import profileRouter from "./profile";
+import forumRouter from "./forum";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(askRabbiRouter);
 router.use(postsRouter);
 router.use(adminRouter);
 router.use(profileRouter);
+router.use(forumRouter);
 
 export default router;
