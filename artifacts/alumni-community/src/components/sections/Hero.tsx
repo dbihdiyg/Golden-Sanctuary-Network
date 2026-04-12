@@ -7,7 +7,7 @@ const logoUrl = "/logo-new.png";
 const stats = [
   { value: "1,200+", label: "בוגרים מחוברים" },
   { value: "38", label: "מחזורים" },
-  { value: "24/7", label: "עדכונים וקהילה" },
+  { value: "24/6", label: "עדכונים וקהילה" },
 ];
 
 const heroActions = [
