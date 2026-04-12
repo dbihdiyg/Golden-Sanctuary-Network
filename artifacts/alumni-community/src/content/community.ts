@@ -34,14 +34,14 @@ export const categories = [
     description: "גלריות מאירועים, מפגשים ורגעים שלא רוצים לשכוח.",
     href: "/photos",
     icon: Camera,
-    image: "https://images.unsplash.com/photo-1528605248644-14dd04022da1?q=80&w=1200&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1200&auto=format&fit=crop",
   },
   {
     title: "ספריית וידאו",
     description: "שיעורים, ברכות, דברי פתיחה וסיפורי בוגרים.",
     href: "/videos",
     icon: Video,
-    image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=1200&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1200&auto=format&fit=crop",
   },
   {
     title: "עלוני PDF",
@@ -55,7 +55,7 @@ export const categories = [
     description: "חדשות, הודעות, שמחות ופעילות שוטפת.",
     href: "/updates",
     icon: Newspaper,
-    image: "https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=1200&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=1200&auto=format&fit=crop",
   },
   {
     title: "שאל את הרב",
@@ -69,28 +69,28 @@ export const categories = [
     description: "וואטסאפ, אימייל וטופס פנייה ישיר לצוות.",
     href: "/contact",
     icon: MessageCircle,
-    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1609770231080-e321deccc34c?q=80&w=1200&auto=format&fit=crop",
   },
   {
     title: "הצטרפות לעדכונים",
     description: "קבלת עלונים, אירועים, תמונות וסרטונים חדשים.",
     href: "/join",
     icon: Send,
-    image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=1200&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=1200&auto=format&fit=crop",
   },
   {
     title: "סיפורי בוגרים",
     description: "מסעות אישיים של צמיחה, אמונה ושליחות.",
     href: "/stories",
     icon: UserRound,
-    image: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=1200&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1200&auto=format&fit=crop",
   },
   {
     title: "אירועים קרובים",
     description: "מפגשים, שיעורים, ערבי קהילה ויוזמות חדשות.",
     href: "/events",
     icon: CalendarDays,
-    image: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=1200&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=1200&auto=format&fit=crop",
   },
 ];
 
@@ -110,7 +110,7 @@ export const updates = [
     title: "מפגש בוגרים שנתי 2026",
     date: "י״ז אייר תשפ״ו",
     excerpt: "ערב חיבור חגיגי עם שיעור מרכזי, גלריית זיכרונות, מפגש מחזורים ושולחנות שיח.",
-    image: "https://images.unsplash.com/photo-1511895426328-dc8714191300?q=80&w=1600&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=1600&auto=format&fit=crop",
   },
   {
     id: 2,
@@ -118,7 +118,7 @@ export const updates = [
     title: "נפתח מיזם החונכות לבוגרים צעירים",
     date: "י׳ אייר תשפ״ו",
     excerpt: "בוגרים ותיקים מלווים את הדור החדש בצמתים של לימודים, משפחה, עבודה ושליחות.",
-    image: "https://images.unsplash.com/photo-1491841550275-ad7854e35ca6?q=80&w=1600&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1600&auto=format&fit=crop",
   },
   {
     id: 3,
@@ -126,7 +126,7 @@ export const updates = [
     title: "סדרת שיעורים חדשה בנושא מנהיגות",
     date: "ב׳ אייר תשפ״ו",
     excerpt: "לימוד עומק על אחריות, אמונה ומנהיגות בחיי היום־יום של הבוגר.",
-    image: "https://images.unsplash.com/photo-1507676184212-d0c30a5991c0?q=80&w=1600&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1600&auto=format&fit=crop",
   },
   {
     id: 4,
@@ -134,27 +134,27 @@ export const updates = [
     title: "איסוף תמונות וסיפורים לארכיון הבוגרים",
     date: "כ״ה ניסן תשפ״ו",
     excerpt: "מזמינים אתכם לשלוח תמונות, סרטונים וסיפורים קצרים שייכנסו לארכיון הדיגיטלי.",
-    image: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1600&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1609770231080-e321deccc34c?q=80&w=1600&auto=format&fit=crop",
   },
 ];
 
 export const photos = [
   { src: "/photo-meron-shobevim.jpg", title: "אבי תנועת הקירוב הגרי\"ד גרוסמן שליט\"א — תפילה באתרא קדישא מירון לרגל סיום ימי השובבי\"ם", tag: "מירון", year: "2026" },
-  { src: "https://images.unsplash.com/photo-1519817650390-64a93db51149?q=80&w=1600&auto=format&fit=crop", title: "ערב איחוד בבית המדרש", tag: "מפגש שנתי", year: "2026" },
-  { src: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1600&auto=format&fit=crop", title: "רגעים של לימוד וזיכרון", tag: "תורה", year: "2026" },
-  { src: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop", title: "מפגש דורות בחצר", tag: "קהילה", year: "2025" },
-  { src: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=1600&auto=format&fit=crop", title: "חברות שנמשכת שנים", tag: "מחזורים", year: "2025" },
-  { src: "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?q=80&w=1600&auto=format&fit=crop", title: "שמחת הקהילה", tag: "אירועים", year: "2024" },
-  { src: "https://images.unsplash.com/photo-1528605248644-14dd04022da1?q=80&w=1600&auto=format&fit=crop", title: "שולחנות של זיכרונות", tag: "מפגש", year: "2024" },
-  { src: "https://images.unsplash.com/photo-1515168833906-d2a3b82b302b?q=80&w=1600&auto=format&fit=crop", title: "שיחה אחרי שיעור", tag: "תורה", year: "2024" },
-  { src: "https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=1600&auto=format&fit=crop", title: "ערב קהילה חגיגי", tag: "אירועים", year: "2023" },
+  { src: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1600&auto=format&fit=crop", title: "ערב תפילה מיוחד בכותל המערבי", tag: "מפגש שנתי", year: "2026" },
+  { src: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=1600&auto=format&fit=crop", title: "רגעים של לימוד וזיכרון", tag: "תורה", year: "2026" },
+  { src: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=1600&auto=format&fit=crop", title: "ירושלים עיר הקודש", tag: "קהילה", year: "2025" },
+  { src: "https://images.unsplash.com/photo-1609770231080-e321deccc34c?q=80&w=1600&auto=format&fit=crop", title: "קריאה בספר התורה", tag: "תורה", year: "2025" },
+  { src: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=1600&auto=format&fit=crop", title: "ספרים עתיקים מאוצרות הישיבה", tag: "אירועים", year: "2024" },
+  { src: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1600&auto=format&fit=crop", title: "בית המדרש — מקום הלימוד", tag: "מפגש", year: "2024" },
+  { src: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1600&auto=format&fit=crop", title: "פרחים לכבוד שבת", tag: "תורה", year: "2024" },
+  { src: "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=1600&auto=format&fit=crop", title: "נרות שבת קודש", tag: "אירועים", year: "2023" },
 ];
 
 export const videos = [
   { title: "שיעור / אירוע מגדל אור", summary: "סרטון חדש שהועלה לספריית הקהילה.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/_oaNsTAQkWo/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=_oaNsTAQkWo" },
   { title: "שיעור / אירוע מגדל אור", summary: "סרטון חדש שהועלה לספריית הקהילה.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/Cf02bu-432w/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=Cf02bu-432w" },
-  { title: "דברי פתיחה למפגש הבוגרים", summary: "מסר קצר על שורשים, אחריות וחיבור מתמשך.", date: "י״ז אייר תשפ״ו", category: "מפגש שנתי", image: "https://images.unsplash.com/photo-1519682337058-a94d519337bc?q=80&w=1600&auto=format&fit=crop", url: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
-  { title: "סיפורי דרך של בוגרים", summary: "עדויות אישיות על השנים שעיצבו אמונה, מנהיגות וחברות.", date: "י׳ אייר תשפ״ו", category: "סיפורים", image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=1600&auto=format&fit=crop", url: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
+  { title: "דברי פתיחה למפגש הבוגרים", summary: "מסר קצר על שורשים, אחריות וחיבור מתמשך.", date: "י״ז אייר תשפ״ו", category: "מפגש שנתי", image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1600&auto=format&fit=crop", url: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
+  { title: "סיפורי דרך של בוגרים", summary: "עדויות אישיות על השנים שעיצבו אמונה, מנהיגות וחברות.", date: "י׳ אייר תשפ״ו", category: "סיפורים", image: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=1600&auto=format&fit=crop", url: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
   { title: "שיעור מיוחד: להיות מאיר בעולם", summary: "שיעור מעורר השראה על שליחות של בוגר בתוך חיי המעשה.", date: "ב׳ אייר תשפ״ו", category: "שיעורים", image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1600&auto=format&fit=crop", url: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
 ];
 
@@ -194,9 +194,9 @@ export const faqs = [
 ];
 
 export const stories = [
-  { title: "מהבית מדרש אל השליחות", text: "בוגר מספר על הדרך שבה השנים במוסד ממשיכות להאיר החלטות יומיומיות.", image: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=1200&auto=format&fit=crop" },
-  { title: "חברות של עשרים שנה", text: "קשר שהתחיל במחזור אחד והפך לרשת תמיכה משפחתית וקהילתית.", image: "https://images.unsplash.com/photo-1528605248644-14dd04022da1?q=80&w=1200&auto=format&fit=crop" },
-  { title: "להישאר מחובר גם מרחוק", text: "איך קהילה דיגיטלית שומרת על נוכחות, תורה וחום גם בין מפגשים.", image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop" },
+  { title: "מהבית מדרש אל השליחות", text: "בוגר מספר על הדרך שבה השנים במוסד ממשיכות להאיר החלטות יומיומיות.", image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1200&auto=format&fit=crop" },
+  { title: "חברות של עשרים שנה", text: "קשר שהתחיל במחזור אחד והפך לרשת תמיכה משפחתית וקהילתית.", image: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=1200&auto=format&fit=crop" },
+  { title: "להישאר מחובר גם מרחוק", text: "איך קהילה דיגיטלית שומרת על נוכחות, תורה וחום גם בין מפגשים.", image: "https://images.unsplash.com/photo-1609770231080-e321deccc34c?q=80&w=1200&auto=format&fit=crop" },
 ];
 
 export const events = [
