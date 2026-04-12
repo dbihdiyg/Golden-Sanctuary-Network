@@ -1,0 +1,221 @@
+Create a premium, highly engaging, visually rich website for the alumni community of a religious institution.
+
+The website should feel alive, emotional, elegant, modern, spiritual, and highly organized. It must not look like a generic template. It should feel like a living community hub with content, connection, media, updates, and direct communication.
+
+Main purpose:
+Create a central digital home for alumni where they can see recent photos, videos, PDF newsletters, community updates, contact the team, ask the rabbi questions, and stay connected.
+
+Design direction:
+- Premium and modern
+- Elegant and inspiring
+- Strong visual hierarchy
+- Clean but not boring
+- Lively, dynamic, and full of movement
+- Spiritual and community-oriented atmosphere
+- Sophisticated UI/UX
+- Rich hover interactions and smooth animations
+- Responsive and mobile-first
+- Hebrew RTL support across the entire site
+
+Color palette:
+- Deep navy blue
+- White
+- Soft gold accents
+- Optional subtle gradients and glow
+- Clean backgrounds with depth, but not cluttered
+
+Typography:
+- Strong Hebrew-friendly typography
+- Clear hierarchy between headlines, body text, buttons, and labels
+- Elegant and modern, easy to read on mobile and desktop
+
+Global UI elements:
+- Sticky top navigation
+- Floating WhatsApp contact button
+- Clear CTA buttons throughout the site
+- Soft shadows
+- Rounded cards
+- Hover states with subtle glow and motion
+- Smooth page transitions
+- Scroll reveal animations
+- Parallax or depth effects used tastefully
+
+Website structure:
+
+1. Homepage:
+The homepage should immediately show the main categories of the entire website in a visually impressive way.
+
+Top section:
+- Logo
+- Community/institution name
+- Main menu
+- Prominent buttons:
+  - Contact on WhatsApp
+  - Contact by Email
+  - Ask the Rabbi
+  - Join Updates
+
+Hero section:
+- Large welcoming visual area
+- Strong emotional headline in Hebrew
+- Short subheadline about connection, memories, updates, and community
+- Two main CTAs:
+  - View Latest Updates
+  - Contact Us
+
+Main categories section:
+Large animated category cards shown early on the homepage, each with icon/image, title, short description, and hover effect.
+Categories:
+- Latest Photos
+- Video Library
+- PDF Newsletter Library
+- Community Updates
+- Ask the Rabbi
+- Contact Us
+- Join Mailing List
+- Alumni Stories
+- Upcoming Events
+
+Recent updates section:
+Show the latest content in stylish cards:
+- image
+- title
+- short excerpt
+- date
+- button to read more
+
+Media spotlight section:
+Feature:
+- latest photo gallery preview
+- featured video
+- latest PDF newsletter
+- recent update
+
+Quick actions section:
+Show large stylish CTA buttons:
+- Talk to us on WhatsApp
+- Send us an Email
+- Ask the Rabbi
+- Send us a photo/update
+- Join the mailing list
+
+Community inspiration section:
+A meaningful quote or spiritual message section with elegant styling and subtle motion.
+
+Footer:
+- navigation links
+- contact details
+- email
+- WhatsApp
+- newsletter join button
+- copyright
+
+2. Photos page:
+A premium gallery page with:
+- page header
+- filters by event/year/category
+- masonry or organized gallery grid
+- fullscreen lightbox
+- hover effects
+- load more option
+- fast browsing experience
+
+3. Videos page:
+A video library page with:
+- video cards
+- thumbnail
+- title
+- short summary
+- date
+- category filters
+- elegant layout
+
+4. PDF Library page:
+A clean, premium document library for downloadable newsletters and publications.
+Each item should include:
+- thumbnail preview
+- title
+- date
+- description
+- button to view
+- button to download
+
+5. Updates page:
+A content/news page for alumni updates.
+Show update cards with:
+- image
+- headline
+- short text
+- date
+- read more button
+
+6. Ask the Rabbi page:
+A dedicated page for sending questions.
+Include:
+- welcoming header
+- explanatory text
+- contact form with:
+  - name
+  - email or phone
+  - topic
+  - question
+- option for anonymous submission
+- optional WhatsApp button for direct question submission
+- FAQ preview section
+
+7. Contact page:
+A clean and inviting contact page with:
+- WhatsApp contact card
+- Email contact card
+- contact form
+- location or office information if relevant
+- response time info
+
+8. Join Updates page:
+A signup page for mailing list and community updates.
+Include:
+- name
+- email
+- phone
+- checkbox options for:
+  - community updates
+  - newsletters
+  - events
+  - new videos/photos
+- strong CTA button
+
+User experience priorities:
+- The visitor should immediately understand what the site offers
+- The categories should appear early and clearly
+- Contact options should always be easy to access
+- Content should feel alive and regularly updated
+- The design should feel premium, warm, and deeply intentional
+
+Animation priorities:
+- smooth scroll reveal
+- elegant hover transitions
+- image zoom on hover
+- soft glowing buttons
+- premium card motion
+- subtle depth, never too flashy
+
+Content style:
+- warm
+- communal
+- inspiring
+- clear
+- confident
+- not overly corporate
+- not childish
+- not cluttered
+
+Technical priorities:
+- easy CMS structure for adding new photos, videos, PDFs, and updates
+- intuitive content management
+- scalable structure
+- mobile optimized
+- fast loading
+- accessible layout
+
+Important:
+The homepage should first display the main categories in a powerful and visually exciting way. The site should feel modern, active, polished, and exciting, with very clear buttons for WhatsApp, Email, Ask the Rabbi, and updates.

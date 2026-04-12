@@ -1,7 +1,7 @@
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, MessageCircle, Phone } from "lucide-react";
+import { Link } from "wouter";
 import logoUrl from "@assets/מאירים_לוגו_1775980957378.png";
-
-const links = ["עדכונים", "גלריה", "וידאו", "ספריית PDF", "קהילה"];
+import { contact, navLinks } from "@/content/community";
 
 export default function Footer() {
   return (
@@ -20,10 +20,10 @@ export default function Footer() {
         <nav className="space-y-4">
           <h3 className="text-sm font-medium tracking-[0.2em] text-primary">ניווט</h3>
           <div className="flex flex-wrap gap-3">
-            {links.map((link) => (
-              <a key={link} href="#updates" className="text-muted-foreground transition hover:text-primary">
-                {link}
-              </a>
+            {navLinks.map((link) => (
+              <Link key={link.href} href={link.href} className="text-muted-foreground transition hover:text-primary">
+                {link.label}
+              </Link>
             ))}
           </div>
         </nav>
@@ -31,9 +31,13 @@ export default function Footer() {
         <div className="space-y-4">
           <h3 className="text-sm font-medium tracking-[0.2em] text-primary">יצירת קשר</h3>
           <div className="space-y-3 text-muted-foreground">
-            <p className="flex items-center gap-3"><Mail className="h-4 w-4 text-primary" /> alumni@example.org</p>
+            <a href={contact.email} className="flex items-center gap-3 transition hover:text-primary"><Mail className="h-4 w-4 text-primary" /> alumni@example.org</a>
             <p className="flex items-center gap-3"><Phone className="h-4 w-4 text-primary" /> 02-000-0000</p>
             <p className="flex items-center gap-3"><MapPin className="h-4 w-4 text-primary" /> ירושלים</p>
+            <a href={contact.whatsapp} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-primary/35 px-5 py-2 font-bold text-primary transition hover:bg-primary hover:text-primary-foreground">
+              וואטסאפ
+              <MessageCircle className="h-4 w-4" />
+            </a>
           </div>
         </div>
       </div>

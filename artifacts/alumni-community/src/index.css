@@ -160,6 +160,10 @@
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    background:
+      radial-gradient(circle at 72% 8%, rgba(245, 192, 55, 0.08), transparent 28%),
+      radial-gradient(circle at 12% 26%, rgba(0, 19, 164, 0.16), transparent 34%),
+      hsl(var(--background));
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif;
@@ -219,6 +223,10 @@
     0 2px 0 rgba(0, 0, 0, 0.72),
     0 0 20px rgba(245, 192, 55, 0.32),
     0 0 70px rgba(0, 19, 164, 0.28);
+}
+
+.min-h-inherit {
+  min-height: inherit;
 }
 
 @theme inline {

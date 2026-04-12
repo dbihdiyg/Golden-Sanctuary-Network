@@ -1,4 +1,3 @@
-import React from "react";
 import Hero from "@/components/sections/Hero";
 import Updates from "@/components/sections/Updates";
 import Gallery from "@/components/sections/Gallery";
@@ -6,6 +5,10 @@ import VideoSection from "@/components/sections/VideoSection";
 import PDFLibrary from "@/components/sections/PDFLibrary";
 import CommunityFeed from "@/components/sections/CommunityFeed";
 import Footer from "@/components/sections/Footer";
+import CategoryHub from "@/components/sections/CategoryHub";
+import MediaSpotlight from "@/components/sections/MediaSpotlight";
+import QuickActions from "@/components/sections/QuickActions";
+import Inspiration from "@/components/sections/Inspiration";
 
 export default function Home() {
   return (
@@ -15,11 +18,15 @@ export default function Home() {
       <Hero />
       
       <div className="relative z-10 bg-background">
+        <CategoryHub />
         <Updates />
+        <MediaSpotlight />
         <Gallery />
         <VideoSection />
         <PDFLibrary />
+        <QuickActions />
         <CommunityFeed />
+        <Inspiration />
         <Footer />
       </div>
     </main>
