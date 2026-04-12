@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import {
   CheckCircle, Clock, MessageSquare, BarChart3, Loader2,
   Lock, Eye, EyeOff, TrendingUp, LogOut, Users, ImageIcon,
-  Video, ThumbsUp, ThumbsDown, Inbox, Mail, Phone, Trash2, UserCheck, UserX, Bot
+  Video, ThumbsUp, ThumbsDown, Inbox, Mail, Phone, Trash2, UserCheck, UserX, Bot,
+  Monitor, Smartphone, Maximize, Activity, MousePointerClick
 } from "lucide-react";
 import Footer from "@/components/sections/Footer";
 
@@ -513,12 +514,153 @@ function ChatbotSessions() {
   );
 }
 
+interface AnalyticsData {
+  total_visits: number;
+  desktop_visits: number;
+  mobile_visits: number;
+  active_now: number;
+  active_desktop: number;
+  active_mobile: number;
+  fullscreen_count: number;
+  visits_by_day: { day: string; visits: number }[];
+}
+
+function AnalyticsPanel() {
+  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const res = await adminFetch("/api/admin/analytics");
+    if (res.ok) setData(await res.json());
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const interval = setInterval(load, 30_000);
+    return () => clearInterval(interval);
+  }, [load]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const maxVisits = Math.max(...data.visits_by_day.map(d => d.visits), 1);
+  const desktopPct = data.total_visits > 0 ? Math.round((data.desktop_visits / data.total_visits) * 100) : 0;
+  const mobilePct = data.total_visits > 0 ? Math.round((data.mobile_visits / data.total_visits) * 100) : 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "סה״כ ביקורים", value: data.total_visits, icon: MousePointerClick, color: "text-primary" },
+          { label: "גולשים עכשיו", value: data.active_now, icon: Activity, color: "text-green-400" },
+          { label: "מסך מלא", value: data.fullscreen_count, icon: Maximize, color: "text-blue-400" },
+          { label: "ביקורים השבוע", value: data.visits_by_day.reduce((s, d) => s + d.visits, 0), icon: BarChart3, color: "text-yellow-400" },
+        ].map(s => (
+          <div key={s.label} className="rounded-[1.5rem] border border-white/10 bg-card p-5">
+            <s.icon className={`h-5 w-5 ${s.color} mb-3`} />
+            <p className="text-3xl font-black text-white">{s.value.toLocaleString("he-IL")}</p>
+            <p className="text-sm text-muted-foreground mt-1">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-[1.5rem] border border-white/10 bg-card p-6">
+          <h3 className="text-base font-black text-white mb-4 flex items-center gap-2">
+            <Monitor className="h-4 w-4 text-primary" /> סוג מכשיר – כלל הביקורים
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-1.5">
+                <span className="flex items-center gap-1.5 text-muted-foreground"><Monitor className="h-3.5 w-3.5" />מחשב</span>
+                <span className="font-bold text-white">{data.desktop_visits.toLocaleString("he-IL")} <span className="text-muted-foreground font-normal">({desktopPct}%)</span></span>
+              </div>
+              <div className="h-2.5 rounded-full bg-white/5 overflow-hidden">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${desktopPct}%` }} />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-sm mb-1.5">
+                <span className="flex items-center gap-1.5 text-muted-foreground"><Smartphone className="h-3.5 w-3.5" />סמארטפון</span>
+                <span className="font-bold text-white">{data.mobile_visits.toLocaleString("he-IL")} <span className="text-muted-foreground font-normal">({mobilePct}%)</span></span>
+              </div>
+              <div className="h-2.5 rounded-full bg-white/5 overflow-hidden">
+                <div className="h-full rounded-full bg-blue-400 transition-all" style={{ width: `${mobilePct}%` }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[1.5rem] border border-white/10 bg-card p-6">
+          <h3 className="text-base font-black text-white mb-4 flex items-center gap-2">
+            <Activity className="h-4 w-4 text-green-400" /> מחוברים כעת
+          </h3>
+          <div className="flex items-end gap-6">
+            <div className="text-center">
+              <p className="text-4xl font-black text-white">{data.active_now}</p>
+              <p className="text-xs text-muted-foreground mt-1">סה״כ מחוברים</p>
+            </div>
+            <div className="flex-1 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-sm text-muted-foreground"><Monitor className="h-3.5 w-3.5" />מחשב</span>
+                <span className="font-bold text-white text-sm">{data.active_desktop}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-sm text-muted-foreground"><Smartphone className="h-3.5 w-3.5" />סמארטפון</span>
+                <span className="font-bold text-white text-sm">{data.active_mobile}</span>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-4">מתעדכן כל 30 שניות · פעיל בדקות האחרונות</p>
+        </div>
+      </div>
+
+      {data.visits_by_day.length > 0 && (
+        <div className="rounded-[1.5rem] border border-white/10 bg-card p-6">
+          <h3 className="text-base font-black text-white mb-5 flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-yellow-400" /> ביקורים לפי יום (7 ימים אחרונים)
+          </h3>
+          <div className="flex items-end gap-2 h-28">
+            {data.visits_by_day.map(d => {
+              const heightPct = Math.round((d.visits / maxVisits) * 100);
+              const date = new Date(d.day);
+              const label = date.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" });
+              return (
+                <div key={d.day} className="flex-1 flex flex-col items-center gap-1.5">
+                  <span className="text-[10px] text-muted-foreground font-bold">{d.visits}</span>
+                  <div className="w-full rounded-t-md bg-white/5 flex flex-col justify-end" style={{ height: "80px" }}>
+                    <div
+                      className="w-full rounded-t-md bg-primary/70 hover:bg-primary transition-all"
+                      style={{ height: `${heightPct}%`, minHeight: d.visits > 0 ? "4px" : "0px" }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("הכל");
-  const [tab, setTab] = useState<"questions" | "media" | "newsletter" | "chatbot">("questions");
+  const [tab, setTab] = useState<"questions" | "media" | "newsletter" | "chatbot" | "analytics">("questions");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -582,8 +724,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         )}
 
-        <div className="flex gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1 mb-2">
-          {([["questions", "שאלות לרב", MessageSquare], ["media", "תוכן ממשתמשים", Inbox], ["newsletter", "רשימת תפוצה", Mail], ["chatbot", "שיחות AI", Bot]] as const).map(([k, l, Icon]) => (
+        <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1 mb-2 flex-wrap">
+          {([["questions", "שאלות לרב", MessageSquare], ["media", "תוכן ממשתמשים", Inbox], ["newsletter", "רשימת תפוצה", Mail], ["chatbot", "שיחות AI", Bot], ["analytics", "סטטיסטיקות", BarChart3]] as const).map(([k, l, Icon]) => (
             <button key={k} onClick={() => setTab(k as any)}
               className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition ${tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-white"}`}>
               <Icon className="h-4 w-4" />{l}
@@ -594,6 +736,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         {tab === "media" && <MediaSubmissions token={sessionStorage.getItem(TOKEN_KEY) ?? ""} />}
         {tab === "newsletter" && <MailingList />}
         {tab === "chatbot" && <ChatbotSessions />}
+        {tab === "analytics" && <AnalyticsPanel />}
 
         {tab === "questions" && <div>
           <h2 className="text-xl font-black text-white mb-4">שאלות לרבני הקהילה</h2>

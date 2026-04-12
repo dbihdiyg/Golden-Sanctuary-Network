@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk } from "@clerk/react";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
@@ -69,6 +70,11 @@ function AdminRoute() {
   return <AdminPage />;
 }
 
+function AnalyticsTracker() {
+  useAnalytics();
+  return null;
+}
+
 function ClerkCacheInvalidator() {
   const { addListener } = useClerk();
   const qc = useQueryClient();
@@ -123,6 +129,7 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkCacheInvalidator />
+        <AnalyticsTracker />
         <TooltipProvider>
           <div dir="rtl" className="min-h-[100dvh] bg-background text-foreground overflow-x-hidden selection:bg-primary/30">
             <SiteNav />

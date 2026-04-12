@@ -9,6 +9,7 @@ import forumRouter from "./forum";
 import mediaSubmissionsRouter from "./media-submissions";
 import newsletterRouter from "./newsletter";
 import chatbotRouter from "./chatbot";
+import analyticsRouter from "./analytics";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(forumRouter);
 router.use(mediaSubmissionsRouter);
 router.use("/newsletter", newsletterRouter);
 router.use("/chatbot", chatbotRouter);
+router.use(analyticsRouter);
 
 export default router;
