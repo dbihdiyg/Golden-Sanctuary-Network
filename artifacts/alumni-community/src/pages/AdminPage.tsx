@@ -724,10 +724,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         )}
 
-        <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1 mb-2 flex-wrap">
+        <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1 mb-2 overflow-x-auto scrollbar-none">
           {([["questions", "שאלות לרב", MessageSquare], ["media", "תוכן ממשתמשים", Inbox], ["newsletter", "רשימת תפוצה", Mail], ["chatbot", "שיחות AI", Bot], ["analytics", "סטטיסטיקות", BarChart3]] as const).map(([k, l, Icon]) => (
             <button key={k} onClick={() => setTab(k as any)}
-              className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition ${tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-white"}`}>
+              className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition whitespace-nowrap ${tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-white"}`}>
               <Icon className="h-4 w-4" />{l}
             </button>
           ))}
