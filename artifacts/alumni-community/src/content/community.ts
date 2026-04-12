@@ -22,6 +22,7 @@ export const navLinks = [
   { label: "תמונות", href: "/photos" },
   { label: "וידאו", href: "/videos" },
   { label: "עלונים", href: "/library" },
+  { label: "שאלה לרב", href: "/ask-rabbi" },
   { label: "צור קשר", href: "/contact" },
 ];
 

@@ -212,21 +212,100 @@ function Field({ label, type = "text", textarea = false }: { label: string; type
 }
 
 export function AskRabbiPage() {
+  const [form, setForm] = useState({ name: "", contact: "", topic: "", question: "" });
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm(f => ({ ...f, [key]: e.target.value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("sending");
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/ask-rabbi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "שגיאה");
+      setStatus("sent");
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : "שגיאה בשליחה");
+      setStatus("error");
+    }
+  };
+
+  const inputCls = "w-full rounded-2xl border border-white/10 bg-background/60 px-5 py-3 text-right text-white outline-none focus:border-primary/60 transition placeholder:text-muted-foreground/50";
+
   return (
     <PageShell eyebrow="שאל את רבני הבוגרים" title="שאלה לרבני הקהילה" description="שאלות בהלכה, אמונה וחיי יום־יום — שלחו שאלה ורבני הבוגרים יענו בהקדם.">
       <section className="px-6 pb-24">
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-          <form className="space-y-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl backdrop-blur-xl">
-            <div className="grid gap-5 md:grid-cols-2"><Field label="שם" /><Field label="אימייל או טלפון" /></div>
-            <Field label="נושא השאלה" />
-            <Field label="השאלה" textarea />
-            <button type="button" className="inline-flex w-full items-center justify-center rounded-full bg-primary px-8 py-4 font-bold text-primary-foreground transition hover:shadow-[0_0_40px_rgba(245,192,55,0.3)]">שליחת שאלה <Send className="mr-2 h-5 w-5" /></button>
-          </form>
+
+          {status === "sent" ? (
+            <div className="flex flex-col items-center justify-center gap-6 rounded-[2rem] border border-primary/30 bg-primary/10 p-12 text-center shadow-2xl">
+              <div className="grid h-20 w-20 place-items-center rounded-full border border-primary/40 bg-primary/20 text-primary shadow-[0_0_50px_rgba(245,192,55,0.3)]">
+                <Send className="h-8 w-8" />
+              </div>
+              <div>
+                <p className="font-serif text-4xl font-black text-primary">תודה, {form.name}!</p>
+                <p className="mt-3 text-lg text-muted-foreground">השאלה נשלחה. רבני הקהילה יחזרו אליך בהקדם.</p>
+              </div>
+              <button onClick={() => { setForm({ name: "", contact: "", topic: "", question: "" }); setStatus("idle"); }}
+                className="rounded-full border border-white/15 px-6 py-2 text-sm text-muted-foreground hover:text-primary transition">
+                שאל שאלה נוספת
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl backdrop-blur-xl">
+              <div className="grid gap-5 md:grid-cols-2">
+                <label className="block space-y-2 text-right">
+                  <span className="text-sm font-bold text-muted-foreground">שם <span className="text-red-400">*</span></span>
+                  <input required value={form.name} onChange={set("name")} placeholder="ישראל ישראלי" className={inputCls} />
+                </label>
+                <label className="block space-y-2 text-right">
+                  <span className="text-sm font-bold text-muted-foreground">אימייל או טלפון</span>
+                  <input value={form.contact} onChange={set("contact")} placeholder="לחזרה אליך (לא חובה)" className={inputCls} />
+                </label>
+              </div>
+              <label className="block space-y-2 text-right">
+                <span className="text-sm font-bold text-muted-foreground">נושא השאלה</span>
+                <input value={form.topic} onChange={set("topic")} placeholder="הלכה, אמונה, חיי יום-יום..." className={inputCls} />
+              </label>
+              <label className="block space-y-2 text-right">
+                <span className="text-sm font-bold text-muted-foreground">השאלה <span className="text-red-400">*</span></span>
+                <textarea required value={form.question} onChange={set("question")} rows={6}
+                  placeholder="כתוב את שאלתך כאן..." className={`${inputCls} resize-none`} />
+              </label>
+
+              {status === "error" && (
+                <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{errorMsg}</p>
+              )}
+
+              <button type="submit" disabled={status === "sending"}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-8 py-4 font-bold text-primary-foreground transition hover:shadow-[0_0_40px_rgba(245,192,55,0.3)] disabled:opacity-60">
+                {status === "sending" ? "שולח..." : "שליחת שאלה"}
+                <Send className="h-5 w-5" />
+              </button>
+            </form>
+          )}
+
           <aside className="space-y-5">
-            <a href={contact.whatsapp} target="_blank" rel="noreferrer" className="flex items-center justify-between rounded-[2rem] border border-primary/30 bg-primary/12 p-6 text-primary transition hover:bg-primary hover:text-primary-foreground"><span className="font-serif text-2xl font-black">שאלה ישירה בוואטסאפ</span><MessageCircle /></a>
+            <a href={contact.whatsapp} target="_blank" rel="noreferrer"
+              className="flex items-center justify-between rounded-[2rem] border border-primary/30 bg-primary/12 p-6 text-primary transition hover:bg-primary hover:text-primary-foreground">
+              <span className="font-serif text-2xl font-black">שאלה ישירה בוואטסאפ</span>
+              <MessageCircle />
+            </a>
             <div className="rounded-[2rem] border border-white/10 bg-card p-6">
               <h3 className="font-serif text-2xl font-black text-white">שאלות נפוצות</h3>
-              <div className="mt-4 space-y-3">{faqs.map((faq) => <p key={faq} className="rounded-2xl bg-white/[0.04] p-4 text-muted-foreground">{faq}</p>)}</div>
+              <div className="mt-4 space-y-3">
+                {faqs.map((faq) => (
+                  <p key={faq} className="rounded-2xl bg-white/[0.04] p-4 text-muted-foreground">{faq}</p>
+                ))}
+              </div>
             </div>
           </aside>
         </div>
