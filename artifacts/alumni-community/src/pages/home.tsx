@@ -1,8 +1,6 @@
 import Hero from "@/components/sections/Hero";
 import Updates from "@/components/sections/Updates";
 import Gallery from "@/components/sections/Gallery";
-import VideoSection from "@/components/sections/VideoSection";
-import ShortsSection from "@/components/sections/ShortsSection";
 import LiveSection from "@/components/sections/LiveSection";
 import PDFLibrary from "@/components/sections/PDFLibrary";
 import CommunityFeed from "@/components/sections/CommunityFeed";
@@ -26,8 +24,6 @@ export default function Home() {
         <MediaSpotlight />
         <Gallery />
         <LiveSection />
-        <VideoSection />
-        <ShortsSection />
         <PDFLibrary />
         <CommunityFeed />
         <Inspiration />

@@ -16,6 +16,9 @@ const KNOWN_SHORTS = new Set([
 function detectCategory(title: string, id: string): string {
   if (KNOWN_SHORTS.has(id)) return "shorts";
   const t = title;
+  if (/ברכה|ברכות|איחולים|מזל טוב/.test(t)) return "ברכות";
+  if (/פתיחה|דבר פתיחה|פתיחת|הקדמה|מבוא/.test(t)) return "דברי פתיחה";
+  if (/סיפור|בוגר|עדות|ראיון|זיכרון/.test(t)) return "סיפורי בוגרים";
   if (/שיעור|הרצאה|לימוד|דרשה|פרש|פרשת|תורה/.test(t)) return "שיעורים";
   if (/מפגש|כינוס|אירוע|טקס|חגיגה|ריקוד/.test(t)) return "מפגשים";
   if (/שירה|נגינה|מוסיקה|ניגון/.test(t)) return "מוסיקה";
