@@ -341,7 +341,7 @@ function MyProfile({ userId, onPostDelete }: { userId: string; onPostDelete?: ()
         )}
       </div>
 
-      {!loading && stats && stats.my_posts.length > 0 && (
+      {!loading && stats && (stats.my_posts?.length ?? 0) > 0 && (
         <div className="space-y-4">
           <h3 className="font-bold text-white text-lg">הפוסטים שלי</h3>
           {stats.my_posts.map(post => (

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   CheckCircle, Clock, MessageSquare, BarChart3, Loader2,
   Lock, Eye, EyeOff, TrendingUp, LogOut, Users, ImageIcon,
-  Video, ThumbsUp, ThumbsDown, Inbox
+  Video, ThumbsUp, ThumbsDown, Inbox, Mail, Phone, Trash2, UserCheck, UserX
 } from "lucide-react";
 import Footer from "@/components/sections/Footer";
 
@@ -254,12 +254,170 @@ function MediaSubmissions({ token }: { token: string }) {
   );
 }
 
+interface Subscriber {
+  id: number;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  studied: string | null;
+  contact_person: string | null;
+  updates: string[];
+  joined_at: string;
+  is_active: boolean;
+  notes: string | null;
+}
+
+function MailingList() {
+  const [subs, setSubs] = useState<Subscriber[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [editNotes, setEditNotes] = useState<number | null>(null);
+  const [noteText, setNoteText] = useState("");
+
+  const load = async () => {
+    setLoading(true);
+    const res = await adminFetch("/api/newsletter/subscribers");
+    if (res.ok) setSubs(await res.json());
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const toggleActive = async (sub: Subscriber) => {
+    await adminFetch(`/api/newsletter/subscribers/${sub.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_active: !sub.is_active }),
+    });
+    setSubs(prev => prev.map(s => s.id === sub.id ? { ...s, is_active: !sub.is_active } : s));
+  };
+
+  const saveNotes = async (id: number) => {
+    await adminFetch(`/api/newsletter/subscribers/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ notes: noteText }),
+    });
+    setSubs(prev => prev.map(s => s.id === id ? { ...s, notes: noteText } : s));
+    setEditNotes(null);
+  };
+
+  const deleteSub = async (id: number) => {
+    if (!confirm("האם למחוק את הנרשם?")) return;
+    await adminFetch(`/api/newsletter/subscribers/${id}`, { method: "DELETE" });
+    setSubs(prev => prev.filter(s => s.id !== id));
+  };
+
+  const filtered = subs.filter(s =>
+    s.name.includes(search) || (s.phone ?? "").includes(search) || (s.email ?? "").includes(search)
+  );
+
+  const active = subs.filter(s => s.is_active).length;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-xl font-black text-white">רשימת תפוצה</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">{subs.length} נרשמים · {active} פעילים</p>
+        </div>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="חיפוש שם / טלפון / מייל…"
+          className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-right text-sm text-white outline-none focus:border-primary/50 placeholder:text-muted-foreground/50 w-64"
+        />
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : filtered.length === 0 ? (
+        <p className="text-center text-muted-foreground py-12">אין נרשמים עדיין.</p>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((s, i) => (
+            <div key={s.id} className={`rounded-[1.5rem] border bg-card p-5 transition ${s.is_active ? "border-white/10 hover:border-white/20" : "border-white/5 opacity-50"}`}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary text-sm font-black">
+                    {i + 1}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-black text-white">{s.name}</p>
+                    <div className="flex items-center gap-3 flex-wrap mt-1">
+                      {s.phone && (
+                        <a href={`tel:${s.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition" dir="ltr">
+                          <Phone className="h-3 w-3" />{s.phone}
+                        </a>
+                      )}
+                      {s.email && (
+                        <a href={`mailto:${s.email}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition" dir="ltr">
+                          <Mail className="h-3 w-3" />{s.email}
+                        </a>
+                      )}
+                    </div>
+                    {s.studied && <p className="text-xs text-muted-foreground mt-1">📚 {s.studied}</p>}
+                    {s.contact_person && <p className="text-xs text-muted-foreground">👤 {s.contact_person}</p>}
+                    {s.updates?.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {s.updates.map(u => (
+                          <span key={u} className="rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs text-primary">{u}</span>
+                        ))}
+                      </div>
+                    )}
+                    {editNotes === s.id ? (
+                      <div className="flex gap-2 mt-2">
+                        <input
+                          value={noteText}
+                          onChange={e => setNoteText(e.target.value)}
+                          placeholder="הוסף הערה…"
+                          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-right text-white outline-none focus:border-primary/50"
+                          autoFocus
+                        />
+                        <button onClick={() => saveNotes(s.id)} className="rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground">שמור</button>
+                        <button onClick={() => setEditNotes(null)} className="rounded-xl border border-white/10 px-3 py-1.5 text-xs text-muted-foreground">ביטול</button>
+                      </div>
+                    ) : s.notes ? (
+                      <p className="mt-1.5 text-xs text-muted-foreground cursor-pointer hover:text-white transition" onClick={() => { setEditNotes(s.id); setNoteText(s.notes ?? ""); }}>
+                        💬 {s.notes}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 flex-col md:flex-row">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {new Date(s.joined_at).toLocaleDateString("he-IL", { day: "numeric", month: "short", year: "numeric" })}
+                  </span>
+                  <button
+                    onClick={() => toggleActive(s)}
+                    title={s.is_active ? "הסר מפעילים" : "הפעל"}
+                    className={`rounded-full border p-2 transition ${s.is_active ? "border-green-500/30 text-green-400 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400" : "border-white/10 text-muted-foreground hover:border-green-500/30 hover:text-green-400"}`}>
+                    {s.is_active ? <UserCheck className="h-4 w-4" /> : <UserX className="h-4 w-4" />}
+                  </button>
+                  <button
+                    onClick={() => { setEditNotes(s.id); setNoteText(s.notes ?? ""); }}
+                    title="הוסף הערה"
+                    className="rounded-full border border-white/10 p-2 text-muted-foreground transition hover:text-primary hover:border-primary/30">
+                    <MessageSquare className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => deleteSub(s.id)} title="מחק"
+                    className="rounded-full border border-white/10 p-2 text-muted-foreground transition hover:text-red-400 hover:border-red-400/30">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("הכל");
-  const [tab, setTab] = useState<"questions" | "media">("questions");
+  const [tab, setTab] = useState<"questions" | "media" | "newsletter">("questions");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -324,7 +482,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         )}
 
         <div className="flex gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1 mb-2">
-          {([["questions", "שאלות לרב", MessageSquare], ["media", "תוכן ממשתמשים", Inbox]] as const).map(([k, l, Icon]) => (
+          {([["questions", "שאלות לרב", MessageSquare], ["media", "תוכן ממשתמשים", Inbox], ["newsletter", "רשימת תפוצה", Mail]] as const).map(([k, l, Icon]) => (
             <button key={k} onClick={() => setTab(k as any)}
               className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition ${tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-white"}`}>
               <Icon className="h-4 w-4" />{l}
@@ -333,6 +491,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         </div>
 
         {tab === "media" && <MediaSubmissions token={sessionStorage.getItem(TOKEN_KEY) ?? ""} />}
+        {tab === "newsletter" && <MailingList />}
 
         {tab === "questions" && <div>
           <h2 className="text-xl font-black text-white mb-4">שאלות לרבני הקהילה</h2>

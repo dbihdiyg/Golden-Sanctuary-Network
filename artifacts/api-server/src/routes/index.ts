@@ -7,6 +7,7 @@ import adminRouter from "./admin";
 import profileRouter from "./profile";
 import forumRouter from "./forum";
 import mediaSubmissionsRouter from "./media-submissions";
+import newsletterRouter from "./newsletter";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(adminRouter);
 router.use(profileRouter);
 router.use(forumRouter);
 router.use(mediaSubmissionsRouter);
+router.use("/newsletter", newsletterRouter);
 
 export default router;

@@ -26,7 +26,7 @@ function validateToken(token: string): boolean {
   }
 }
 
-function requireAdmin(req: any, res: any, next: any) {
+export function requireAdmin(req: any, res: any, next: any) {
   const auth = req.headers["authorization"] as string | undefined;
   const token = auth?.replace("Bearer ", "").trim() ?? "";
   if (!token || !validateToken(token)) {

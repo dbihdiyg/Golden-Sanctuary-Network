@@ -294,17 +294,29 @@ export function JoinPage() {
   const toggle = (opt: string) =>
     setForm(f => ({ ...f, updates: f.updates.includes(opt) ? f.updates.filter(o => o !== opt) : [...f.updates, opt] }));
 
-  const handleSubmit = () => {
-    const body = [
-      `שם: ${form.name}`,
-      `טלפון: ${form.phone}`,
-      `אימייל: ${form.email}`,
-      `היכן למדת: ${form.studied}`,
-      `איש קשר בצוות: ${form.contact_person}`,
-      `עדכונים מבוקשים: ${form.updates.join(", ")}`,
-    ].join("\n");
-    window.open(`mailto:O462272103@GMAIL.COM?subject=הצטרפות חדשה לרשימת התפוצה — ${form.name}&body=${encodeURIComponent(body)}`);
-    setSent(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const res = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setSubmitError(d.error ?? "שגיאה בשליחה, נסה שוב");
+      } else {
+        setSent(true);
+      }
+    } catch {
+      setSubmitError("שגיאת רשת — נסה שוב");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -357,8 +369,12 @@ export function JoinPage() {
               </div>
             </div>
 
-            <button type="submit" className="inline-flex w-full items-center justify-center rounded-full bg-primary px-8 py-4 font-bold text-primary-foreground transition hover:shadow-[0_0_40px_rgba(245,192,55,0.3)]">
-              הצטרפות לרשימה <Send className="mr-2 h-5 w-5" />
+            {submitError && (
+              <p className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-center text-sm text-red-400">{submitError}</p>
+            )}
+
+            <button type="submit" disabled={submitting} className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-8 py-4 font-bold text-primary-foreground transition hover:shadow-[0_0_40px_rgba(245,192,55,0.3)] disabled:opacity-60 disabled:cursor-not-allowed">
+              {submitting ? <><span className="h-5 w-5 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" /> שולח…</> : <>הצטרפות לרשימה <Send className="mr-2 h-5 w-5" /></>}
             </button>
           </form>
         )}
