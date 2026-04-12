@@ -37,7 +37,7 @@ export default function Footer() {
           <div className="space-y-3 text-muted-foreground">
             <a href={contact.email} className="flex items-center gap-3 transition hover:text-primary"><Mail className="h-4 w-4 text-primary" /> O462272103@GMAIL.COM</a>
             <p className="flex items-center gap-3"><Phone className="h-4 w-4 text-primary" /> 03-306-5092</p>
-            <p className="flex items-center gap-3"><MapPin className="h-4 w-4 text-primary" /> ירושלים</p>
+            <p className="flex items-center gap-3"><MapPin className="h-4 w-4 text-primary" /> מגדל העמק</p>
             <a href={contact.whatsapp} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-primary/35 px-5 py-2 font-bold text-primary transition hover:bg-primary hover:text-primary-foreground">
               וואטסאפ
               <MessageCircle className="h-4 w-4" />
