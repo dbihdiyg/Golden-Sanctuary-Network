@@ -6,6 +6,7 @@ export const shortsData = [
   { id: "dw-0tv1JCDY", title: "רגע מהקהילה" },
   { id: "WJR3UNFD-AA", title: "רגע מהקהילה" },
   { id: "jtECZkvt_WY", title: "רגע מהקהילה" },
+  { id: "fa2zbBBpJto", title: "רגע מהקהילה" },
 ];
 
 function ShortsModal({ id, onClose }: { id: string; onClose: () => void }) {
