@@ -55,7 +55,7 @@ export const categories = [
     description: "חדשות, הודעות, שמחות ופעילות שוטפת.",
     href: "/updates",
     icon: Newspaper,
-    image: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=1200&auto=format&fit=crop",
+    image: "/community-gathering.jpg",
   },
   {
     title: "שאל את הרב",
