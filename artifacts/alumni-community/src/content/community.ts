@@ -100,14 +100,6 @@ export const updates = [
 
 export const photos = [
   { src: "/photo-meron-shobevim.jpg", title: "אבי תנועת הקירוב הגרי\"ד גרוסמן שליט\"א — תפילה באתרא קדישא מירון לרגל סיום ימי השובבי\"ם", tag: "מירון", year: "2026" },
-  { src: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1600&auto=format&fit=crop", title: "ערב תפילה מיוחד בכותל המערבי", tag: "מפגש שנתי", year: "2026" },
-  { src: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=1600&auto=format&fit=crop", title: "רגעים של לימוד וזיכרון", tag: "תורה", year: "2026" },
-  { src: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=1600&auto=format&fit=crop", title: "ירושלים עיר הקודש", tag: "קהילה", year: "2025" },
-  { src: "https://images.unsplash.com/photo-1609770231080-e321deccc34c?q=80&w=1600&auto=format&fit=crop", title: "קריאה בספר התורה", tag: "תורה", year: "2025" },
-  { src: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=1600&auto=format&fit=crop", title: "ספרים עתיקים מאוצרות הישיבה", tag: "אירועים", year: "2024" },
-  { src: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1600&auto=format&fit=crop", title: "בית המדרש — מקום הלימוד", tag: "מפגש", year: "2024" },
-  { src: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1600&auto=format&fit=crop", title: "פרחים לכבוד שבת", tag: "תורה", year: "2024" },
-  { src: "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=1600&auto=format&fit=crop", title: "נרות שבת קודש", tag: "אירועים", year: "2023" },
 ];
 
 export const videos = [
