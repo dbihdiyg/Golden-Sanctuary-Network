@@ -51,7 +51,8 @@ router.post("/ask-rabbi", async (req, res) => {
     });
     return res.json({ success: true });
   } catch (err) {
-    return res.status(500).json({ error: "שגיאה בשליחת המייל. נסה שנית." });
+    console.error("Email send error:", err);
+    return res.status(500).json({ error: "שגיאה בשליחת המייל. נסה שנית.", detail: String(err) });
   }
 });
 
