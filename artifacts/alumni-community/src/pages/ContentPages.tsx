@@ -70,17 +70,23 @@ export function VideosPage() {
 
       <section className="px-6 pb-16">
         <div className="mx-auto max-w-7xl overflow-hidden rounded-[2.5rem] border border-primary/20 bg-card shadow-[0_40px_120px_rgba(0,0,0,0.55)]">
-          <div className="grid md:grid-cols-[1fr_1.1fr]">
-            <div className="relative min-h-[340px] overflow-hidden md:min-h-[420px]">
+          <div className="grid md:grid-cols-[1fr_1.4fr_1fr]">
+
+            {/* תמונה שמאל — יוסף זריהן ז״ל */}
+            <div className="relative hidden min-h-[420px] overflow-hidden md:block">
               <img
-                src="/rabbi-intro.jpg"
-                alt="מורנו הרב שליט״א"
-                className="h-full w-full object-cover object-top"
+                src="/yosef-zarihan.jpg"
+                alt="יוסף זריהן ז״ל"
+                className="h-full w-full object-cover object-top grayscale"
               />
-              <div className="absolute inset-0 bg-gradient-to-l from-card via-card/30 to-transparent md:bg-gradient-to-l" />
-              <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent md:hidden" />
+              <div className="absolute inset-0 bg-gradient-to-r from-card via-card/20 to-transparent" />
+              <div className="absolute bottom-6 right-6 text-right">
+                <p className="text-xs font-black tracking-widest text-white/50">ברוך דיין האמת</p>
+                <p className="font-serif text-lg font-black text-white/80">יוסף זריהן ז״ל</p>
+              </div>
             </div>
 
+            {/* טקסט מרכזי */}
             <div className="flex flex-col justify-center gap-6 p-8 text-right md:p-12">
               <div>
                 <p className="text-sm font-black tracking-[0.28em] text-blue-brand">פתח דבר</p>
@@ -101,6 +107,18 @@ export function VideosPage() {
                 <ArrowLeft className="h-4 w-4 text-primary" />
               </div>
             </div>
+
+            {/* תמונה ימין — הרב שליט״א */}
+            <div className="relative min-h-[340px] overflow-hidden md:min-h-[420px]">
+              <img
+                src="/rabbi-intro.jpg"
+                alt="מורנו הרב שליט״א"
+                className="h-full w-full object-cover object-top"
+              />
+              <div className="absolute inset-0 bg-gradient-to-l from-transparent via-card/20 to-card" />
+              <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent md:hidden" />
+            </div>
+
           </div>
         </div>
       </section>
