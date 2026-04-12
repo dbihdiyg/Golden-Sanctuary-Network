@@ -24,7 +24,7 @@ export const navLinks = [
   { label: "וידאו", href: "/videos" },
   { label: "עלונים", href: "/library" },
   { label: "עדכונים", href: "/updates" },
-  { label: "שאל את הרב", href: "/ask-rabbi" },
+  { label: "שאל את רבני הבוגרים", href: "/ask-rabbi" },
   { label: "צור קשר", href: "/contact" },
 ];
 
@@ -58,8 +58,8 @@ export const categories = [
     image: "/community-gathering.jpg",
   },
   {
-    title: "שאל את הרב",
-    description: "שליחת שאלות בצורה מכבדת, אישית ודיסקרטית.",
+    title: "שאל את רבני הבוגרים",
+    description: "שאלות בהלכה, אמונה וחיי יום־יום — רבני הקהילה כאן בשבילכם.",
     href: "/ask-rabbi",
     icon: HelpCircle,
     image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1200&auto=format&fit=crop",
@@ -183,15 +183,15 @@ export const feed = [
 export const quickActions = [
   { title: "דברו איתנו בוואטסאפ", text: "מענה מהיר לצוות הקהילה", href: contact.whatsapp, icon: MessageCircle },
   { title: "שלחו אימייל", text: "לפניות, תמונות ועדכונים", href: contact.email, icon: Mail },
-  { title: "שאל את הרב", text: "שאלה אישית או אנונימית", href: "/ask-rabbi", icon: HelpCircle },
+  { title: "שאל את רבני הבוגרים", text: "שאלה בהלכה ואמונה", href: "/ask-rabbi", icon: HelpCircle },
   { title: "שלחו תמונה או עדכון", text: "נשמח להעלות לאתר", href: "/contact", icon: Camera },
   { title: "הצטרפו לרשימת התפוצה", text: "עלונים, אירועים ומדיה", href: "/join", icon: UsersRound },
 ];
 
 export const faqs = [
-  "האם אפשר לשלוח שאלה באופן אנונימי?",
   "כמה זמן לוקח לקבל מענה?",
-  "האם שאלות מתפרסמות באתר?",
+  "האם ניתן לשלוח שאלה בוואטסאפ?",
+  "אילו נושאים ניתן לשאול?",
 ];
 
 export const stories = [

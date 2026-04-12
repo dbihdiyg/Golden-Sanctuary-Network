@@ -210,14 +210,13 @@ function Field({ label, type = "text", textarea = false }: { label: string; type
 
 export function AskRabbiPage() {
   return (
-    <PageShell eyebrow="שאל את הרב" title="שליחת שאלה בצורה מכבדת ודיסקרטית" description="ניתן לשלוח שאלה אישית, לבחור נושא, ולסמן אם תרצו שהפנייה תהיה אנונימית.">
+    <PageShell eyebrow="שאל את רבני הבוגרים" title="שאלה לרבני הקהילה" description="שאלות בהלכה, אמונה וחיי יום־יום — שלחו שאלה ורבני הבוגרים יענו בהקדם.">
       <section className="px-6 pb-24">
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.2fr_0.8fr]">
           <form className="space-y-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl backdrop-blur-xl">
             <div className="grid gap-5 md:grid-cols-2"><Field label="שם" /><Field label="אימייל או טלפון" /></div>
             <Field label="נושא השאלה" />
             <Field label="השאלה" textarea />
-            <label className="flex items-center gap-3 text-muted-foreground"><input type="checkbox" className="h-5 w-5 accent-primary" /> שליחה אנונימית</label>
             <button type="button" className="inline-flex w-full items-center justify-center rounded-full bg-primary px-8 py-4 font-bold text-primary-foreground transition hover:shadow-[0_0_40px_rgba(245,192,55,0.3)]">שליחת שאלה <Send className="mr-2 h-5 w-5" /></button>
           </form>
           <aside className="space-y-5">
