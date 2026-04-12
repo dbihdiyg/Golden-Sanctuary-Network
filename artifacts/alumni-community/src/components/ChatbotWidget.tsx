@@ -99,7 +99,7 @@ export default function ChatbotWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 left-6 z-50 flex flex-col items-start gap-3" dir="rtl">
+    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3" dir="rtl">
       {open && (
         <div className="w-[340px] sm:w-[380px] rounded-[2rem] border border-white/15 bg-[#0e0e0e] shadow-[0_24px_80px_rgba(0,0,0,0.7)] flex flex-col overflow-hidden"
           style={{ maxHeight: "calc(100dvh - 120px)" }}>
