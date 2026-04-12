@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   CheckCircle, Clock, MessageSquare, BarChart3, Loader2,
   Lock, Eye, EyeOff, TrendingUp, LogOut, Users, ImageIcon,
-  Video, ThumbsUp, ThumbsDown, Inbox, Mail, Phone, Trash2, UserCheck, UserX
+  Video, ThumbsUp, ThumbsDown, Inbox, Mail, Phone, Trash2, UserCheck, UserX, Bot
 } from "lucide-react";
 import Footer from "@/components/sections/Footer";
 
@@ -412,12 +412,113 @@ function MailingList() {
   );
 }
 
+interface ChatSession {
+  session_id: string;
+  user_name: string | null;
+  phone: string | null;
+  registered_at: string | null;
+  started_at: string;
+  last_message_at: string;
+  message_count: number;
+}
+
+interface ChatMsg {
+  role: string;
+  content: string;
+  created_at: string;
+}
+
+function ChatbotSessions() {
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [msgs, setMsgs] = useState<Record<string, ChatMsg[]>>({});
+  const [loadingMsgs, setLoadingMsgs] = useState<string | null>(null);
+
+  useEffect(() => {
+    adminFetch("/api/chatbot/sessions")
+      .then(r => r.json())
+      .then(d => { setSessions(d); setLoading(false); });
+  }, []);
+
+  const toggleSession = async (id: string) => {
+    if (expanded === id) { setExpanded(null); return; }
+    setExpanded(id);
+    if (!msgs[id]) {
+      setLoadingMsgs(id);
+      const r = await adminFetch(`/api/chatbot/sessions/${id}/messages`);
+      const d = await r.json();
+      setMsgs(prev => ({ ...prev, [id]: d }));
+      setLoadingMsgs(null);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-xl font-black text-white">שיחות עם הרוחניק</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">{sessions.length} שיחות</p>
+      </div>
+      {loading ? (
+        <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : sessions.length === 0 ? (
+        <p className="text-center text-muted-foreground py-12">אין שיחות עדיין.</p>
+      ) : (
+        <div className="space-y-3">
+          {sessions.map(s => (
+            <div key={s.session_id} className="rounded-[1.5rem] border border-white/10 bg-card overflow-hidden">
+              <button
+                onClick={() => toggleSession(s.session_id)}
+                className="w-full flex items-center justify-between gap-4 p-5 text-right hover:bg-white/[0.02] transition">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/8 text-primary text-xs font-black">
+                    AI
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-white">{s.user_name ?? "אנונימי"}</span>
+                      {s.phone && <span className="text-xs text-muted-foreground" dir="ltr">{s.phone}</span>}
+                      {s.registered_at && (
+                        <span className="rounded-full bg-green-500/10 border border-green-500/30 px-2 py-0.5 text-xs text-green-400">✓ נרשם</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <span className="text-xs text-muted-foreground">{s.message_count} הודעות</span>
+                      <span className="text-xs text-muted-foreground/50">
+                        {new Date(s.last_message_at).toLocaleDateString("he-IL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <span className={`text-muted-foreground transition ${expanded === s.session_id ? "rotate-180" : ""}`}>▼</span>
+              </button>
+              {expanded === s.session_id && (
+                <div className="border-t border-white/10 p-4 space-y-2 max-h-96 overflow-y-auto bg-black/20">
+                  {loadingMsgs === s.session_id ? (
+                    <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+                  ) : (msgs[s.session_id] ?? []).map((m, i) => (
+                    <div key={i} className={`flex gap-2 ${m.role === "user" ? "flex-row-reverse" : ""}`} dir="rtl">
+                      <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
+                        m.role === "user" ? "bg-primary/20 text-primary-foreground border border-primary/30 rounded-tr-sm" : "bg-white/5 border border-white/10 text-muted-foreground rounded-tl-sm"
+                      }`}>{m.content}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("הכל");
-  const [tab, setTab] = useState<"questions" | "media" | "newsletter">("questions");
+  const [tab, setTab] = useState<"questions" | "media" | "newsletter" | "chatbot">("questions");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -482,7 +583,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         )}
 
         <div className="flex gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1 mb-2">
-          {([["questions", "שאלות לרב", MessageSquare], ["media", "תוכן ממשתמשים", Inbox], ["newsletter", "רשימת תפוצה", Mail]] as const).map(([k, l, Icon]) => (
+          {([["questions", "שאלות לרב", MessageSquare], ["media", "תוכן ממשתמשים", Inbox], ["newsletter", "רשימת תפוצה", Mail], ["chatbot", "שיחות AI", Bot]] as const).map(([k, l, Icon]) => (
             <button key={k} onClick={() => setTab(k as any)}
               className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition ${tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-white"}`}>
               <Icon className="h-4 w-4" />{l}
@@ -492,6 +593,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
         {tab === "media" && <MediaSubmissions token={sessionStorage.getItem(TOKEN_KEY) ?? ""} />}
         {tab === "newsletter" && <MailingList />}
+        {tab === "chatbot" && <ChatbotSessions />}
 
         {tab === "questions" && <div>
           <h2 className="text-xl font-black text-white mb-4">שאלות לרבני הקהילה</h2>

@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import SiteNav from "@/components/SiteNav";
 import FloatingActions from "@/components/FloatingActions";
+import ChatbotWidget from "@/components/ChatbotWidget";
 import UserPortal from "@/pages/UserPortal";
 import AdminPage from "@/pages/AdminPage";
 import {
@@ -127,6 +128,7 @@ function ClerkProviderWithRoutes() {
             <SiteNav />
             <AppRoutes />
             <FloatingActions />
+            <ChatbotWidget />
           </div>
         </TooltipProvider>
         <Toaster />
