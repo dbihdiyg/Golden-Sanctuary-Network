@@ -8,30 +8,17 @@ const router = Router();
 const TO_EMAIL = "O462272103@GMAIL.COM";
 
 function createTransporter() {
-  const user = process.env["GMAIL_USER"] ?? TO_EMAIL;
+  const user = process.env["GMAIL_USER"];
   const pass = process.env["GMAIL_APP_PASSWORD"];
-  if (!pass) return null;
+  if (!user || !pass) return null;
   return nodemailer.createTransport({
     service: "gmail",
     auth: { user, pass },
   });
 }
 
-router.post("/ask-rabbi", async (req, res) => {
-  const { name, contact, topic, question } = req.body ?? {};
-  const auth = getAuth(req);
-  const clerkUserId = auth?.userId ?? null;
-
-  if (!name || !question) {
-    return res.status(400).json({ error: "שם ושאלה הם שדות חובה" });
-  }
-
-  const transporter = createTransporter();
-  if (!transporter) {
-    return res.status(503).json({ error: "שירות המייל אינו מוגדר עדיין" });
-  }
-
-  const htmlBody = `
+function buildHtml(name: string, contact: string | null, topic: string | null, question: string) {
+  return `
     <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px;">
       <h2 style="color: #d4a62a;">שאלה חדשה לרבני הקהילה</h2>
       <table style="width:100%; border-collapse:collapse;">
@@ -45,6 +32,16 @@ router.post("/ask-rabbi", async (req, res) => {
       <p style="color:#888; font-size:12px;">נשלח מאתר בוגרי מאירים</p>
     </div>
   `;
+}
+
+router.post("/ask-rabbi", async (req, res) => {
+  const { name, contact, topic, question } = req.body ?? {};
+  const auth = getAuth(req);
+  const clerkUserId = auth?.userId ?? null;
+
+  if (!name || !question) {
+    return res.status(400).json({ error: "שם ושאלה הם שדות חובה" });
+  }
 
   try {
     await pool.query(
@@ -53,20 +50,27 @@ router.post("/ask-rabbi", async (req, res) => {
     );
   } catch (dbErr) {
     console.error("DB save error:", dbErr);
+    return res.status(500).json({ error: "שגיאה בשמירת השאלה. נסה שנית." });
   }
 
-  try {
-    await transporter.sendMail({
-      from: `"בוגרי מאירים" <${process.env["GMAIL_USER"] ?? TO_EMAIL}>`,
-      to: TO_EMAIL,
-      subject: `שאלה חדשה מ${name}${topic ? ` — ${topic}` : ""}`,
-      html: htmlBody,
-    });
-    return res.json({ success: true });
-  } catch (err) {
-    console.error("Email send error:", err);
-    return res.status(500).json({ error: "שגיאה בשליחת המייל. נסה שנית.", detail: String(err) });
+  res.json({ success: true });
+
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.warn("Email not configured — question saved to DB only.");
+    return;
   }
+
+  transporter.sendMail({
+    from: `"בוגרי מאירים" <${process.env["GMAIL_USER"]}>`,
+    to: TO_EMAIL,
+    subject: `שאלה חדשה מ${name}${topic ? ` — ${topic}` : ""}`,
+    html: buildHtml(name, contact || null, topic || null, question),
+  }).then(() => {
+    console.info("Email sent for question from", name);
+  }).catch((err: unknown) => {
+    console.error("Email send error (non-blocking):", err);
+  });
 });
 
 export default router;
