@@ -2,6 +2,7 @@ import Hero from "@/components/sections/Hero";
 import Updates from "@/components/sections/Updates";
 import Gallery from "@/components/sections/Gallery";
 import VideoSection from "@/components/sections/VideoSection";
+import ShortsSection from "@/components/sections/ShortsSection";
 import PDFLibrary from "@/components/sections/PDFLibrary";
 import CommunityFeed from "@/components/sections/CommunityFeed";
 import Footer from "@/components/sections/Footer";
@@ -24,6 +25,7 @@ export default function Home() {
         <MediaSpotlight />
         <Gallery />
         <VideoSection />
+        <ShortsSection />
         <PDFLibrary />
         <CommunityFeed />
         <Inspiration />
