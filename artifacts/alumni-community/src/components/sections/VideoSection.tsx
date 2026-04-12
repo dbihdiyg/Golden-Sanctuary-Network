@@ -4,16 +4,16 @@ import VideoModal from "@/components/VideoModal";
 
 const videos = [
   {
+    title: "שיעור / אירוע מגדל אור — חדש",
+    text: "סרטון חדש שהועלה לספריית הקהילה.",
+    image: "https://img.youtube.com/vi/hzMacELExrU/maxresdefault.jpg",
+    url: "https://www.youtube.com/watch?v=hzMacELExrU",
+  },
+  {
     title: "שיעור / אירוע מגדל אור",
     text: "סרטון חדש שהועלה לספריית הקהילה.",
     image: "https://img.youtube.com/vi/TPQ-MDNOLu4/maxresdefault.jpg",
     url: "https://www.youtube.com/watch?v=TPQ-MDNOLu4",
-  },
-  {
-    title: "דברי פתיחה למפגש הבוגרים",
-    text: "מסר קצר על שורשים, אחריות וחיבור מתמשך.",
-    image: "/rabbi-mic.jpg",
-    url: "https://www.youtube.com/watch?v=azdY5mFGjU0",
   },
 ];
 
