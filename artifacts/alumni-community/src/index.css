@@ -76,30 +76,29 @@
   --elevate-2: rgba(255,255,255, .08);
 
   /* Very dark rich grey/blue for background */
-  --background: 228 15% 7%;
-  --foreground: 45 30% 90%;
+  --background: 232 30% 4%;
+  --foreground: 46 42% 91%;
 
-  --border: 228 15% 15%;
+  --border: 228 26% 15%;
 
-  --card: 228 15% 10%;
+  --card: 230 28% 8%;
   --card-foreground: 45 30% 90%;
-  --card-border: 228 15% 15%;
+  --card-border: 228 26% 15%;
 
-  --popover: 228 15% 10%;
+  --popover: 230 28% 8%;
   --popover-foreground: 45 30% 90%;
   --popover-border: 228 15% 15%;
 
-  /* Gold accents */
-  --primary: 43 74% 49%;
-  --primary-foreground: 228 15% 7%;
+  --primary: 44 92% 57%;
+  --primary-foreground: 232 30% 4%;
 
-  --secondary: 228 15% 15%;
+  --secondary: 237 100% 24%;
   --secondary-foreground: 45 30% 90%;
 
-  --muted: 228 15% 15%;
-  --muted-foreground: 45 10% 60%;
+  --muted: 230 24% 14%;
+  --muted-foreground: 46 18% 67%;
 
-  --accent: 43 74% 49%;
+  --accent: 237 100% 32%;
   --accent-foreground: 228 15% 7%;
 
   --destructive: 0 84% 60%;
@@ -108,18 +107,18 @@
   --input: 228 15% 15%;
   --ring: 43 74% 49%;
 
-  --chart-1: 43 74% 49%;
-  --chart-2: 25 85% 55%;
-  --chart-3: 175 60% 45%;
+  --chart-1: 44 92% 57%;
+  --chart-2: 237 100% 32%;
+  --chart-3: 46 95% 78%;
   --chart-4: 280 65% 60%;
   --chart-5: 340 70% 65%;
 
-  --sidebar: 228 15% 7%;
+  --sidebar: 232 30% 4%;
   --sidebar-foreground: 45 30% 90%;
   --sidebar-border: 228 15% 15%;
-  --sidebar-primary: 43 74% 49%;
-  --sidebar-primary-foreground: 228 15% 7%;
-  --sidebar-accent: 228 15% 15%;
+  --sidebar-primary: 44 92% 57%;
+  --sidebar-primary-foreground: 232 30% 4%;
+  --sidebar-accent: 237 100% 24%;
   --sidebar-accent-foreground: 45 30% 90%;
   --sidebar-ring: 43 74% 49%;
 
@@ -203,14 +202,28 @@
 }
 
 .glow-text {
-  text-shadow: 0 0 20px rgba(234, 179, 8, 0.3);
+  text-shadow: 0 0 22px rgba(245, 192, 55, 0.36), 0 0 55px rgba(0, 19, 164, 0.18);
 }
 
 .gold-gradient-text {
-  background: linear-gradient(to right, #fef08a, #ca8a04, #fef08a);
+  background: linear-gradient(92deg, #fff2a8 0%, #f5c037 28%, #b88406 52%, #fff0a0 76%, #d89b10 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.brand-title {
+  font-family: 'Frank Ruhl Libre', serif;
+  letter-spacing: -0.04em;
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.72),
+    0 0 20px rgba(245, 192, 55, 0.32),
+    0 0 70px rgba(0, 19, 164, 0.28);
+}
+
+@theme inline {
+  --color-blue-brand: #0013a4;
+  --color-gold-light: #ffe681;
 }
 
 @layer utilities {

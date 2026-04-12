@@ -9,6 +9,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - Standalone React/Vite web artifact at `artifacts/alumni-community` served from `/`.
 - Hebrew RTL single-page alumni community website with dark luxury spiritual styling.
 - Includes cinematic hero, latest updates, masonry-style gallery with lightbox, video cards, downloadable PDF library, community feed, and footer.
+- April 2026 brand upgrade: integrated the attached "מאירים" logo and shifted the visual palette to logo-inspired black/graphite, luminous gold, and deep royal blue.
 
 ## Stack
 
