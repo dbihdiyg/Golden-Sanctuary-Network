@@ -41,5 +41,3 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
-ADMIN_PASSWORD = "148318156"
-ADMIN_SECRET = "7b255f748eee8a47d514c12f6c83906c67d9a0c45cdc301debbd921f826df9f9"
