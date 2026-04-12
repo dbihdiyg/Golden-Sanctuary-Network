@@ -139,6 +139,8 @@ export const updates = [
 ];
 
 export const photos = [
+  { src: "/rabbi-lelov-shacharit.png", title: "מורנו הרב שליט״א בתפילת שחרית — עיירת לעלוב, פולין", tag: "לעלוב", year: "2026" },
+  { src: "/rabbi-lelov-outside.png", title: "מורנו הרב שליט״א בעיירת לעלוב, פולין", tag: "לעלוב", year: "2026" },
   { src: "/photo-meron-shobevim.jpg", title: "אבי תנועת הקירוב הגרי\"ד גרוסמן שליט\"א — תפילה באתרא קדישא מירון לרגל סיום ימי השובבי\"ם", tag: "מירון", year: "2026" },
   { src: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1600&auto=format&fit=crop", title: "ערב תפילה מיוחד בכותל המערבי", tag: "מפגש שנתי", year: "2026" },
   { src: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=1600&auto=format&fit=crop", title: "רגעים של לימוד וזיכרון", tag: "תורה", year: "2026" },
