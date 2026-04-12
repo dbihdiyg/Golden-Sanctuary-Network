@@ -254,15 +254,80 @@ export function ContactPage() {
 
 export function JoinPage() {
   const options = ["עדכוני קהילה", "עלונים", "אירועים", "וידאו ותמונות חדשים"];
+  const [form, setForm] = useState({ name: "", phone: "", email: "", studied: "", contact_person: "", updates: options.slice() });
+  const [sent, setSent] = useState(false);
+
+  const toggle = (opt: string) =>
+    setForm(f => ({ ...f, updates: f.updates.includes(opt) ? f.updates.filter(o => o !== opt) : [...f.updates, opt] }));
+
+  const handleSubmit = () => {
+    const body = [
+      `שם: ${form.name}`,
+      `טלפון: ${form.phone}`,
+      `אימייל: ${form.email}`,
+      `היכן למדת: ${form.studied}`,
+      `איש קשר בצוות: ${form.contact_person}`,
+      `עדכונים מבוקשים: ${form.updates.join(", ")}`,
+    ].join("\n");
+    window.open(`mailto:s0555030580@gmail.com?subject=הצטרפות חדשה לרשימת התפוצה — ${form.name}&body=${encodeURIComponent(body)}`);
+    setSent(true);
+  };
+
   return (
-    <PageShell eyebrow="הצטרפות לעדכונים" title="לא מפספסים שום דבר" description="הצטרפו לרשימת התפוצה ובחרו אילו עדכונים תרצו לקבל.">
+    <PageShell eyebrow="הצטרפות לעדכונים" title="לא מפספסים שום דבר" description="מלאו את הפרטים ובחרו אילו עדכונים תרצו לקבל — ונשלח לכם ישירות.">
       <section className="px-6 pb-24">
-        <form className="mx-auto max-w-3xl space-y-5 rounded-[2.5rem] border border-white/10 bg-white/[0.04] p-7 shadow-2xl backdrop-blur-xl">
-          <div className="grid gap-5 md:grid-cols-2"><Field label="שם" /><Field label="טלפון" /></div>
-          <Field label="אימייל" type="email" />
-          <div className="grid gap-3 md:grid-cols-2">{options.map((option) => <label key={option} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-background/60 p-4 text-muted-foreground"><input type="checkbox" className="h-5 w-5 accent-primary" defaultChecked /> {option}</label>)}</div>
-          <button type="button" className="inline-flex w-full items-center justify-center rounded-full bg-primary px-8 py-4 font-bold text-primary-foreground transition hover:shadow-[0_0_40px_rgba(245,192,55,0.3)]">הצטרפות לרשימה <Send className="mr-2 h-5 w-5" /></button>
-        </form>
+        {sent ? (
+          <div className="mx-auto max-w-xl rounded-[2.5rem] border border-primary/30 bg-primary/10 p-12 text-center shadow-2xl">
+            <p className="font-serif text-4xl font-black text-primary">תודה!</p>
+            <p className="mt-4 text-lg text-muted-foreground">הפרטים התקבלו. נחזור אליך בקרוב.</p>
+            <button onClick={() => setSent(false)} className="mt-6 rounded-full border border-white/10 px-6 py-2 text-sm text-muted-foreground hover:text-primary">חזרה לטופס</button>
+          </div>
+        ) : (
+          <form onSubmit={e => { e.preventDefault(); handleSubmit(); }} className="mx-auto max-w-3xl space-y-5 rounded-[2.5rem] border border-white/10 bg-white/[0.04] p-7 shadow-2xl backdrop-blur-xl">
+
+            <div className="grid gap-5 md:grid-cols-2">
+              <label className="block space-y-2 text-right">
+                <span className="text-sm font-bold text-muted-foreground">שם מלא</span>
+                <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full rounded-2xl border border-white/10 bg-background/60 px-5 py-3 text-right text-white outline-none focus:border-primary/60" />
+              </label>
+              <label className="block space-y-2 text-right">
+                <span className="text-sm font-bold text-muted-foreground">טלפון</span>
+                <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className="w-full rounded-2xl border border-white/10 bg-background/60 px-5 py-3 text-right text-white outline-none focus:border-primary/60" />
+              </label>
+            </div>
+
+            <label className="block space-y-2 text-right">
+              <span className="text-sm font-bold text-muted-foreground">אימייל</span>
+              <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="w-full rounded-2xl border border-white/10 bg-background/60 px-5 py-3 text-right text-white outline-none focus:border-primary/60" />
+            </label>
+
+            <label className="block space-y-2 text-right">
+              <span className="text-sm font-bold text-muted-foreground">בוגר מאירים — היכן למדת? (ישיבה קטנה / גדולה, שנה)</span>
+              <input required value={form.studied} onChange={e => setForm(f => ({ ...f, studied: e.target.value }))} placeholder="לדוגמה: ישיבה קטנה, מחזור תש״פ" className="w-full rounded-2xl border border-white/10 bg-background/60 px-5 py-3 text-right text-white placeholder:text-white/25 outline-none focus:border-primary/60" />
+            </label>
+
+            <label className="block space-y-2 text-right">
+              <span className="text-sm font-bold text-muted-foreground">מי האיש צוות שאתה בקשר איתו?</span>
+              <input value={form.contact_person} onChange={e => setForm(f => ({ ...f, contact_person: e.target.value }))} placeholder="שם האיש צוות" className="w-full rounded-2xl border border-white/10 bg-background/60 px-5 py-3 text-right text-white placeholder:text-white/25 outline-none focus:border-primary/60" />
+            </label>
+
+            <div>
+              <p className="mb-3 text-right text-sm font-bold text-muted-foreground">אילו עדכונים תרצה לקבל?</p>
+              <div className="grid gap-3 md:grid-cols-2">
+                {options.map(opt => (
+                  <label key={opt} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-background/60 p-4 text-muted-foreground transition hover:border-primary/30">
+                    <input type="checkbox" className="h-5 w-5 accent-primary" checked={form.updates.includes(opt)} onChange={() => toggle(opt)} />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <button type="submit" className="inline-flex w-full items-center justify-center rounded-full bg-primary px-8 py-4 font-bold text-primary-foreground transition hover:shadow-[0_0_40px_rgba(245,192,55,0.3)]">
+              הצטרפות לרשימה <Send className="mr-2 h-5 w-5" />
+            </button>
+          </form>
+        )}
       </section>
     </PageShell>
   );

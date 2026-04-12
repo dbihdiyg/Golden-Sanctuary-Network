@@ -45,8 +45,19 @@ export default function Footer() {
           </div>
         </div>
       </div>
-      <div className="mx-auto mt-12 max-w-6xl border-t border-white/10 pt-6 text-center text-sm text-muted-foreground">
-        © 2026 קהילת הבוגרים. כל הזכויות שמורות.
+      <div className="mx-auto mt-12 max-w-6xl border-t border-white/10 pt-6 text-sm text-muted-foreground">
+        <div className="flex flex-col items-center justify-between gap-3 md:flex-row">
+          <span>© 2026 קהילת הבוגרים. כל הזכויות שמורות.</span>
+          <a
+            href="https://wa.me/972555030580"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 transition hover:border-primary/40 hover:text-primary"
+          >
+            <MessageCircle className="h-4 w-4 text-[#25D366]" />
+            <span>עיצוב ובנייה: <strong className="text-white">שימיפיקס</strong> — גרפיקאי ועורך וידאו</span>
+          </a>
+        </div>
       </div>
     </footer>
   );
