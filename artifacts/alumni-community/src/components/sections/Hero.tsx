@@ -42,16 +42,32 @@ export default function Hero() {
       <div className="relative z-20 mx-auto flex min-h-[100dvh] max-w-7xl flex-col items-center justify-center px-6 pb-12 pt-28 text-center md:pb-16">
         <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000">
           <div className="relative mx-auto mb-7 max-w-4xl">
-            <div className="absolute inset-x-[-8%] top-[18%] h-[68%] rounded-[50%] bg-primary/22 blur-3xl" />
-            <div className="absolute inset-x-[-4%] top-[30%] h-[40%] rounded-[50%] bg-blue-brand/20 blur-2xl" />
-            <div className="relative z-10 px-4 py-2">
+            <div className="logo-light-stage absolute inset-0 -top-[30%] z-0">
+              <div className="logo-ray logo-ray-1" />
+              <div className="logo-ray logo-ray-2" />
+              <div className="logo-ray logo-ray-3" />
+              <div className="logo-ray logo-ray-4" />
+              <div className="logo-ray logo-ray-5" />
+              <div className="logo-ray logo-ray-6" />
+              <div className="logo-ray logo-ray-7" />
+              <div className="logo-ray logo-ray-8" />
+            </div>
+
+            <div className="absolute left-[22%] top-[4%] z-0 h-44 w-44 -translate-x-1/2 rounded-full bg-primary/35 blur-3xl motion-safe:animate-[logo-glow_4s_ease-in-out_infinite]" />
+            <div className="absolute left-[22%] top-[4%] z-0 h-24 w-24 -translate-x-1/2 rounded-full bg-amber-300/50 blur-2xl motion-safe:animate-[logo-glow_3s_ease-in-out_infinite_0.8s]" />
+            <div className="absolute inset-x-[-8%] top-[30%] z-0 h-[55%] rounded-[50%] bg-primary/14 blur-3xl" />
+            <div className="absolute inset-x-[5%] top-[28%] z-0 h-[35%] rounded-[50%] bg-blue-brand/18 blur-2xl" />
+
+            <div className="relative z-10 px-4 py-6">
               <img
                 src={logoUrl}
                 alt="לוגו מאירים"
-                className="mx-auto h-auto w-full max-w-[700px] object-contain drop-shadow-[0_0_55px_rgba(245,192,55,0.48)] drop-shadow-[0_28px_52px_rgba(0,0,0,0.75)] motion-safe:animate-[logo-glow_5s_ease-in-out_infinite]"
+                className="mx-auto h-auto w-full max-w-[700px] object-contain drop-shadow-[0_0_70px_rgba(245,192,55,0.55)] drop-shadow-[0_32px_60px_rgba(0,0,0,0.8)] motion-safe:animate-[logo-glow_5s_ease-in-out_infinite]"
               />
             </div>
-            <div className="absolute inset-x-[10%] bottom-0 h-px bg-gradient-to-l from-transparent via-primary/80 to-transparent" />
+
+            <div className="absolute inset-x-[14%] bottom-4 h-px bg-gradient-to-l from-transparent via-primary/90 to-transparent" />
+            <div className="absolute inset-x-[28%] bottom-2 h-px bg-gradient-to-l from-transparent via-primary/45 to-transparent" />
           </div>
 
           <div className="mx-auto mb-5 inline-flex items-center gap-3 rounded-full border border-primary/35 bg-primary/12 px-6 py-3 text-sm font-bold tracking-[0.26em] text-primary shadow-[0_0_42px_rgba(245,192,55,0.2)] backdrop-blur-xl">
