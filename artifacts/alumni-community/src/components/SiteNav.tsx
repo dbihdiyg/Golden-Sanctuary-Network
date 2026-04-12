@@ -1,19 +1,17 @@
 import { Link } from "wouter";
 import { Mail, MessageCircle } from "lucide-react";
-import logoUrl from "@assets/מאירים_לוגו_1775980957378.png";
 import { contact, navLinks } from "@/content/community";
+
+const logoUrl = "/logo-new.png";
 
 export default function SiteNav() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 px-3 py-3 md:px-5">
       <div className="mx-auto flex max-w-7xl items-center justify-between rounded-full border border-white/10 bg-background/62 px-3 py-3 shadow-[0_22px_90px_rgba(0,0,0,0.52)] backdrop-blur-2xl md:px-5">
-        <Link href="/" className="flex min-w-0 items-center gap-3">
-          <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full border border-primary/30 bg-gradient-to-b from-white/10 to-primary/10 shadow-[0_0_30px_rgba(245,192,55,0.18)]">
-            <img src={logoUrl} alt="מאירים" className="h-10 w-10 object-contain" />
-          </span>
-          <span className="hidden flex-col leading-tight sm:flex">
-            <span className="font-serif text-xl font-bold text-white">מאירים</span>
-            <span className="text-xs text-muted-foreground">קהילת הבוגרים</span>
+        <Link href="/" className="flex min-w-0 items-center gap-2">
+          <span className="relative flex h-11 shrink-0 items-center overflow-hidden">
+            <span className="absolute inset-0 rounded-xl bg-primary/10 blur-md" />
+            <img src={logoUrl} alt="מאירים" className="relative h-11 w-auto max-w-[160px] object-contain drop-shadow-[0_0_14px_rgba(245,192,55,0.45)]" />
           </span>
         </Link>
 

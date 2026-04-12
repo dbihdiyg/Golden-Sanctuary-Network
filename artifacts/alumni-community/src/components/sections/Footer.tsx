@@ -1,7 +1,8 @@
 import { Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { Link } from "wouter";
-import logoUrl from "@assets/מאירים_לוגו_1775980957378.png";
 import { contact, navLinks } from "@/content/community";
+
+const logoUrl = "/logo-new.png";
 
 export default function Footer() {
   return (
@@ -10,7 +11,10 @@ export default function Footer() {
       <div className="absolute bottom-[-35%] left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
       <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
         <div className="space-y-4">
-          <img src={logoUrl} alt="מאירים" className="h-auto w-64 max-w-full object-contain drop-shadow-[0_14px_24px_rgba(0,0,0,0.55)]" />
+          <div className="relative inline-block">
+            <div className="absolute inset-0 rounded-2xl bg-primary/12 blur-xl" />
+            <img src={logoUrl} alt="מאירים" className="relative h-auto w-72 max-w-full object-contain drop-shadow-[0_0_28px_rgba(245,192,55,0.4)] drop-shadow-[0_10px_22px_rgba(0,0,0,0.6)]" />
+          </div>
           <h2 className="font-serif text-3xl font-bold text-white">קהילת הבוגרים</h2>
           <p className="max-w-md leading-relaxed text-muted-foreground">
             בית דיגיטלי לבוגרים: עדכונים, זיכרונות, חיבורים ותוכן שממשיך את הדרך המשותפת.

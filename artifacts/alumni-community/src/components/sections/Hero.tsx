@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ChevronDown, HelpCircle, Mail, MessageCircle, Send, Sparkles } from "lucide-react";
-import logoUrl from "@assets/מאירים_לוגו_1775980957378.png";
 import { contact } from "@/content/community";
+
+const logoUrl = "/logo-new.png";
 
 const stats = [
   { value: "1,200+", label: "בוגרים מחוברים" },
@@ -40,10 +41,17 @@ export default function Hero() {
 
       <div className="relative z-20 mx-auto flex min-h-[100dvh] max-w-7xl flex-col items-center justify-center px-6 pb-12 pt-28 text-center md:pb-16">
         <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000">
-          <div className="mx-auto mb-6 max-w-3xl rounded-[2.4rem] border border-primary/20 bg-black/32 p-3 shadow-[0_0_120px_rgba(245,192,55,0.18),0_40px_130px_rgba(0,0,0,0.55)] backdrop-blur-2xl md:p-5">
-            <div className="rounded-[1.8rem] border border-white/8 bg-[radial-gradient(circle_at_50%_20%,rgba(245,192,55,0.13),transparent_45%)] px-5 py-6">
-              <img src={logoUrl} alt="לוגו מאירים" className="mx-auto h-auto w-full max-w-[610px] object-contain drop-shadow-[0_24px_44px_rgba(0,0,0,0.72)]" />
+          <div className="relative mx-auto mb-7 max-w-4xl">
+            <div className="absolute inset-x-[-8%] top-[18%] h-[68%] rounded-[50%] bg-primary/22 blur-3xl" />
+            <div className="absolute inset-x-[-4%] top-[30%] h-[40%] rounded-[50%] bg-blue-brand/20 blur-2xl" />
+            <div className="relative z-10 px-4 py-2">
+              <img
+                src={logoUrl}
+                alt="לוגו מאירים"
+                className="mx-auto h-auto w-full max-w-[700px] object-contain drop-shadow-[0_0_55px_rgba(245,192,55,0.48)] drop-shadow-[0_28px_52px_rgba(0,0,0,0.75)] motion-safe:animate-[logo-glow_5s_ease-in-out_infinite]"
+              />
             </div>
+            <div className="absolute inset-x-[10%] bottom-0 h-px bg-gradient-to-l from-transparent via-primary/80 to-transparent" />
           </div>
 
           <div className="mx-auto mb-5 inline-flex items-center gap-3 rounded-full border border-primary/35 bg-primary/12 px-6 py-3 text-sm font-bold tracking-[0.26em] text-primary shadow-[0_0_42px_rgba(245,192,55,0.2)] backdrop-blur-xl">
@@ -51,11 +59,7 @@ export default function Hero() {
             היכל הזיכרון והחיבור
           </div>
 
-          <h1 className="brand-title text-7xl font-black leading-[0.92] text-white md:text-9xl lg:text-[10.5rem]">
-            קהילת הבוגרים
-          </h1>
-
-          <p className="mx-auto mt-7 max-w-4xl text-xl leading-relaxed text-white/78 md:text-2xl">
+          <p className="mx-auto mt-2 max-w-4xl text-xl leading-relaxed text-white/78 md:text-2xl">
             בית דיגיטלי יוקרתי וחי לבוגרים — זיכרונות, שיעורים, עדכונים וחיבורים שממשיכים להאיר את הדרך.
           </p>
 

@@ -266,6 +266,15 @@
   }
 }
 
+@keyframes logo-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 55px rgba(245, 192, 55, 0.48)) drop-shadow(0 28px 52px rgba(0,0,0,0.75));
+  }
+  50% {
+    filter: drop-shadow(0 0 85px rgba(245, 192, 55, 0.72)) drop-shadow(0 0 30px rgba(0, 19, 164, 0.35)) drop-shadow(0 28px 52px rgba(0,0,0,0.75));
+  }
+}
+
 @theme inline {
   --color-blue-brand: #0013a4;
   --color-gold-light: #ffe681;
