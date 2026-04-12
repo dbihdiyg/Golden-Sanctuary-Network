@@ -8,7 +8,7 @@ export default function Inspiration() {
         <p className="mx-auto mt-7 max-w-3xl font-serif text-3xl font-bold leading-relaxed text-white md:text-5xl">
           “הבוגר אינו עוזב את הבית; הוא יוצא ממנו כדי להאיר במקום שבו הוא נמצא.”
         </p>
-        <p className="mt-6 text-lg text-muted-foreground">מסר קהילתי של חיבור, אחריות וזיכרון חי</p>
+
       </div>
     </section>
   );
