@@ -102,8 +102,14 @@ export function LibraryPage() {
                   <h3 className="font-serif text-2xl font-black text-white">{pdf.title}</h3>
                   <p className="text-muted-foreground">{pdf.description}</p>
                   <div className="flex flex-wrap gap-3">
-                    <a href={`data:application/pdf,%25PDF-1.4%0A%25 ${encodeURIComponent(pdf.title)}`} target="_blank" rel="noreferrer" className="rounded-full border border-white/10 px-5 py-2 text-sm text-white transition hover:border-primary/40 hover:text-primary">צפייה</a>
-                    <a href={`data:application/pdf,%25PDF-1.4%0A%25 ${encodeURIComponent(pdf.title)}`} download={`${pdf.title}.pdf`} className="inline-flex items-center rounded-full bg-primary px-5 py-2 text-sm font-bold text-primary-foreground transition hover:shadow-[0_0_32px_rgba(245,192,55,0.25)]">הורדה <Download className="mr-2 h-4 w-4" /></a>
+                    {pdf.url ? (
+                      <>
+                        <a href={pdf.url} target="_blank" rel="noreferrer" className="rounded-full border border-white/10 px-5 py-2 text-sm text-white transition hover:border-primary/40 hover:text-primary">צפייה</a>
+                        <a href={pdf.url} download className="inline-flex items-center rounded-full bg-primary px-5 py-2 text-sm font-bold text-primary-foreground transition hover:shadow-[0_0_32px_rgba(245,192,55,0.25)]">הורדה <Download className="mr-2 h-4 w-4" /></a>
+                      </>
+                    ) : (
+                      <span className="rounded-full border border-white/10 px-5 py-2 text-sm text-muted-foreground">בקרוב</span>
+                    )}
                   </div>
                 </div>
               </div>
