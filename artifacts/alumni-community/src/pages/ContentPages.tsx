@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, CalendarDays, Download, FileText, Mail, MessageCircle, Play, Send, X } from "lucide-react";
 import Footer from "@/components/sections/Footer";
+import VideoModal from "@/components/VideoModal";
 import { contact, events, faqs, pdfs, photos, stories, updates, videos } from "@/content/community";
 
 function PageShell({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: React.ReactNode }) {
@@ -65,8 +66,10 @@ export function PhotosPage() {
 }
 
 export function VideosPage() {
+  const [activeUrl, setActiveUrl] = useState<string | null>(null);
   return (
     <PageShell eyebrow="ספריית וידאו" title="שיעורים, ברכות וסיפורים" description="מרכז צפייה מסודר עם סרטונים, תקצירים, תאריכים וסינון לפי קטגוריות תוכן.">
+      {activeUrl && <VideoModal url={activeUrl} onClose={() => setActiveUrl(null)} />}
 
       <section className="px-6 pb-16">
         <div className="mx-auto max-w-7xl overflow-hidden rounded-[2.5rem] border border-primary/20 bg-card shadow-[0_40px_120px_rgba(0,0,0,0.55)]">
@@ -108,7 +111,7 @@ export function VideosPage() {
       <section className="px-6 pb-24">
         <div className="mx-auto grid max-w-6xl gap-7 md:grid-cols-3">
           {videos.map((video) => (
-            <a key={video.title} href={video.url} target="_blank" rel="noreferrer" className="group overflow-hidden rounded-[2rem] border border-white/10 bg-card shadow-2xl transition hover:-translate-y-2 hover:border-primary/45">
+            <button key={video.title} onClick={() => setActiveUrl(video.url)} className="group overflow-hidden rounded-[2rem] border border-white/10 bg-card shadow-2xl transition hover:-translate-y-2 hover:border-primary/45 text-right w-full">
               <div className="relative h-56 overflow-hidden">
                 <img src={video.image} alt={video.title} className="h-full w-full object-cover opacity-75 transition duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 grid place-items-center bg-background/20"><span className="grid h-16 w-16 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_0_40px_rgba(245,192,55,0.35)]"><Play className="h-7 w-7 fill-current" /></span></div>
@@ -118,7 +121,7 @@ export function VideosPage() {
                 <h3 className="font-serif text-2xl font-black text-white">{video.title}</h3>
                 <p className="leading-relaxed text-muted-foreground">{video.summary}</p>
               </div>
-            </a>
+            </button>
           ))}
         </div>
       </section>
