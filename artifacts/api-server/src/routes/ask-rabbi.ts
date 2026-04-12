@@ -1,5 +1,7 @@
 import { Router } from "express";
 import nodemailer from "nodemailer";
+import { getAuth } from "@clerk/express";
+import { pool } from "@workspace/db";
 
 const router = Router();
 
@@ -17,6 +19,8 @@ function createTransporter() {
 
 router.post("/ask-rabbi", async (req, res) => {
   const { name, contact, topic, question } = req.body ?? {};
+  const auth = getAuth(req);
+  const clerkUserId = auth?.userId ?? null;
 
   if (!name || !question) {
     return res.status(400).json({ error: "שם ושאלה הם שדות חובה" });
@@ -41,6 +45,15 @@ router.post("/ask-rabbi", async (req, res) => {
       <p style="color:#888; font-size:12px;">נשלח מאתר בוגרי מאירים</p>
     </div>
   `;
+
+  try {
+    await pool.query(
+      `INSERT INTO rabbi_questions (clerk_user_id, name, contact, topic, question) VALUES ($1,$2,$3,$4,$5)`,
+      [clerkUserId, name, contact || null, topic || null, question]
+    );
+  } catch (dbErr) {
+    console.error("DB save error:", dbErr);
+  }
 
   try {
     await transporter.sendMail({

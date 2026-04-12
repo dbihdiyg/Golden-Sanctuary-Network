@@ -12,6 +12,40 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - April 2026 brand upgrade: integrated the attached "מאירים" logo and shifted the visual palette to logo-inspired black/graphite, luminous gold, and deep royal blue.
 - Expanded into a multi-page community hub with sticky navigation, floating WhatsApp/Ask Rabbi/join actions, homepage category cards, quick actions, media spotlight, and dedicated pages for photos, videos, PDFs, updates, Ask the Rabbi, contact, join updates, alumni stories, and events.
 
+### Authentication System (Clerk)
+- Clerk auth provisioned (dev instance). Keys: `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`
+- Sign-in page at `/sign-in`, sign-up at `/sign-up`
+- "כניסה" button in navbar (desktop + mobile)
+- User portal at `/portal` (community board + my questions) — requires auth
+- Admin panel at `/admin` — requires auth; admin user IDs set via `ADMIN_CLERK_USER_IDS` env var (comma-separated)
+- Auth pane in workspace toolbar manages users, branding, and OAuth providers
+
+### Community Board
+- `/portal` — signed-in users can post messages, react with ❤️, delete own posts
+- Posts stored in `community_posts` PostgreSQL table
+- Reactions stored in `post_reactions` table (one per user per post)
+
+### Ask Rabbi + Database
+- `/ask-rabbi` form saves questions to `rabbi_questions` table + sends email via Gmail SMTP
+- Admin panel shows all questions with status management (new → in_progress → answered)
+- `rabbi_questions` status tracked in DB; admin can update via PATCH /api/admin/questions/:id
+- `contact_submissions` table for contact form submissions (future use)
+
+### YouTube Auto-fetch
+- API endpoint `/api/youtube` fetches 15 latest videos from channel `UCdDqqlcExi8gVxHMI4mKpSA` via RSS
+- Categorizes by title keywords, 10-minute cache
+- Shorts: YyjYaoD_eeM, dw-0tv1JCDY, WJR3UNFD-AA, jtECZkvt_WY, fa2zbBBpJto
+
+### Email
+- GMAIL_USER: O462272103@gmail.com
+- GMAIL_APP_PASSWORD: Google App Password (16-char, requires 2FA)
+- Status: may need re-verification
+
+### Contact Info
+- Email: O462272103@GMAIL.COM
+- Phone: 03-306-5092
+- Address: מגדל העמק
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces
@@ -19,10 +53,18 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
+- **Database**: PostgreSQL + Drizzle ORM + raw `pool.query` for new tables
+- **Auth**: Clerk (@clerk/react v6, @clerk/express v2)
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+
+## Database Tables
+
+- `community_posts` — user posts on the community board
+- `post_reactions` — emoji reactions (one per user per post)
+- `rabbi_questions` — questions submitted via the ask-rabbi form
+- `contact_submissions` — contact form submissions
 
 ## Key Commands
 

@@ -1,9 +1,53 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Mail, Menu, MessageCircle, X } from "lucide-react";
+import { Mail, Menu, MessageCircle, X, LogIn, LayoutDashboard } from "lucide-react";
 import { contact, navLinks } from "@/content/community";
+import { useUser, Show } from "@clerk/react";
 
 const logoUrl = "/logo-new.png";
+
+function AuthButtons({ mobile = false }: { mobile?: boolean }) {
+  const { user } = useUser();
+
+  if (mobile) {
+    return (
+      <>
+        <Show when="signed-out">
+          <Link href="/sign-in" className="flex items-center justify-center gap-3 rounded-2xl border border-white/15 px-6 py-4 text-lg text-white">
+            <LogIn className="h-5 w-5" />
+            כניסה לאזור האישי
+          </Link>
+        </Show>
+        <Show when="signed-in">
+          <Link href="/portal" className="flex items-center justify-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-6 py-4 text-lg font-bold text-primary">
+            <LayoutDashboard className="h-5 w-5" />
+            {user?.firstName || "האזור האישי שלי"}
+          </Link>
+        </Show>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Show when="signed-out">
+        <Link href="/sign-in" className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white transition hover:border-primary/40 hover:text-primary inline-flex items-center gap-1.5">
+          <LogIn className="h-3.5 w-3.5" />
+          כניסה
+        </Link>
+      </Show>
+      <Show when="signed-in">
+        <Link href="/portal" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-bold text-primary hover:bg-primary hover:text-primary-foreground transition">
+          {user?.imageUrl
+            ? <img src={user.imageUrl} alt="" className="h-5 w-5 rounded-full object-cover" />
+            : <span className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center text-xs">{user?.firstName?.[0] || "א"}</span>
+          }
+          {user?.firstName || "האזור שלי"}
+        </Link>
+      </Show>
+    </>
+  );
+}
 
 export default function SiteNav() {
   const [open, setOpen] = useState(false);
@@ -34,6 +78,7 @@ export default function SiteNav() {
               וואטסאפ
               <MessageCircle className="mr-2 h-4 w-4" />
             </a>
+            <AuthButtons />
             <button
               onClick={() => setOpen(!open)}
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white transition hover:bg-white/10 lg:hidden"
@@ -68,6 +113,7 @@ export default function SiteNav() {
               <Mail className="h-5 w-5" />
               אימייל
             </a>
+            <AuthButtons mobile />
           </div>
         </div>
       )}
