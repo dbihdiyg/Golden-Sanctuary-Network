@@ -67,6 +67,44 @@ export function PhotosPage() {
 export function VideosPage() {
   return (
     <PageShell eyebrow="ספריית וידאו" title="שיעורים, ברכות וסיפורים" description="מרכז צפייה מסודר עם סרטונים, תקצירים, תאריכים וסינון לפי קטגוריות תוכן.">
+
+      <section className="px-6 pb-16">
+        <div className="mx-auto max-w-7xl overflow-hidden rounded-[2.5rem] border border-primary/20 bg-card shadow-[0_40px_120px_rgba(0,0,0,0.55)]">
+          <div className="grid md:grid-cols-[1fr_1.1fr]">
+            <div className="relative min-h-[340px] overflow-hidden md:min-h-[420px]">
+              <img
+                src="/rabbi-intro.jpg"
+                alt="מורנו הרב שליט״א"
+                className="h-full w-full object-cover object-top"
+              />
+              <div className="absolute inset-0 bg-gradient-to-l from-card via-card/30 to-transparent md:bg-gradient-to-l" />
+              <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent md:hidden" />
+            </div>
+
+            <div className="flex flex-col justify-center gap-6 p-8 text-right md:p-12">
+              <div>
+                <p className="text-sm font-black tracking-[0.28em] text-blue-brand">פתח דבר</p>
+                <h2 className="mt-3 font-serif text-4xl font-black text-white md:text-5xl">
+                  מורנו הרב שליט״א
+                </h2>
+                <div className="mt-2 h-px w-24 bg-gradient-to-l from-primary to-transparent" />
+              </div>
+              <p className="text-lg leading-relaxed text-muted-foreground">
+                ספריית הווידאו של קהילת הבוגרים מרכזת שיעורים, ברכות, דברי עידוד וחיזוק מפי מורנו הרב שליט״א — לחיזוק הקשר, האמונה והחיבור המתמשך לבית המדרש.
+              </p>
+              <p className="text-base leading-relaxed text-muted-foreground/80">
+                כל סרטון הוא הזדמנות לחוות שוב את אותה אווירה מיוחדת, ולהמשיך לשאוב כוח מדברי הרב גם מרחוק.
+              </p>
+              <div className="flex items-center gap-3">
+                <span className="h-px flex-1 bg-gradient-to-r from-primary/40 to-transparent" />
+                <span className="text-sm font-bold tracking-widest text-primary">לצפייה בסרטונים</span>
+                <ArrowLeft className="h-4 w-4 text-primary" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="px-6 pb-24">
         <div className="mx-auto grid max-w-6xl gap-7 md:grid-cols-3">
           {videos.map((video) => (
