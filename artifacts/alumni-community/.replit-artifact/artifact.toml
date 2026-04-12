@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "קהילת הבוגרים"
+version = "1.0.0"
+id = "artifacts/alumni-community"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25250
+
+[services.development]
+run = "pnpm --filter @workspace/alumni-community run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/alumni-community", "run", "build" ]
+publicDir = "artifacts/alumni-community/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25250"
+BASE_PATH = "/"

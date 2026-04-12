@@ -1,0 +1,61 @@
+import { Play } from "lucide-react";
+
+const videos = [
+  {
+    title: "דברי פתיחה למפגש הבוגרים",
+    text: "מסר קצר על שורשים, אחריות וחיבור מתמשך.",
+    image: "https://images.unsplash.com/photo-1519682337058-a94d519337bc?q=80&w=1600&auto=format&fit=crop",
+    url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+  },
+  {
+    title: "סיפורי דרך של בוגרים",
+    text: "עדויות אישיות על השנים שעיצבו אמונה, מנהיגות וחברות.",
+    image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?q=80&w=1600&auto=format&fit=crop",
+    url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+  },
+];
+
+export default function VideoSection() {
+  return (
+    <section className="relative px-6 py-24">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(202,138,4,0.12),transparent_32%),radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.06),transparent_28%)]" />
+      <div className="relative mx-auto max-w-6xl space-y-12">
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div className="max-w-2xl space-y-4">
+            <p className="text-sm font-medium tracking-[0.25em] text-primary">וידאו</p>
+            <h2 className="text-4xl font-bold text-white md:text-5xl">קולות מהקהילה</h2>
+          </div>
+          <p className="max-w-md leading-relaxed text-muted-foreground">
+            תכנים מצולמים, ברכות, שיעורים וסיפורים שמאפשרים להרגיש קרוב גם מרחוק.
+          </p>
+        </div>
+
+        <div className="grid gap-7 md:grid-cols-2">
+          {videos.map((video, index) => (
+            <a
+              key={video.title}
+              href={video.url}
+              target="_blank"
+              rel="noreferrer"
+              className="group relative min-h-[360px] overflow-hidden rounded-[2rem] border border-white/10 bg-card shadow-2xl reveal-up"
+              style={{ animationDelay: `${index * 120}ms` }}
+            >
+              <img src={video.image} alt={video.title} className="absolute inset-0 h-full w-full object-cover opacity-70 transition duration-700 group-hover:scale-105 group-hover:opacity-90" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/35 to-transparent" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="relative grid h-24 w-24 place-items-center rounded-full border border-primary/40 bg-primary/15 text-primary shadow-[0_0_40px_rgba(202,138,4,0.25)] backdrop-blur-md transition duration-500 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
+                  <span className="absolute inset-[-10px] rounded-full border border-primary/15 animate-ping" />
+                  <Play className="mr-1 h-9 w-9 fill-current" />
+                </span>
+              </div>
+              <div className="absolute bottom-0 right-0 left-0 space-y-3 p-7">
+                <h3 className="font-serif text-3xl font-bold text-white">{video.title}</h3>
+                <p className="max-w-lg leading-relaxed text-muted-foreground">{video.text}</p>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

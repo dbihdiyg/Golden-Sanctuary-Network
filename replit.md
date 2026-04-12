@@ -4,6 +4,12 @@
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 
+### קהילת הבוגרים Website
+
+- Standalone React/Vite web artifact at `artifacts/alumni-community` served from `/`.
+- Hebrew RTL single-page alumni community website with dark luxury spiritual styling.
+- Includes cinematic hero, latest updates, masonry-style gallery with lightbox, video cards, downloadable PDF library, community feed, and footer.
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces
