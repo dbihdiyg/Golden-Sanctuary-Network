@@ -271,7 +271,7 @@ export function JoinPage() {
       `איש קשר בצוות: ${form.contact_person}`,
       `עדכונים מבוקשים: ${form.updates.join(", ")}`,
     ].join("\n");
-    window.open(`mailto:s0555030580@gmail.com?subject=הצטרפות חדשה לרשימת התפוצה — ${form.name}&body=${encodeURIComponent(body)}`);
+    window.open(`mailto:O462272103@GMAIL.COM?subject=הצטרפות חדשה לרשימת התפוצה — ${form.name}&body=${encodeURIComponent(body)}`);
     setSent(true);
   };
 
