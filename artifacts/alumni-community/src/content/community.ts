@@ -106,12 +106,6 @@ export const videos = [
   { title: "שיעור / אירוע מגדל אור — חדש 3", summary: "סרטון חדש שהועלה לספריית הקהילה.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/CaLgv1ZKfeA/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=CaLgv1ZKfeA" },
   { title: "שיעור / אירוע מגדל אור — חדש 2", summary: "סרטון חדש שהועלה לספריית הקהילה.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/hzMacELExrU/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=hzMacELExrU" },
   { title: "שיעור / אירוע מגדל אור — חדש", summary: "סרטון חדש שהועלה לספריית הקהילה.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/TPQ-MDNOLu4/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=TPQ-MDNOLu4" },
-  { title: "מדוע ללמוד דווקא גמרא? הרב במענה לשאלת הבוגרים", summary: "תשובת מורנו הרב שליט״א לשאלת הבוגרים על חשיבות לימוד הגמרא.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/azdY5mFGjU0/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=azdY5mFGjU0" },
-  { title: "שיעור / אירוע מגדל אור", summary: "סרטון חדש שהועלה לספריית הקהילה.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/_oaNsTAQkWo/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=_oaNsTAQkWo" },
-  { title: "שיעור / אירוע מגדל אור", summary: "סרטון חדש שהועלה לספריית הקהילה.", date: "היום", category: "שיעורים", image: "https://img.youtube.com/vi/Cf02bu-432w/maxresdefault.jpg", url: "https://www.youtube.com/watch?v=Cf02bu-432w" },
-  { title: "דברי פתיחה למפגש הבוגרים", summary: "מסר קצר על שורשים, אחריות וחיבור מתמשך.", date: "י״ז אייר תשפ״ו", category: "מפגש שנתי", image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1600&auto=format&fit=crop", url: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
-  { title: "סיפורי דרך של בוגרים", summary: "עדויות אישיות על השנים שעיצבו אמונה, מנהיגות וחברות.", date: "י׳ אייר תשפ״ו", category: "סיפורים", image: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=1600&auto=format&fit=crop", url: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
-  { title: "שיעור מיוחד: להיות מאיר בעולם", summary: "שיעור מעורר השראה על שליחות של בוגר בתוך חיי המעשה.", date: "ב׳ אייר תשפ״ו", category: "שיעורים", image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1600&auto=format&fit=crop", url: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
 ];
 
 export const pdfs = [
