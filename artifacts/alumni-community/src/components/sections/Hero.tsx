@@ -1,14 +1,60 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ChevronDown, HelpCircle, Mail, MessageCircle, Send, Sparkles } from "lucide-react";
 import { contact } from "@/content/community";
+import { useEffect, useRef, useState } from "react";
 
 const logoUrl = "/logo-new.png";
 
 const stats = [
-  { value: "1,200+", label: "בוגרים מחוברים" },
-  { value: "38", label: "מחזורים" },
-  { value: "24/6", label: "עדכונים וקהילה" },
+  { target: 1200, formatted: (n: number) => n >= 1200 ? "1,200+" : n.toLocaleString(), label: "בוגרים מחוברים" },
+  { target: 38, formatted: (n: number) => String(n), label: "מחזורים" },
+  { target: 24, formatted: (n: number) => n >= 24 ? "24/6" : String(n), label: "עדכונים וקהילה" },
 ];
+
+function useCountUp(target: number, duration = 1800) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !started.current) {
+          started.current = true;
+          const start = performance.now();
+          const tick = (now: number) => {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setCount(Math.floor(eased * target));
+            if (progress < 1) requestAnimationFrame(tick);
+            else setCount(target);
+          };
+          requestAnimationFrame(tick);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [target, duration]);
+
+  return { count, ref };
+}
+
+function AnimatedStat({ stat }: { stat: typeof stats[0] }) {
+  const { count, ref } = useCountUp(stat.target);
+  return (
+    <div ref={ref} className="border-l border-white/10 p-4 last:border-l-0 md:p-6">
+      <div className="gold-gradient-text font-serif text-2xl font-black md:text-4xl tabular-nums">
+        {stat.formatted(count)}
+      </div>
+      <div className="mt-1 text-xs text-muted-foreground md:text-sm">{stat.label}</div>
+    </div>
+  );
+}
 
 const heroActions = [
   { label: "וואטסאפ", text: "מענה מהיר", href: contact.whatsapp, icon: MessageCircle, external: true },
@@ -96,10 +142,7 @@ export default function Hero() {
 
           <div className="mx-auto mt-9 grid max-w-3xl grid-cols-3 overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.04] shadow-[0_22px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl">
             {stats.map((stat) => (
-              <div key={stat.label} className="border-l border-white/10 p-4 last:border-l-0 md:p-6">
-                <div className="gold-gradient-text font-serif text-2xl font-black md:text-4xl">{stat.value}</div>
-                <div className="mt-1 text-xs text-muted-foreground md:text-sm">{stat.label}</div>
-              </div>
+              <AnimatedStat key={stat.label} stat={stat} />
             ))}
           </div>
         </div>
