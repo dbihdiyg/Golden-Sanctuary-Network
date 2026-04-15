@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Radio, Bell } from "lucide-react";
+import ShareButton from "@/components/ShareButton";
 
 const CHANNEL_ID = "UCdDqqlcExi8gVxHMI4mKpSA";
 const CHANNEL_URL = "https://www.youtube.com/@%D7%91%D7%95%D7%92%D7%A8%D7%99-%D7%9E%D7%90%D7%99%D7%A8%D7%99%D7%9D";
@@ -25,6 +26,7 @@ export default function LiveSection() {
             <h2 className="font-serif text-4xl font-black text-white md:text-5xl">
               בשידור ישיר
             </h2>
+            <ShareButton sectionId="live" label="שידור חי" className="mt-2" />
           </div>
           <p className="max-w-sm text-sm leading-relaxed text-muted-foreground md:text-base">
             אירועים, שיעורים ומפגשים בשידור חי — היכנס וצפה בזמן אמת.

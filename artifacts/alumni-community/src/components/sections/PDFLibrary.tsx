@@ -1,5 +1,6 @@
 import { Download, FileText, Eye } from "lucide-react";
 import { pdfs } from "@/content/community";
+import ShareButton from "@/components/ShareButton";
 
 export default function PDFLibrary() {
   return (
@@ -8,6 +9,9 @@ export default function PDFLibrary() {
         <div className="space-y-4 text-center">
           <p className="text-sm font-bold tracking-[0.28em] text-blue-brand">ספריית מסמכים</p>
           <h2 className="inline-block gold-gradient-text text-4xl font-black md:text-6xl">קבצים להורדה</h2>
+          <div className="flex justify-center pt-1">
+            <ShareButton sectionId="library" label="ספריית גליונות" />
+          </div>
         </div>
 
         <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.025] shadow-[0_35px_100px_rgba(0,0,0,0.4)] backdrop-blur-xl">

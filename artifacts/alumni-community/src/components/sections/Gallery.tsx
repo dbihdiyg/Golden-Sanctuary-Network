@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X, ZoomIn } from "lucide-react";
+import ShareButton from "@/components/ShareButton";
 
 const photos = [
   {
@@ -42,6 +43,9 @@ export default function Gallery() {
           <p className="leading-relaxed text-muted-foreground">
             מבט אל המפגשים, החיבורים והרגעים הקטנים שמספרים את הסיפור הגדול של הקהילה.
           </p>
+          <div className="flex justify-center pt-1">
+            <ShareButton sectionId="gallery" label="גלריית זיכרונות" />
+          </div>
         </div>
 
         <div className="grid auto-rows-[160px] md:auto-rows-[220px] grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">

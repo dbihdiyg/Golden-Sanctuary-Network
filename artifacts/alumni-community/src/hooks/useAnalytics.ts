@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 
 function getSessionId(): string {
   const key = "meirim_session_id";
@@ -31,21 +32,26 @@ function fireAndForget(url: string, body: object) {
   }
 }
 
-const HEARTBEAT_INTERVAL = 2 * 60 * 1000; // 2 minutes instead of 30s
+const HEARTBEAT_INTERVAL = 2 * 60 * 1000;
 
 export function useAnalytics() {
   const sessionId = useRef(getSessionId());
   const deviceType = useRef(getDeviceType());
-  const visitTracked = useRef(false);
+  const [location] = useLocation();
+  const trackedPages = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (visitTracked.current) return;
-    visitTracked.current = true;
+    const page = location || "/";
+    if (trackedPages.current.has(page)) return;
+    trackedPages.current.add(page);
+
     fireAndForget("/api/analytics/visit", {
       session_id: sessionId.current,
       device_type: deviceType.current,
+      page,
+      referrer: document.referrer || null,
     });
-  }, []);
+  }, [location]);
 
   useEffect(() => {
     const sendHeartbeat = () => {

@@ -1,3 +1,5 @@
+import ShareButton from "@/components/ShareButton";
+
 const feed = [
   {
     date: "היום",
@@ -32,6 +34,9 @@ export default function CommunityFeed() {
           <p className="mx-auto max-w-2xl leading-relaxed text-muted-foreground">
             זרם עדכונים חי שמחזיק את כולם מחוברים למה שקורה עכשיו.
           </p>
+          <div className="flex justify-center pt-1">
+            <ShareButton sectionId="feed" label="חדשות ועדכונים" />
+          </div>
         </div>
 
         <div className="relative space-y-6 before:absolute before:right-6 before:top-4 before:bottom-4 before:w-px before:bg-gradient-to-b before:from-primary before:via-blue-brand/60 before:to-transparent">

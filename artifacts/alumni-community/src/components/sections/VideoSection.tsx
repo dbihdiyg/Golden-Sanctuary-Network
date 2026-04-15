@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Play, Loader2 } from "lucide-react";
 import VideoModal from "@/components/VideoModal";
+import ShareButton from "@/components/ShareButton";
 
 interface Video {
   id: string;
@@ -81,6 +82,7 @@ export default function VideoSection({ standalone = false }: Props) {
           <div className="max-w-2xl space-y-4">
             <p className="text-sm font-bold tracking-[0.28em] text-blue-brand">וידאו</p>
             <h2 className="text-4xl font-black text-white md:text-6xl">קולות מהקהילה</h2>
+            <ShareButton sectionId="video" label="קולות מהקהילה" className="mt-1" />
           </div>
           <p className="max-w-md leading-relaxed text-muted-foreground">
             תכנים מצולמים, ברכות, שיעורים וסיפורים שמאפשרים להרגיש קרוב גם מרחוק.

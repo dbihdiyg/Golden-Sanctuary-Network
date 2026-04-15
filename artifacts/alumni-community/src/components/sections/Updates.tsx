@@ -1,4 +1,5 @@
 import { updates } from "@/content/community";
+import ShareButton from "@/components/ShareButton";
 
 export default function Updates() {
   if (!updates || updates.length === 0) return null;
@@ -10,6 +11,9 @@ export default function Updates() {
         <div className="text-center space-y-3">
           <p className="text-sm font-bold tracking-[0.28em] text-blue-brand">מה חדש</p>
           <h2 className="inline-block gold-gradient-text text-4xl font-black md:text-5xl">עדכוני קהילה</h2>
+          <div className="flex justify-center pt-1">
+            <ShareButton sectionId="updates" label="עדכוני קהילה" />
+          </div>
         </div>
 
         <div className="space-y-4">

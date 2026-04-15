@@ -3,7 +3,8 @@ import {
   CheckCircle, Clock, MessageSquare, BarChart3, Loader2,
   Lock, Eye, EyeOff, TrendingUp, LogOut, Users, ImageIcon,
   Video, ThumbsUp, ThumbsDown, Inbox, Mail, Phone, Trash2, UserCheck, UserX, Bot,
-  Monitor, Smartphone, Maximize, Activity, MousePointerClick
+  Monitor, Smartphone, Maximize, Activity, MousePointerClick, Globe, ArrowUp, ArrowDown,
+  Repeat2, Sparkles, Chrome, Navigation, RefreshCw
 } from "lucide-react";
 import Footer from "@/components/sections/Footer";
 
@@ -523,16 +524,98 @@ interface AnalyticsData {
   active_mobile: number;
   fullscreen_count: number;
   visits_by_day: { day: string; visits: number }[];
+  peak_hours: { hour: number; visits: number }[];
+  top_pages: { page: string; visits: number }[];
+  browser_breakdown: { browser: string; visits: number }[];
+  today_visits: number;
+  yesterday_visits: number;
+  new_visitors: number;
+  returning_visitors: number;
+  recent_visits: { page: string; device_type: string; browser: string; visited_at: string }[];
+}
+
+const PAGE_LABELS: Record<string, string> = {
+  "/": "עמוד הבית",
+  "/forum": "פורום",
+  "/video": "וידאו",
+  "/live": "שידור חי",
+  "/gallery": "גלריה",
+  "/library": "ספרייה",
+  "/newsletter": "ניוזלטר",
+};
+
+const BROWSER_COLORS: Record<string, string> = {
+  Chrome: "bg-yellow-400",
+  Firefox: "bg-orange-400",
+  Safari: "bg-blue-400",
+  Edge: "bg-cyan-400",
+  Opera: "bg-red-400",
+  IE: "bg-gray-400",
+  Other: "bg-purple-400",
+  unknown: "bg-white/20",
+};
+
+function StatCard({ icon: Icon, label, value, sub, color, pulse }: {
+  icon: React.ElementType; label: string; value: string | number; sub?: string; color: string; pulse?: boolean;
+}) {
+  return (
+    <div className="rounded-[1.5rem] border border-white/10 bg-card p-5 flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <div className={`relative h-8 w-8 rounded-xl flex items-center justify-center ${color.replace("text-", "bg-").replace("400", "400/15").replace("primary", "primary/15")}`}>
+          {pulse && <span className="absolute inset-0 rounded-xl animate-ping opacity-30" style={{ background: "currentColor" }} />}
+          <Icon className={`h-4 w-4 ${color}`} />
+        </div>
+      </div>
+      <p className={`text-3xl font-black ${color}`}>{typeof value === "number" ? value.toLocaleString("he-IL") : value}</p>
+      <div>
+        <p className="text-sm font-bold text-white">{label}</p>
+        {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
+function BarRow({ label, value, max, color, count }: { label: string; value: number; max: number; color: string; count: number }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-sm">
+        <span className="text-muted-foreground truncate max-w-[60%]">{label}</span>
+        <span className="font-bold text-white">{count.toLocaleString("he-IL")} <span className="text-muted-foreground font-normal text-xs">({pct}%)</span></span>
+      </div>
+      <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+        <div className={`h-full rounded-full transition-all duration-700 ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function formatTime(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  if (d.toDateString() === today.toDateString()) return "היום";
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return "אתמול";
+  return d.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" });
 }
 
 function AnalyticsPanel() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
     const res = await adminFetch("/api/admin/analytics");
-    if (res.ok) setData(await res.json());
+    if (res.ok) {
+      setData(await res.json());
+      setLastUpdated(new Date());
+    }
     setLoading(false);
   }, []);
 
@@ -553,104 +636,291 @@ function AnalyticsPanel() {
 
   if (!data) return null;
 
-  const maxVisits = Math.max(...data.visits_by_day.map(d => d.visits), 1);
+  const maxDayVisits = Math.max(...data.visits_by_day.map(d => d.visits), 1);
+  const maxHour = Math.max(...data.peak_hours.map(h => h.visits), 1);
+  const maxPage = Math.max(...data.top_pages.map(p => p.visits), 1);
+  const maxBrowser = Math.max(...data.browser_breakdown.map(b => b.visits), 1);
   const desktopPct = data.total_visits > 0 ? Math.round((data.desktop_visits / data.total_visits) * 100) : 0;
   const mobilePct = data.total_visits > 0 ? Math.round((data.mobile_visits / data.total_visits) * 100) : 0;
+  const todayDiff = data.today_visits - data.yesterday_visits;
+  const totalNV = data.new_visitors + data.returning_visitors;
+  const newPct = totalNV > 0 ? Math.round((data.new_visitors / totalNV) * 100) : 0;
+  const retPct = totalNV > 0 ? Math.round((data.returning_visitors / totalNV) * 100) : 0;
+  const last30 = data.visits_by_day.reduce((s, d) => s + d.visits, 0);
+
+  const PEAK_HOUR = data.peak_hours.reduce((a, b) => (b.visits > a.visits ? b : a), { hour: 0, visits: 0 });
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "סה״כ ביקורים", value: data.total_visits, icon: MousePointerClick, color: "text-primary" },
-          { label: "גולשים עכשיו", value: data.active_now, icon: Activity, color: "text-green-400" },
-          { label: "מסך מלא", value: data.fullscreen_count, icon: Maximize, color: "text-blue-400" },
-          { label: "ביקורים השבוע", value: data.visits_by_day.reduce((s, d) => s + d.visits, 0), icon: BarChart3, color: "text-yellow-400" },
-        ].map(s => (
-          <div key={s.label} className="rounded-[1.5rem] border border-white/10 bg-card p-5">
-            <s.icon className={`h-5 w-5 ${s.color} mb-3`} />
-            <p className="text-3xl font-black text-white">{s.value.toLocaleString("he-IL")}</p>
-            <p className="text-sm text-muted-foreground mt-1">{s.label}</p>
-          </div>
-        ))}
+    <div className="space-y-5" dir="rtl">
+      {lastUpdated && (
+        <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          <RefreshCw className="h-3 w-3" />
+          עודכן: {lastUpdated.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+          <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+        </div>
+      )}
+
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <StatCard icon={MousePointerClick} label="סה״כ ביקורים" value={data.total_visits} color="text-primary" />
+        <StatCard icon={Activity} label="מחוברים עכשיו" value={data.active_now} sub={`${data.active_desktop} מחשב · ${data.active_mobile} נייד`} color="text-green-400" pulse={data.active_now > 0} />
+        <StatCard icon={TrendingUp} label="ביקורים היום" value={data.today_visits}
+          sub={todayDiff >= 0 ? `+${todayDiff} מאתמול` : `${todayDiff} מאתמול`}
+          color={todayDiff >= 0 ? "text-emerald-400" : "text-red-400"} />
+        <StatCard icon={Sparkles} label="גולשים חדשים" value={data.new_visitors} sub={`${newPct}% מכלל הגולשים`} color="text-cyan-400" />
+        <StatCard icon={Repeat2} label="גולשים חוזרים" value={data.returning_visitors} sub={`${retPct}% מכלל הגולשים`} color="text-purple-400" />
+        <StatCard icon={BarChart3} label="30 יום אחרונים" value={last30} color="text-yellow-400" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-[1.5rem] border border-white/10 bg-card p-6">
-          <h3 className="text-base font-black text-white mb-4 flex items-center gap-2">
-            <Monitor className="h-4 w-4 text-primary" /> סוג מכשיר – כלל הביקורים
+      {/* Today vs Yesterday */}
+      <div className="rounded-[1.5rem] border border-white/10 bg-card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-black text-white flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-emerald-400" /> היום מול אתמול
           </h3>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-1.5">
-                <span className="flex items-center gap-1.5 text-muted-foreground"><Monitor className="h-3.5 w-3.5" />מחשב</span>
-                <span className="font-bold text-white">{data.desktop_visits.toLocaleString("he-IL")} <span className="text-muted-foreground font-normal">({desktopPct}%)</span></span>
-              </div>
-              <div className="h-2.5 rounded-full bg-white/5 overflow-hidden">
-                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${desktopPct}%` }} />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-1.5">
-                <span className="flex items-center gap-1.5 text-muted-foreground"><Smartphone className="h-3.5 w-3.5" />סמארטפון</span>
-                <span className="font-bold text-white">{data.mobile_visits.toLocaleString("he-IL")} <span className="text-muted-foreground font-normal">({mobilePct}%)</span></span>
-              </div>
-              <div className="h-2.5 rounded-full bg-white/5 overflow-hidden">
-                <div className="h-full rounded-full bg-blue-400 transition-all" style={{ width: `${mobilePct}%` }} />
-              </div>
-            </div>
-          </div>
+          {todayDiff >= 0
+            ? <span className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-400/10 rounded-full px-2.5 py-1"><ArrowUp className="h-3 w-3" />+{todayDiff} ביקורים</span>
+            : <span className="flex items-center gap-1 text-xs font-bold text-red-400 bg-red-400/10 rounded-full px-2.5 py-1"><ArrowDown className="h-3 w-3" />{todayDiff} ביקורים</span>
+          }
         </div>
-
-        <div className="rounded-[1.5rem] border border-white/10 bg-card p-6">
-          <h3 className="text-base font-black text-white mb-4 flex items-center gap-2">
-            <Activity className="h-4 w-4 text-green-400" /> מחוברים כעת
-          </h3>
-          <div className="flex items-end gap-6">
-            <div className="text-center">
-              <p className="text-4xl font-black text-white">{data.active_now}</p>
-              <p className="text-xs text-muted-foreground mt-1">סה״כ מחוברים</p>
-            </div>
-            <div className="flex-1 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-sm text-muted-foreground"><Monitor className="h-3.5 w-3.5" />מחשב</span>
-                <span className="font-bold text-white text-sm">{data.active_desktop}</span>
+        <div className="flex gap-4 items-end h-20">
+          {[
+            { label: "אתמול", value: data.yesterday_visits, color: "bg-white/20" },
+            { label: "היום", value: data.today_visits, color: "bg-primary" },
+          ].map(({ label, value, color }) => {
+            const maxV = Math.max(data.today_visits, data.yesterday_visits, 1);
+            const h = Math.round((value / maxV) * 100);
+            return (
+              <div key={label} className="flex-1 flex flex-col items-center gap-1.5">
+                <span className="text-xs font-bold text-white">{value}</span>
+                <div className="w-full rounded-t-lg bg-white/5 flex flex-col justify-end" style={{ height: "60px" }}>
+                  <div className={`w-full rounded-t-lg ${color} transition-all`} style={{ height: `${h}%`, minHeight: value > 0 ? "4px" : "0" }} />
+                </div>
+                <span className="text-xs text-muted-foreground">{label}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-sm text-muted-foreground"><Smartphone className="h-3.5 w-3.5" />סמארטפון</span>
-                <span className="font-bold text-white text-sm">{data.active_mobile}</span>
-              </div>
-            </div>
+            );
+          })}
+          <div className="flex-1 flex flex-col items-center justify-center gap-1 pb-5">
+            {todayDiff >= 0
+              ? <ArrowUp className="h-8 w-8 text-emerald-400" />
+              : <ArrowDown className="h-8 w-8 text-red-400" />
+            }
+            <span className={`text-sm font-black ${todayDiff >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {todayDiff >= 0 ? "+" : ""}{data.yesterday_visits > 0 ? Math.round((todayDiff / data.yesterday_visits) * 100) : 0}%
+            </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-4">מתעדכן כל 30 שניות · פעיל בדקות האחרונות</p>
         </div>
       </div>
 
+      {/* 30-day trend */}
       {data.visits_by_day.length > 0 && (
         <div className="rounded-[1.5rem] border border-white/10 bg-card p-6">
-          <h3 className="text-base font-black text-white mb-5 flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-yellow-400" /> ביקורים לפי יום (7 ימים אחרונים)
+          <h3 className="text-sm font-black text-white mb-5 flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-yellow-400" /> ביקורים לפי יום — 30 ימים אחרונים
           </h3>
-          <div className="flex items-end gap-2 h-28">
+          <div className="flex items-end gap-1 h-24 overflow-x-auto">
             {data.visits_by_day.map(d => {
-              const heightPct = Math.round((d.visits / maxVisits) * 100);
+              const heightPct = Math.round((d.visits / maxDayVisits) * 100);
               const date = new Date(d.day);
               const label = date.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" });
+              const isToday = new Date().toDateString() === date.toDateString();
               return (
-                <div key={d.day} className="flex-1 flex flex-col items-center gap-1.5">
-                  <span className="text-[10px] text-muted-foreground font-bold">{d.visits}</span>
-                  <div className="w-full rounded-t-md bg-white/5 flex flex-col justify-end" style={{ height: "80px" }}>
+                <div key={d.day} className="flex-1 min-w-[10px] flex flex-col items-center gap-1" title={`${label}: ${d.visits} ביקורים`}>
+                  <div className="w-full rounded-t-sm bg-white/5 flex flex-col justify-end" style={{ height: "72px" }}>
                     <div
-                      className="w-full rounded-t-md bg-primary/70 hover:bg-primary transition-all"
-                      style={{ height: `${heightPct}%`, minHeight: d.visits > 0 ? "4px" : "0px" }}
+                      className={`w-full rounded-t-sm transition-all duration-500 ${isToday ? "bg-primary" : "bg-primary/40 hover:bg-primary/70"}`}
+                      style={{ height: `${heightPct}%`, minHeight: d.visits > 0 ? "3px" : "0" }}
                     />
                   </div>
-                  <span className="text-[10px] text-muted-foreground">{label}</span>
+                  {data.visits_by_day.length <= 14 && (
+                    <span className="text-[9px] text-muted-foreground">{label}</span>
+                  )}
                 </div>
               );
             })}
           </div>
         </div>
       )}
+
+      {/* Peak Hours */}
+      <div className="rounded-[1.5rem] border border-white/10 bg-card p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-sm font-black text-white flex items-center gap-2">
+            <Clock className="h-4 w-4 text-orange-400" /> שעות השיא
+          </h3>
+          <span className="text-xs text-muted-foreground bg-white/5 rounded-full px-3 py-1">
+            שיא: {PEAK_HOUR.hour}:00–{PEAK_HOUR.hour + 1}:00
+          </span>
+        </div>
+        <div className="flex items-end gap-0.5 h-20">
+          {data.peak_hours.map(h => {
+            const heightPct = Math.round((h.visits / maxHour) * 100);
+            const isDay = h.hour >= 7 && h.hour <= 22;
+            const isPeak = h.hour === PEAK_HOUR.hour;
+            return (
+              <div key={h.hour} className="flex-1 flex flex-col items-center gap-1" title={`${h.hour}:00 — ${h.visits} ביקורים`}>
+                <div className="w-full rounded-t-sm bg-white/5 flex flex-col justify-end" style={{ height: "64px" }}>
+                  <div
+                    className={`w-full rounded-t-sm transition-all duration-500 ${isPeak ? "bg-orange-400" : isDay ? "bg-orange-400/35 hover:bg-orange-400/60" : "bg-white/10"}`}
+                    style={{ height: `${heightPct}%`, minHeight: h.visits > 0 ? "2px" : "0" }}
+                  />
+                </div>
+                {[0, 6, 12, 18, 23].includes(h.hour) && (
+                  <span className="text-[9px] text-muted-foreground">{h.hour}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">שעות 0–23 · כל עמודה = שעה אחת</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Top Pages */}
+        <div className="rounded-[1.5rem] border border-white/10 bg-card p-6">
+          <h3 className="text-sm font-black text-white mb-4 flex items-center gap-2">
+            <Navigation className="h-4 w-4 text-cyan-400" /> עמודים פופולריים
+          </h3>
+          <div className="space-y-3">
+            {data.top_pages.length === 0 && (
+              <p className="text-sm text-muted-foreground">אין נתונים עדיין</p>
+            )}
+            {data.top_pages.map(p => (
+              <BarRow
+                key={p.page}
+                label={PAGE_LABELS[p.page] ?? p.page}
+                value={p.visits}
+                max={maxPage}
+                color="bg-cyan-400"
+                count={p.visits}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Browser Breakdown */}
+        <div className="rounded-[1.5rem] border border-white/10 bg-card p-6">
+          <h3 className="text-sm font-black text-white mb-4 flex items-center gap-2">
+            <Globe className="h-4 w-4 text-purple-400" /> דפדפנים
+          </h3>
+          <div className="space-y-3">
+            {data.browser_breakdown.length === 0 && (
+              <p className="text-sm text-muted-foreground">אין נתונים עדיין</p>
+            )}
+            {data.browser_breakdown.map(b => (
+              <BarRow
+                key={b.browser}
+                label={b.browser}
+                value={b.visits}
+                max={maxBrowser}
+                color={BROWSER_COLORS[b.browser] ?? "bg-white/30"}
+                count={b.visits}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Device */}
+        <div className="rounded-[1.5rem] border border-white/10 bg-card p-6">
+          <h3 className="text-sm font-black text-white mb-4 flex items-center gap-2">
+            <Monitor className="h-4 w-4 text-primary" /> מכשירים
+          </h3>
+          <div className="space-y-3">
+            <BarRow label="מחשב" value={data.desktop_visits} max={data.total_visits} color="bg-primary" count={data.desktop_visits} />
+            <BarRow label="סמארטפון" value={data.mobile_visits} max={data.total_visits} color="bg-blue-400" count={data.mobile_visits} />
+          </div>
+          <div className="mt-4 pt-4 border-t border-white/10 flex justify-between text-xs text-muted-foreground">
+            <span>מחשב: {desktopPct}%</span>
+            <span>נייד: {mobilePct}%</span>
+          </div>
+        </div>
+
+        {/* New vs Returning */}
+        <div className="rounded-[1.5rem] border border-white/10 bg-card p-6">
+          <h3 className="text-sm font-black text-white mb-4 flex items-center gap-2">
+            <Users className="h-4 w-4 text-pink-400" /> גולשים חדשים מול חוזרים
+          </h3>
+          <div className="flex items-center gap-6 mb-4">
+            <div className="relative h-20 w-20 shrink-0">
+              <svg viewBox="0 0 36 36" className="h-20 w-20 -rotate-90">
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="3.8" />
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgb(34,211,238)" strokeWidth="3.8"
+                  strokeDasharray={`${newPct} ${100 - newPct}`} strokeLinecap="round" />
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgb(168,85,247)" strokeWidth="3.8"
+                  strokeDasharray={`${retPct} ${100 - retPct}`}
+                  strokeDashoffset={`-${newPct}`} strokeLinecap="round" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-xs font-black text-white">{totalNV}</span>
+              </div>
+            </div>
+            <div className="space-y-3 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-sm"><span className="h-2.5 w-2.5 rounded-full bg-cyan-400 shrink-0" />חדשים</span>
+                <span className="font-black text-white">{data.new_visitors} <span className="text-muted-foreground font-normal text-xs">({newPct}%)</span></span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-sm"><span className="h-2.5 w-2.5 rounded-full bg-purple-400 shrink-0" />חוזרים</span>
+                <span className="font-black text-white">{data.returning_visitors} <span className="text-muted-foreground font-normal text-xs">({retPct}%)</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Live Activity Feed */}
+      <div className="rounded-[1.5rem] border border-white/10 bg-card p-6">
+        <h3 className="text-sm font-black text-white mb-4 flex items-center gap-2">
+          <Activity className="h-4 w-4 text-green-400" />
+          <span>פעילות אחרונה</span>
+          <span className="mr-auto h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+        </h3>
+        {data.recent_visits.length === 0 ? (
+          <p className="text-sm text-muted-foreground">אין ביקורים עדיין</p>
+        ) : (
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {data.recent_visits.map((v, i) => (
+              <div key={i} className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.025] px-4 py-2.5 text-sm">
+                {v.device_type === "mobile"
+                  ? <Smartphone className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                  : <Monitor className="h-3.5 w-3.5 text-primary shrink-0" />
+                }
+                <span className="text-white font-bold truncate max-w-[120px]">
+                  {PAGE_LABELS[v.page] ?? v.page}
+                </span>
+                <span className="text-muted-foreground text-xs">{v.browser}</span>
+                <span className="mr-auto text-xs text-muted-foreground whitespace-nowrap">
+                  {formatDate(v.visited_at)} {formatTime(v.visited_at)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Extra stats row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="rounded-[1.5rem] border border-white/10 bg-card p-5">
+          <Maximize className="h-4 w-4 text-blue-400 mb-3" />
+          <p className="text-3xl font-black text-blue-400">{data.fullscreen_count.toLocaleString("he-IL")}</p>
+          <p className="text-sm font-bold text-white">פתיחות מסך מלא</p>
+          <p className="text-xs text-muted-foreground mt-0.5">PDF / וידאו</p>
+        </div>
+        <div className="rounded-[1.5rem] border border-white/10 bg-card p-5">
+          <Clock className="h-4 w-4 text-orange-400 mb-3" />
+          <p className="text-3xl font-black text-orange-400">{PEAK_HOUR.hour}:00</p>
+          <p className="text-sm font-bold text-white">שעת השיא</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{PEAK_HOUR.visits} ביקורים</p>
+        </div>
+        <div className="rounded-[1.5rem] border border-white/10 bg-card p-5 col-span-2 md:col-span-1">
+          <Users className="h-4 w-4 text-pink-400 mb-3" />
+          <p className="text-3xl font-black text-pink-400">{data.active_now}</p>
+          <p className="text-sm font-bold text-white">מחוברים עכשיו</p>
+          <p className="text-xs text-muted-foreground mt-0.5">פעיל ב-10 דקות האחרונות</p>
+        </div>
+      </div>
     </div>
   );
 }
