@@ -18,6 +18,21 @@ function getDeviceType(): "mobile" | "desktop" {
     : "desktop";
 }
 
+function fireAndForget(url: string, body: object) {
+  try {
+    navigator.sendBeacon(url, new Blob([JSON.stringify(body)], { type: "application/json" }));
+  } catch {
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      keepalive: true,
+    }).catch(() => {});
+  }
+}
+
+const HEARTBEAT_INTERVAL = 2 * 60 * 1000; // 2 minutes instead of 30s
+
 export function useAnalytics() {
   const sessionId = useRef(getSessionId());
   const deviceType = useRef(getDeviceType());
@@ -26,42 +41,33 @@ export function useAnalytics() {
   useEffect(() => {
     if (visitTracked.current) return;
     visitTracked.current = true;
-
-    fetch("/api/analytics/visit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        session_id: sessionId.current,
-        device_type: deviceType.current,
-      }),
-    }).catch(() => {});
+    fireAndForget("/api/analytics/visit", {
+      session_id: sessionId.current,
+      device_type: deviceType.current,
+    });
   }, []);
 
   useEffect(() => {
     const sendHeartbeat = () => {
-      fetch("/api/analytics/heartbeat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          session_id: sessionId.current,
-          device_type: deviceType.current,
-        }),
-      }).catch(() => {});
+      fireAndForget("/api/analytics/heartbeat", {
+        session_id: sessionId.current,
+        device_type: deviceType.current,
+      });
     };
 
-    sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, 30_000);
-    return () => clearInterval(interval);
+    const timeout = setTimeout(() => {
+      sendHeartbeat();
+      const interval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+      return () => clearInterval(interval);
+    }, 10_000);
+
+    return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
     const onChange = () => {
       if (document.fullscreenElement) {
-        fetch("/api/analytics/fullscreen", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_id: sessionId.current }),
-        }).catch(() => {});
+        fireAndForget("/api/analytics/fullscreen", { session_id: sessionId.current });
       }
     };
     document.addEventListener("fullscreenchange", onChange);

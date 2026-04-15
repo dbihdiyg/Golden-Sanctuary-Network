@@ -65,7 +65,7 @@ router.get("/admin/analytics", requireAdmin, async (_req, res) => {
         pool.query(`
           SELECT COUNT(*) as count, device_type
           FROM active_sessions
-          WHERE last_seen > NOW() - INTERVAL '2 minutes'
+          WHERE last_seen > NOW() - INTERVAL '10 minutes'
           GROUP BY device_type
         `),
         pool.query(`SELECT COUNT(*) FROM fullscreen_events`),
