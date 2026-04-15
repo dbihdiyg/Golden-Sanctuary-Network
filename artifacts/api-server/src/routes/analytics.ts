@@ -15,7 +15,7 @@ function detectBrowser(ua: string): string {
   return "Other";
 }
 
-router.post("/analytics/visit", async (req, res) => {
+router.post("/analytics/visit", (req, res) => {
   const { session_id, device_type, page, referrer } = req.body ?? {};
   if (!session_id || !["mobile", "desktop"].includes(device_type)) {
     return res.status(400).json({ error: "invalid params" });
@@ -24,54 +24,40 @@ router.post("/analytics/visit", async (req, res) => {
   const safePage = typeof page === "string" ? page.slice(0, 200) : "/";
   const safeReferrer = typeof referrer === "string" ? referrer.slice(0, 500) : null;
 
-  try {
-    const existing = await pool.query(
-      `SELECT 1 FROM page_visits WHERE session_id = $1 LIMIT 1`,
-      [session_id]
-    );
-    const isNew = existing.rowCount === 0;
+  // Respond immediately — DB write happens in background
+  res.json({ ok: true });
 
-    await pool.query(
-      `INSERT INTO page_visits (session_id, device_type, page, browser, referrer, is_new_visitor)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [session_id, device_type, safePage, browser, safeReferrer, isNew]
-    );
-    return res.json({ ok: true });
-  } catch (err) {
-    return res.status(500).json({ error: String(err) });
-  }
+  // Single query: determine new/returning + insert in one round-trip
+  pool.query(
+    `INSERT INTO page_visits (session_id, device_type, page, browser, referrer, is_new_visitor)
+     VALUES ($1, $2, $3, $4, $5,
+       (SELECT COUNT(*) = 0 FROM page_visits WHERE session_id = $1 LIMIT 1)
+     )`,
+    [session_id, device_type, safePage, browser, safeReferrer]
+  ).catch(() => {});
 });
 
-router.post("/analytics/heartbeat", async (req, res) => {
+router.post("/analytics/heartbeat", (req, res) => {
   const { session_id, device_type } = req.body ?? {};
   if (!session_id || !["mobile", "desktop"].includes(device_type)) {
     return res.status(400).json({ error: "invalid params" });
   }
-  try {
-    await pool.query(
-      `INSERT INTO active_sessions (session_id, device_type, last_seen)
-       VALUES ($1, $2, NOW())
-       ON CONFLICT (session_id) DO UPDATE SET last_seen = NOW(), device_type = $2`,
-      [session_id, device_type]
-    );
-    return res.json({ ok: true });
-  } catch (err) {
-    return res.status(500).json({ error: String(err) });
-  }
+  // Respond immediately — DB write in background
+  res.json({ ok: true });
+
+  pool.query(
+    `INSERT INTO active_sessions (session_id, device_type, last_seen)
+     VALUES ($1, $2, NOW())
+     ON CONFLICT (session_id) DO UPDATE SET last_seen = NOW(), device_type = $2`,
+    [session_id, device_type]
+  ).catch(() => {});
 });
 
-router.post("/analytics/fullscreen", async (req, res) => {
+router.post("/analytics/fullscreen", (req, res) => {
   const { session_id } = req.body ?? {};
   if (!session_id) return res.status(400).json({ error: "invalid params" });
-  try {
-    await pool.query(
-      `INSERT INTO fullscreen_events (session_id) VALUES ($1)`,
-      [session_id]
-    );
-    return res.json({ ok: true });
-  } catch (err) {
-    return res.status(500).json({ error: String(err) });
-  }
+  res.json({ ok: true });
+  pool.query(`INSERT INTO fullscreen_events (session_id) VALUES ($1)`, [session_id]).catch(() => {});
 });
 
 router.get("/admin/analytics", requireAdmin, async (_req, res) => {
