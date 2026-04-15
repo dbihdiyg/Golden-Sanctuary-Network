@@ -12,6 +12,7 @@ router.get("/forum/categories", async (_req, res) => {
       GROUP BY fc.id
       ORDER BY fc.sort_order ASC
     `);
+    res.set("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
     return res.json(result.rows);
   } catch (err) {
     return res.status(500).json({ error: String(err) });
