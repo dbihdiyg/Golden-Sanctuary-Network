@@ -13,7 +13,7 @@ export default function ShareButton({ sectionId, label, className = "" }: ShareB
   const handleShare = async () => {
     const url = `${window.location.origin}${window.location.pathname}#${sectionId}`;
 
-    if (navigator.share) {
+    if (typeof navigator.share === "function") {
       try {
         await navigator.share({ url, title: label ?? document.title });
         return;
@@ -55,7 +55,7 @@ export default function ShareButton({ sectionId, label, className = "" }: ShareB
         </>
       ) : (
         <>
-          {navigator.share ? <Share2 className="h-3 w-3" /> : <Link2 className="h-3 w-3" />}
+          {typeof navigator.share === "function" ? <Share2 className="h-3 w-3" /> : <Link2 className="h-3 w-3" />}
           שיתוף
         </>
       )}

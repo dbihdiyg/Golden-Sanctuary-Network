@@ -11,6 +11,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - Includes cinematic hero, latest updates, masonry-style gallery with lightbox, video cards, downloadable PDF library, community feed, and footer.
 - April 2026 brand upgrade: integrated the attached "מאירים" logo and shifted the visual palette to logo-inspired black/graphite, luminous gold, and deep royal blue.
 - Expanded into a multi-page community hub with sticky navigation, floating WhatsApp/Ask Rabbi/join actions, homepage category cards, quick actions, media spotlight, and dedicated pages for photos, videos, PDFs, updates, Ask the Rabbi, contact, join updates, alumni stories, and events.
+- Premium visual upgrade (April 2026): scroll-reveal animations (.sr/.sr-visible system), gold shimmer text, improved section headers with ornament dividers, active nav link indicator, upgraded Footer (4-column + social links), dramatic Inspiration quote section, animated timeline in CommunityFeed, number badges on PDFLibrary, upgraded Gallery with prev/next lightbox, and comprehensive hover states with gold glow across all cards.
 
 ### Authentication System (Clerk)
 - Clerk auth provisioned (dev instance). Keys: `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`

@@ -1,0 +1,100 @@
+Upgrade my existing website completely without breaking current functionality.
+
+This is an existing project for “בוגרי מאירים”.
+Do not rebuild from scratch unless necessary.
+Keep all existing content, routes, admin functionality, and data connections working.
+Focus on a full visual and UX upgrade from end to end.
+
+Main goal:
+Transform the current site into a premium, modern, emotionally powerful, highly polished website that feels professional, alive, and trustworthy.
+
+Design direction:
+- Elegant, clean, high-end look
+- Strong visual hierarchy
+- Smooth modern animations
+- Premium Hebrew-first layout with proper RTL support
+- Responsive and beautiful on mobile first, then desktop
+- Less generic, more branded, more intentional
+
+Color direction:
+- Deep rich background tones
+- Refined gold accents
+- Clean whites / light neutrals for readability
+- Strong contrast, but not noisy
+- Make it feel warm, respectful, and premium
+
+Typography:
+- Improve all typography across the site
+- Better Hebrew font pairing
+- Better spacing, line-height, section rhythm, and headline hierarchy
+- Headlines should feel strong and dignified
+- Body text should feel clean and readable
+
+Upgrade the following areas:
+1. Header / navigation
+- Redesign navbar
+- Make it cleaner and more premium
+- Improve menu behavior on mobile
+- Add subtle active states and hover effects
+
+2. Hero section
+- Make the first screen impressive
+- Strong headline, subheadline, and call to action
+- Add elegant background treatment, subtle motion, glow, depth, or layered design
+- Make users immediately feel this is a serious, high-quality platform
+
+3. Content sections
+- Redesign all cards, blocks, spacing, dividers, and buttons
+- Make sections feel consistent and professionally art-directed
+- Improve visual flow between sections
+- Add subtle entrance animations on scroll
+
+4. Gallery / media / updates
+- Make media sections look much more modern
+- Better thumbnails, hover states, card shadows, spacing, and grid structure
+- Improve interaction and clarity
+
+5. Admin area
+- Upgrade admin UI styling too
+- Keep all admin functions working
+- Improve form layout, buttons, tables, edit states, empty states, and feedback messages
+- Make admin feel clean, modern, and easy to use
+
+6. Footer
+- Redesign footer with proper structure
+- Add cleaner links, spacing, contact area, and refined visual finish
+
+UX improvements:
+- Better loading states
+- Better empty states
+- Better hover states
+- Better button consistency
+- Better spacing everywhere
+- Improve perceived quality in every screen
+
+Animation:
+- Use subtle premium motion only
+- No childish effects
+- Add fade, slide, depth, parallax, or glow only where it improves quality
+- Keep performance smooth
+
+Technical requirements:
+- Preserve all current logic and functionality
+- Preserve admin access and existing data flow
+- Refactor components where helpful
+- Clean up repetitive or messy UI code
+- Improve overall maintainability
+- Ensure full RTL correctness
+- Ensure accessibility and responsiveness
+
+Important:
+- Do not make the design generic
+- Do not overload with too many colors
+- Do not break working features
+- Before changing, inspect the existing structure and then upgrade intelligently
+- Apply the redesign consistently across the entire site, not just one section
+
+Then, after finishing the redesign:
+1. Summarize exactly what you changed
+2. List files/components updated
+3. Suggest 3 additional premium improvements I can add next
