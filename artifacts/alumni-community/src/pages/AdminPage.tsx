@@ -4,8 +4,74 @@ import {
   Lock, Eye, EyeOff, TrendingUp, LogOut, Users, ImageIcon,
   Video, ThumbsUp, ThumbsDown, Inbox, Mail, Phone, Trash2, UserCheck, UserX, Bot,
   Monitor, Smartphone, Maximize, Activity, MousePointerClick, Globe, ArrowUp, ArrowDown,
-  Repeat2, Sparkles, Chrome, Navigation, RefreshCw
+  Repeat2, Sparkles, Chrome, Navigation, RefreshCw, AlertTriangle, X
 } from "lucide-react";
+
+/* ─── Safe Delete Confirmation Modal ─────────────────────── */
+function ConfirmDeleteModal({
+  name,
+  onConfirm,
+  onCancel,
+}: {
+  name: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-[2rem] border border-red-500/30 bg-[hsl(232,30%,6%)] p-8 shadow-[0_0_80px_rgba(220,30,30,0.25),0_40px_100px_rgba(0,0,0,0.7)] animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex flex-col items-center text-center gap-5">
+          <div className="grid h-16 w-16 place-items-center rounded-full border border-red-500/35 bg-red-500/12 text-red-400 shadow-[0_0_40px_rgba(220,30,30,0.2)]">
+            <AlertTriangle className="h-8 w-8" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="font-serif text-2xl font-black text-white">מחיקה לצמיתות</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              האם למחוק את{" "}
+              <strong className="text-white font-black">{name}</strong>{" "}
+              מרשימת התפוצה?
+            </p>
+            <p className="text-sm text-red-400/80 font-bold">
+              ⚠️ פעולה זו בלתי הפיכה — לא ניתן לשחזר!
+            </p>
+          </div>
+
+          <div className="flex w-full gap-3 pt-2">
+            <button
+              autoFocus
+              onClick={onCancel}
+              className="flex-1 rounded-2xl border border-white/15 bg-white/[0.06] py-3 font-bold text-white transition-all duration-200 hover:bg-white/10 hover:border-white/30 focus:outline-none focus:ring-2 focus:ring-white/30"
+            >
+              ביטול
+            </button>
+            <button
+              onClick={onConfirm}
+              className="flex-1 rounded-2xl border border-red-500/50 bg-red-600/20 py-3 font-black text-red-400 transition-all duration-200 hover:bg-red-600 hover:text-white hover:border-red-500 hover:shadow-[0_0_30px_rgba(220,30,30,0.35)] focus:outline-none"
+            >
+              <Trash2 className="inline h-4 w-4 ml-1.5" />
+              כן, מחק לצמיתות
+            </button>
+          </div>
+        </div>
+
+        <button
+          onClick={onCancel}
+          className="absolute left-4 top-4 grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/5 text-muted-foreground transition hover:text-white"
+          aria-label="סגור"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 import Footer from "@/components/sections/Footer";
 
 const TOKEN_KEY = "meirim_admin_token";
@@ -275,6 +341,7 @@ function MailingList() {
   const [search, setSearch] = useState("");
   const [editNotes, setEditNotes] = useState<number | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -302,10 +369,11 @@ function MailingList() {
     setEditNotes(null);
   };
 
-  const deleteSub = async (id: number) => {
-    if (!confirm("האם למחוק את הנרשם?")) return;
-    await adminFetch(`/api/newsletter/subscribers/${id}`, { method: "DELETE" });
-    setSubs(prev => prev.filter(s => s.id !== id));
+  const doDelete = async () => {
+    if (!confirmDelete) return;
+    await adminFetch(`/api/newsletter/subscribers/${confirmDelete.id}`, { method: "DELETE" });
+    setSubs(prev => prev.filter(s => s.id !== confirmDelete.id));
+    setConfirmDelete(null);
   };
 
   const filtered = subs.filter(s =>
@@ -400,8 +468,11 @@ function MailingList() {
                     className="rounded-full border border-white/10 p-2 text-muted-foreground transition hover:text-primary hover:border-primary/30">
                     <MessageSquare className="h-4 w-4" />
                   </button>
-                  <button onClick={() => deleteSub(s.id)} title="מחק"
-                    className="rounded-full border border-white/10 p-2 text-muted-foreground transition hover:text-red-400 hover:border-red-400/30">
+                  <button
+                    onClick={() => setConfirmDelete({ id: s.id, name: s.name })}
+                    title="מחק לצמיתות"
+                    className="rounded-full border border-white/10 p-2 text-muted-foreground/40 transition hover:text-red-400 hover:border-red-400/30 hover:bg-red-500/8"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -409,6 +480,14 @@ function MailingList() {
             </div>
           ))}
         </div>
+      )}
+
+      {confirmDelete && (
+        <ConfirmDeleteModal
+          name={confirmDelete.name}
+          onConfirm={doDelete}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
     </div>
   );
