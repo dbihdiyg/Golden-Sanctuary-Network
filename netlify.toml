@@ -1,0 +1,64 @@
+# ============================================================
+# Netlify configuration for "בוגרי מאירים" (alumni-community)
+#
+# IMPORTANT — BACKEND:
+#   This repo has an Express API server (artifacts/api-server)
+#   that Netlify CANNOT host (it requires a long-running Node.js
+#   process + PostgreSQL).
+#
+#   Deploy the API server separately on Replit Deployments,
+#   Railway, Render, or Fly.io, then set the environment
+#   variable VITE_API_BASE_URL below to that server's public URL.
+#
+#   Example: VITE_API_BASE_URL = "https://your-api.up.railway.app"
+#
+#   The [[redirects]] rule below will proxy all /api/* requests
+#   from Netlify → your backend automatically — no code changes
+#   needed in the frontend.
+# ============================================================
+
+[build]
+  # Run from repo root so pnpm workspace packages resolve correctly.
+  # Netlify supports pnpm natively when a pnpm-lock.yaml is present.
+  command       = "pnpm --filter @workspace/alumni-community run build"
+  publish       = "artifacts/alumni-community/dist/public"
+
+[build.environment]
+  # Vite base path — must be "/" on Netlify (app is at the root)
+  BASE_PATH     = "/"
+  NODE_VERSION  = "20"
+
+  # ── Clerk ──────────────────────────────────────────────────
+  # Set your real Clerk publishable key in:
+  #   Netlify UI → Site settings → Environment variables
+  # VITE_CLERK_PUBLISHABLE_KEY = "pk_live_..."
+
+  # ── Backend API URL ────────────────────────────────────────
+  # Set this to wherever your Express API server is deployed.
+  # The /api/* redirect rule below uses this value at build time
+  # to know where to proxy requests.
+  # VITE_API_BASE_URL = "https://your-backend-url.example.com"
+
+# ── API proxy ──────────────────────────────────────────────────────────────
+# Forward all /api/* requests to the backend server.
+# Replace the `to` URL with your actual deployed API URL.
+# You can also set it dynamically via the Netlify UI environment variable
+# BACKEND_URL (and reference it below).
+#
+# ⚠️  Update the `to` value before deploying!
+[[redirects]]
+  from   = "/api/*"
+  to     = "https://REPLACE_WITH_YOUR_API_URL/api/:splat"
+  status = 200
+  force  = true
+
+  [redirects.headers]
+    X-From = "Netlify"
+
+# ── SPA fallback ───────────────────────────────────────────────────────────
+# Must come LAST — React Router handles all navigation client-side.
+# Without this, refreshing /admin or /portal returns a 404.
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
