@@ -4,9 +4,14 @@ import ShareButton from "@/components/ShareButton";
 
 const photos = [
   {
+    src: "/yom-hazikaron-tashpav.jpg",
+    title: "טקס יום הזכרון תשפ״ו — מגדל העמק",
+    className: "md:row-span-2",
+  },
+  {
     src: "/event-gathering2.jpg",
     title: "ערב מפגש הבוגרים — רגעים של קהילה",
-    className: "md:row-span-2",
+    className: "",
   },
   {
     src: "/event-invite.jpg",
