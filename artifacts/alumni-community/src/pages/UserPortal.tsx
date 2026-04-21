@@ -281,7 +281,7 @@ function MyProfile({ userId, onPostDelete }: { userId: string; onPostDelete?: ()
 
   const deleteMine = async (postId: number) => {
     await fetch(`/api/posts/${postId}`, { method: "DELETE" });
-    setStats(s => s ? { ...s, my_posts: s.my_posts.filter(p => p.id !== postId), posts_count: s.posts_count - 1 } : s);
+    setStats(s => s ? { ...s, my_posts: (s.my_posts ?? []).filter(p => p.id !== postId), posts_count: s.posts_count - 1 } : s);
     onPostDelete?.();
   };
 
@@ -368,7 +368,7 @@ function MyProfile({ userId, onPostDelete }: { userId: string; onPostDelete?: ()
         </div>
       )}
 
-      {!loading && stats && stats.my_posts.length === 0 && (
+      {!loading && stats && (stats.my_posts?.length ?? 0) === 0 && (
         <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-10 text-center">
           <Sparkles className="h-8 w-8 text-primary/40 mx-auto mb-3" />
           <p className="text-muted-foreground">עדיין לא שיתפת שום דבר עם הקהילה.</p>
