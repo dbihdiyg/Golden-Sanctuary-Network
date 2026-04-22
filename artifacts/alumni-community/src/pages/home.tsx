@@ -10,6 +10,7 @@ import CategoryHub from "@/components/sections/CategoryHub";
 import MediaSpotlight from "@/components/sections/MediaSpotlight";
 import QuickActions from "@/components/sections/QuickActions";
 import Inspiration from "@/components/sections/Inspiration";
+import FeaturedShiur from "@/components/sections/FeaturedShiur";
 
 export default function Home() {
   return (
@@ -19,6 +20,7 @@ export default function Home() {
       <Hero />
       
       <div className="relative z-10 bg-background">
+        <FeaturedShiur />
         <PesachExclusive />
         <CategoryHub />
         <QuickActions />
