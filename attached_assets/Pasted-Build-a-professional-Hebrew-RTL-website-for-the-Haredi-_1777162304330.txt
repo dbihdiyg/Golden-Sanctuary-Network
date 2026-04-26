@@ -1,0 +1,82 @@
+Build a professional Hebrew RTL website for the Haredi/Orthodox Jewish community.
+
+Website concept:
+A digital marketplace/library for ready-made design templates:
+- Kiddush invitations
+- Wedding invitations
+- Bar Mitzvah invitations
+- Event posters
+- Yeshiva / Torah event ads
+- Fundraising posters
+- Shabbat and holiday graphics
+- Short video templates for events and social media
+
+Main style:
+Elegant, clean, premium, Jewish/Haredi aesthetic.
+Use deep navy, cream, gold, burgundy, black-and-gold options.
+RTL Hebrew layout.
+Modern but respectful, not too flashy.
+
+Main features:
+1. Homepage with strong hero section:
+   Title: "תבניות עיצוב ווידאו לציבור החרדי"
+   Subtitle: "הזמנות, מודעות, קליפים ותבניות מוכנות — משנים טקסט ומורידים"
+   CTA buttons:
+   "צפה בתבניות"
+   "העלה בקשה אישית"
+
+2. Template categories:
+   - הזמנות לקידוש
+   - הזמנות לחתונה
+   - מודעות לאירועים
+   - מודעות לישיבות
+   - תבניות וידאו
+   - עיצובים לחגים
+
+3. Template cards:
+   Each card should show:
+   - Preview image/video placeholder
+   - Template name
+   - Category
+   - Price
+   - Button: "התאמה אישית"
+   - Button: "הורדה"
+
+4. Product page:
+   - Large preview
+   - Details
+   - What can be edited: names, dates, location, text, colors
+   - Download button
+   - WhatsApp order button
+
+5. Search and filters:
+   Search by event type.
+   Filter by style:
+   - יוקרתי
+   - חסידי
+   - מודרני
+   - קלאסי
+   - זהב
+   - מינימליסטי
+
+6. User flow:
+   User chooses template → changes text in form → sees preview mockup → can download or send request by WhatsApp.
+
+7. Add admin-style section placeholder:
+   Admin can later upload new templates, images, videos, prices and categories.
+
+8. Design details:
+   Use elegant Hebrew typography.
+   Add subtle gold ornaments, soft gradients, cards with shadows, clean spacing.
+   Make it mobile-first and responsive.
+   The site should feel like a premium Jewish design studio, not a cheap template website.
+
+9. Add sample content:
+   Create at least 12 sample template cards with Hebrew names and prices.
+   Use placeholder images with elegant gradients and labels.
+
+10. Technical:
+   Build as a clean React app.
+   Use Tailwind CSS.
+   Full RTL support.
+   Components should be organized clearly.
