@@ -1,13 +1,104 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useAuth, useUser, SignInButton } from "@clerk/react";
-import { ArrowRight, Crown, MessageCircle, Download, RotateCcw, CheckCircle2, ZoomIn, ZoomOut, Sun, Moon, Lock, Loader2, User, CreditCard, LogIn } from "lucide-react";
+import { ArrowRight, Crown, MessageCircle, Download, RotateCcw, CheckCircle2, ZoomIn, ZoomOut, Sun, Moon, Lock, Loader2, User, CreditCard, LogIn, Type, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { templates, TextSlot } from "@/lib/data";
 import { useTheme } from "@/hooks/useTheme";
 import { motion, AnimatePresence } from "framer-motion";
+
+// ─── Hebrew fonts — all free for commercial use (OFL / Google Fonts) ───────
+export const HEBREW_FONTS: { name: string; family: string; category: "serif" | "sans" }[] = [
+  { name: "Frank Ruhl Libre", family: "Frank Ruhl Libre",  category: "serif" },
+  { name: "Noto Serif Hebrew", family: "Noto Serif Hebrew", category: "serif" },
+  { name: "David Libre",       family: "David Libre",       category: "serif" },
+  { name: "Miriam Libre",      family: "Miriam Libre",      category: "serif" },
+  { name: "Suez One",          family: "Suez One",          category: "serif" },
+  { name: "Tinos",             family: "Tinos",             category: "serif" },
+  { name: "Heebo",             family: "Heebo",             category: "sans"  },
+  { name: "Rubik",             family: "Rubik",             category: "sans"  },
+  { name: "Assistant",         family: "Assistant",         category: "sans"  },
+  { name: "Secular One",       family: "Secular One",       category: "sans"  },
+  { name: "Varela Round",      family: "Varela Round",      category: "sans"  },
+  { name: "Alef",              family: "Alef",              category: "sans"  },
+  { name: "Noto Sans Hebrew",  family: "Noto Sans Hebrew",  category: "sans"  },
+  { name: "Cousine",           family: "Cousine",           category: "sans"  },
+];
+
+const DEFAULT_FONT = "Frank Ruhl Libre";
+
+function loadGoogleFont(family: string) {
+  const id = `gfont-${family.replace(/\s/g, "-")}`;
+  if (document.getElementById(id)) return;
+  const link = document.createElement("link");
+  link.id = id;
+  link.rel = "stylesheet";
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@400;700&display=swap`;
+  document.head.appendChild(link);
+}
+
+function FontSelector({ selected, onChange }: { selected: string; onChange: (f: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<"serif" | "sans">("serif");
+
+  const fonts = HEBREW_FONTS.filter(f => f.category === tab);
+
+  return (
+    <div className="border-b border-primary/10">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-5 py-2.5 hover:bg-primary/5 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Type className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs font-semibold text-foreground">פונט</span>
+          <span className="text-xs text-muted-foreground" style={{ fontFamily: `'${selected}', serif` }}>
+            {selected}
+          </span>
+        </div>
+        {open ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+      </button>
+
+      {open && (
+        <div className="px-4 pb-3 bg-card/30">
+          {/* Category tabs */}
+          <div className="flex gap-1 mb-2.5">
+            {(["serif", "sans"] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`flex-1 text-xs py-1 rounded-md font-medium transition-colors ${tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {t === "serif" ? "סריף — יוקרתי" : "סאנס — מודרני"}
+              </button>
+            ))}
+          </div>
+          {/* Font list */}
+          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+            {fonts.map(font => (
+              <button
+                key={font.family}
+                onClick={() => { loadGoogleFont(font.family); onChange(font.family); }}
+                className={`flex items-center justify-between px-3 py-2 rounded-lg text-right transition-colors border ${
+                  selected === font.family
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-transparent hover:border-primary/20 hover:bg-primary/5 text-foreground"
+                }`}
+              >
+                <span className="text-xs text-muted-foreground">{font.category === "serif" ? "סריף" : "סאנס"}</span>
+                <span className="text-base leading-tight" style={{ fontFamily: `'${font.family}', serif`, direction: "rtl" }}>
+                  {font.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/[^/]*\/?$/, "");
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -23,13 +114,17 @@ function resolveColor(color?: string): string {
   return "#F8F1E3";
 }
 
-function StackedLine({ slot, value }: { slot: TextSlot; value: string }) {
+function resolveFont(slotFamily: string | undefined, fontOverride: string): string {
+  return `'${fontOverride}', ${slotFamily === "serif" ? "serif" : "sans-serif"}`;
+}
+
+function StackedLine({ slot, value, fontOverride }: { slot: TextSlot; value: string; fontOverride: string }) {
   if (!value.trim()) return null;
   const sz = previewFontSizePx[slot.fontSize || "sm"];
   return (
     <div className="text-center leading-snug my-0.5 whitespace-pre-line" style={{
       fontSize: sz,
-      fontFamily: slot.fontFamily === "serif" ? "'Noto Serif Hebrew', serif" : "'Heebo', sans-serif",
+      fontFamily: resolveFont(slot.fontFamily, fontOverride),
       fontWeight: slot.bold ? 700 : 400,
       fontStyle: slot.italic ? "italic" : "normal",
       color: resolveColor(slot.color),
@@ -40,7 +135,7 @@ function StackedLine({ slot, value }: { slot: TextSlot; value: string }) {
   );
 }
 
-function AbsoluteSlot({ slot, value }: { slot: TextSlot; value: string }) {
+function AbsoluteSlot({ slot, value, fontOverride }: { slot: TextSlot; value: string; fontOverride: string }) {
   if (!value.trim() || slot.x == null || slot.y == null) return null;
   const sz = previewFontSizePx[slot.fontSize || "sm"];
   const w = slot.width ?? 80;
@@ -48,7 +143,7 @@ function AbsoluteSlot({ slot, value }: { slot: TextSlot; value: string }) {
     <div style={{
       position: "absolute", left: `${slot.x}%`, top: `${slot.y}%`, width: `${w}%`,
       transform: "translateX(-50%)", fontSize: sz,
-      fontFamily: slot.fontFamily === "serif" ? "'Noto Serif Hebrew', serif" : "'Heebo', sans-serif",
+      fontFamily: resolveFont(slot.fontFamily, fontOverride),
       fontWeight: slot.bold ? 700 : 400, fontStyle: slot.italic ? "italic" : "normal",
       color: resolveColor(slot.color), textAlign: slot.align ?? "center",
       lineHeight: slot.lineHeight ?? 1.35, whiteSpace: "pre-line", direction: "rtl", pointerEvents: "none",
@@ -58,8 +153,8 @@ function AbsoluteSlot({ slot, value }: { slot: TextSlot; value: string }) {
   );
 }
 
-function InvitationPreview({ template, values, zoom }: {
-  template: typeof templates[0]; values: Record<string, string>; zoom: number;
+function InvitationPreview({ template, values, zoom, fontOverride }: {
+  template: typeof templates[0]; values: Record<string, string>; zoom: number; fontOverride: string;
 }) {
   const slots = template.slots || [];
   const hasCoords = slots.some(s => s.x != null && s.y != null);
@@ -89,12 +184,12 @@ function InvitationPreview({ template, values, zoom }: {
       {!template.isGradient && !hasCoords && <div className="absolute inset-0 bg-black/45" />}
       {hasCoords ? (
         <div className="absolute inset-0">
-          {slots.map(slot => <AbsoluteSlot key={slot.id} slot={slot} value={values[slot.id] ?? slot.defaultValue} />)}
+          {slots.map(slot => <AbsoluteSlot key={slot.id} slot={slot} value={values[slot.id] ?? slot.defaultValue} fontOverride={fontOverride} />)}
         </div>
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center px-8 py-10 gap-0.5 overflow-hidden" dir="rtl">
           <div className="w-24 h-px bg-[#D6A84F]/50 mb-2" />
-          {slots.map(slot => <StackedLine key={slot.id} slot={slot} value={values[slot.id] ?? slot.defaultValue} />)}
+          {slots.map(slot => <StackedLine key={slot.id} slot={slot} value={values[slot.id] ?? slot.defaultValue} fontOverride={fontOverride} />)}
           <div className="w-24 h-px bg-[#D6A84F]/50 mt-2" />
         </div>
       )}
@@ -230,7 +325,11 @@ export default function Editor() {
   const [paySuccess, setPaySuccess] = useState(false);
   const [designId, setDesignId] = useState<number | null>(designIdParam ? Number(designIdParam) : null);
   const [designName, setDesignName] = useState("עיצוב שלי");
+  const [selectedFont, setSelectedFont] = useState(DEFAULT_FONT);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  // Load default font on mount
+  useEffect(() => { loadGoogleFont(DEFAULT_FONT); }, []);
 
   const initValues = useCallback(() => {
     const init: Record<string, string> = {};
@@ -502,6 +601,9 @@ export default function Editor() {
             </div>
           )}
 
+          {/* Font selector */}
+          <FontSelector selected={selectedFont} onChange={setSelectedFont} />
+
           {/* Fields list */}
           <div className="flex-1 overflow-y-auto">
             <div className="px-4 py-3 space-y-2">
@@ -588,7 +690,7 @@ export default function Editor() {
           </div>
 
           <div ref={previewRef} className="w-full max-w-xs sm:max-w-sm md:max-w-md relative" style={{ transformOrigin: "top center" }}>
-            <InvitationPreview template={template} values={values} zoom={zoom} />
+            <InvitationPreview template={template} values={values} zoom={zoom} fontOverride={selectedFont} />
             {isLoaded && !isSignedIn && <AuthWall templateId={template.id} />}
           </div>
 
