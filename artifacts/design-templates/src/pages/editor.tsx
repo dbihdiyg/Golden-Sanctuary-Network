@@ -8,7 +8,7 @@ import {
   ChevronDown, ChevronUp, ImagePlus, X as XIcon, Upload, Layers,
   Plus, Copy, Trash2, ChevronUp as Up, ChevronDown as Down,
   ArrowUp, ArrowDown, Unlock, Move, Settings2, Eye, EyeOff,
-  AlignCenter, AlignLeft, AlignRight, MoreVertical, Save,
+  AlignCenter, AlignLeft, AlignRight, MoreVertical, Save, Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -255,6 +255,7 @@ interface CanvasProps {
   selectedElementUid: string | null;
   zoom: number;
   canvasRef?: React.RefObject<HTMLDivElement>;
+  readonly?: boolean;
   onSlotSelect: (id: string | null) => void;
   onSlotMove: (id: string, x: number, y: number) => void;
   onLogoMove?: (pos: LogoPos) => void;
@@ -264,7 +265,7 @@ interface CanvasProps {
 function InteractiveCanvas({
   template, values, slotStyles, slotPositions, allSlots, activeSlotId, lockedSlots,
   fontOverride, logoUrl, logoPos, placedElements, selectedElementUid, zoom,
-  canvasRef: externalRef, onSlotSelect, onSlotMove, onLogoMove, onSelectElement,
+  canvasRef: externalRef, readonly, onSlotSelect, onSlotMove, onLogoMove, onSelectElement,
 }: CanvasProps) {
   const internalRef = useRef<HTMLDivElement>(null);
   const canvasRef = externalRef || internalRef;
@@ -685,6 +686,7 @@ export default function Editor() {
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
   const [rightTab, setRightTab] = useState<"text" | "elements" | "design">("text");
   const [elementsTab, setElementsTab] = useState(false);
+  const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
 
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -1047,8 +1049,8 @@ export default function Editor() {
       {/* ── MAIN 3-COLUMN LAYOUT ── */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* ── LEFT: Layers panel ── */}
-        <div className="w-48 shrink-0 border-l border-primary/10 bg-card flex flex-col hidden lg:flex">
+        {/* ── LEFT: Layers panel — hidden in preview mode ── */}
+        <div className={`w-48 shrink-0 border-l border-primary/10 bg-card flex-col ${viewMode === "edit" ? "hidden lg:flex" : "hidden"}`}>
           <div className="px-3 py-2 border-b border-primary/10 flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-primary" />
@@ -1098,28 +1100,62 @@ export default function Editor() {
 
         {/* ── CENTER: Canvas ── */}
         <main className="flex-1 bg-secondary/20 flex flex-col items-center overflow-auto">
-          {/* Zoom controls */}
-          <div className="flex items-center gap-2 bg-card border border-primary/10 rounded-full px-3 py-1 shadow-sm mt-3 mb-3 self-center shrink-0">
-            <button onClick={() => setZoom(z => Math.max(0.4, z - 0.1))} className="text-muted-foreground hover:text-foreground p-0.5">
-              <ZoomOut className="w-3.5 h-3.5" />
-            </button>
-            <span className="text-xs font-mono w-9 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(z => Math.min(1.8, z + 0.1))} className="text-muted-foreground hover:text-foreground p-0.5">
-              <ZoomIn className="w-3.5 h-3.5" />
-            </button>
-            <div className="w-px h-3 bg-primary/20" />
-            <span className="text-[10px] text-muted-foreground">גרור לזוז • חיצים לכוונון</span>
+
+          {/* Mode toggle + zoom controls */}
+          <div className="flex items-center gap-2 mt-3 mb-3 shrink-0 flex-wrap justify-center px-4">
+
+            {/* Preview / Edit mode toggle */}
+            <div className="flex items-center bg-card border border-primary/15 rounded-full p-0.5 shadow-sm">
+              <button
+                onClick={() => setViewMode("preview")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${viewMode === "preview" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <Eye className="w-3 h-3" />
+                תצוגה מקדימה
+              </button>
+              <button
+                onClick={() => setViewMode("edit")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${viewMode === "edit" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <Pencil className="w-3 h-3" />
+                עריכה מלאה
+              </button>
+            </div>
+
+            {/* Zoom controls */}
+            <div className="flex items-center gap-2 bg-card border border-primary/10 rounded-full px-3 py-1 shadow-sm">
+              <button onClick={() => setZoom(z => Math.max(0.4, z - 0.1))} className="text-muted-foreground hover:text-foreground p-0.5">
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-xs font-mono w-9 text-center">{Math.round(zoom * 100)}%</span>
+              <button onClick={() => setZoom(z => Math.min(1.8, z + 0.1))} className="text-muted-foreground hover:text-foreground p-0.5">
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+              {viewMode === "edit" && (
+                <>
+                  <div className="w-px h-3 bg-primary/20" />
+                  <span className="text-[10px] text-muted-foreground hidden sm:block">גרור לזוז • חיצים לכוונון</span>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Canvas */}
-          <div className="px-4 pb-4 w-full max-w-sm relative" style={{ transformOrigin: "top center" }}>
+          <div
+            className="px-4 pb-4 w-full max-w-sm relative"
+            style={{
+              transformOrigin: "top center",
+              // In preview mode: disable all pointer events on canvas content
+              pointerEvents: viewMode === "preview" ? "none" : undefined,
+            }}
+          >
             <InteractiveCanvas
               template={tmpl}
               values={values}
               slotStyles={slotStyles}
               slotPositions={slotPositions}
               allSlots={visibleSlots}
-              activeSlotId={activeSlotId}
+              activeSlotId={viewMode === "preview" ? null : activeSlotId}
               lockedSlots={lockedSlots}
               fontOverride={selectedFont}
               logoUrl={logoUrl}
@@ -1127,23 +1163,27 @@ export default function Editor() {
               placedElements={placedElements}
               selectedElementUid={selectedElementUid}
               zoom={zoom}
+              readonly={viewMode === "preview"}
               canvasRef={previewRef as React.RefObject<HTMLDivElement>}
               onSlotSelect={id => {
+                if (viewMode === "preview") return;
                 setActiveSlotId(id);
                 if (id) setRightTab("text");
               }}
               onSlotMove={(slotId, x, y) => {
+                if (viewMode === "preview") return;
                 setSlotPositions(prev => ({ ...prev, [slotId]: { ...(prev[slotId] ?? { width: 80 }), x, y } }));
                 setSaved(false);
               }}
-              onLogoMove={pos => { setLogoPos(pos); setSaved(false); }}
-              onSelectElement={uid => { setSelectedElementUid(uid); if (uid) setRightTab("elements" as any); }}
+              onLogoMove={pos => { if (viewMode === "preview") return; setLogoPos(pos); setSaved(false); }}
+              onSelectElement={uid => { if (viewMode === "preview") return; setSelectedElementUid(uid); if (uid) setRightTab("elements" as any); }}
             />
-            {isLoaded && !isSignedIn && <AuthWall templateId={tmpl.id} />}
           </div>
 
           <p className="text-[10px] text-muted-foreground text-center pb-4 px-4">
-            זוהי תצוגה מקדימה — העיצוב הסופי מוכן על ידי הסטודיו
+            {viewMode === "preview"
+              ? "מצב תצוגה — לחצו על \"עריכה מלאה\" כדי לערוך"
+              : "גרור שדות לכל מקום • חיצים לכוונון מדויק"}
           </p>
         </main>
 
@@ -1154,13 +1194,31 @@ export default function Editor() {
             {(["text", "elements"] as const).map(tab => (
               <button
                 key={tab}
-                onClick={() => setRightTab(tab)}
+                onClick={() => { if (viewMode === "preview") { setViewMode("edit"); } setRightTab(tab); }}
                 className={`flex-1 py-2.5 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${rightTab === tab ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"}`}
               >
                 {tab === "text" ? <><Type className="w-3 h-3" />טקסטים</> : <><Layers className="w-3 h-3" />אלמנטים{placedElements.length > 0 && <span className="bg-primary text-primary-foreground text-[9px] rounded-full w-4 h-4 flex items-center justify-center">{placedElements.length}</span>}</>}
               </button>
             ))}
           </div>
+
+          {/* Preview mode notice */}
+          {viewMode === "preview" && (
+            <div className="mx-3 mt-3 mb-1 p-3 rounded-xl bg-primary/8 border border-primary/20 flex items-center gap-2" dir="rtl">
+              <Eye className="w-4 h-4 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold text-foreground">מצב תצוגה מקדימה</p>
+                <p className="text-[10px] text-muted-foreground">לחצו עריכה מלאה כדי לשנות טקסטים וסגנונות</p>
+              </div>
+              <button
+                onClick={() => setViewMode("edit")}
+                className="shrink-0 flex items-center gap-1 px-2 py-1 bg-primary text-primary-foreground rounded-lg text-[10px] font-bold hover:bg-primary/90 transition-colors"
+              >
+                <Pencil className="w-2.5 h-2.5" />
+                עריכה
+              </button>
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto">
             {/* ── Text tab ── */}
@@ -1365,20 +1423,27 @@ export default function Editor() {
                   <MessageCircle className="w-3.5 h-3.5" />שלחו לסטודיו לגרסת הדפוס
                 </Button>
               </>
-            ) : isSignedIn ? (
-              <Button onClick={handleDownloadClick} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-10 font-bold shadow-lg">
-                <CreditCard className="w-4 h-4" />קבלת העיצוב הסופי — ₪49
-              </Button>
             ) : (
-              <Button onClick={() => redirectToSignIn({ redirectUrl: `${basePath}/editor/${tmpl.id}` })}
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-10 font-bold">
-                <LogIn className="w-4 h-4" />כניסה לשמירה ותשלום
-              </Button>
-            )}
-            {!paySuccess && (
-              <Button onClick={handleWhatsApp} variant="outline" className="w-full border-primary/20 text-primary hover:bg-primary/10 gap-2 h-8 text-xs">
-                <MessageCircle className="w-3.5 h-3.5" />שלחו לסטודיו דרך ווצאפ
-              </Button>
+              <>
+                {isSignedIn ? (
+                  <Button onClick={handleDownloadClick} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-10 font-bold shadow-lg">
+                    <CreditCard className="w-4 h-4" />המשך לתשלום — ₪49
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => redirectToSignIn({ redirectUrl: `${basePath}/editor/${tmpl.id}` })}
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-10 font-bold shadow-lg"
+                  >
+                    <CreditCard className="w-4 h-4" />המשך לתשלום — ₪49
+                  </Button>
+                )}
+                <p className="text-[10px] text-muted-foreground text-center">
+                  {isSignedIn ? "תשלום מאובטח דרך Stripe" : "נדרשת כניסה לחשבון לביצוע תשלום"}
+                </p>
+                <Button onClick={handleWhatsApp} variant="outline" className="w-full border-primary/20 text-primary hover:bg-primary/10 gap-2 h-8 text-xs">
+                  <MessageCircle className="w-3.5 h-3.5" />שלחו לסטודיו דרך ווצאפ
+                </Button>
+              </>
             )}
           </div>
         </aside>
