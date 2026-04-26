@@ -3,6 +3,8 @@ import { Bold, Italic, Underline, ChevronDown, ChevronUp, RotateCcw } from "luci
 import { FontEntry } from "@/lib/fonts";
 import { SvgWarpText } from "./SvgWarpText";
 import { PRESETS_3D, build3DShadows, type Preset3DConfig } from "@/lib/3d-presets";
+import { Text3DCanvas, MATERIAL_3D_OPTIONS, type Material3DType } from "./Text3DCanvas";
+import { STYLE_PRESETS, STYLE_PRESET_CATEGORIES, type StylePreset } from "@/lib/style-presets";
 
 export interface SlotStyle {
   fontFamily?: string;
@@ -70,6 +72,15 @@ export interface SlotStyle {
   shadowStr3D?: number;
   highlight3D?: number;
   glow3D?: number;
+
+  // ── Three.js 3D engine ──────────────────────
+  mode3D?: boolean;
+  material3D?: Material3DType;
+  depth3DEngine?: number;
+  bevel3D?: number;
+  cameraAngleX?: number;
+  cameraAngleY?: number;
+  autoRotate3D?: boolean;
 }
 
 const PRESET_COLORS = [
@@ -361,7 +372,22 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
   const [fontDropPos, setFontDropPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const fontBtnRef = useRef<HTMLButtonElement>(null);
   const [gradientCat, setGradientCat] = useState(GRADIENT_LIBRARY[0].id);
+  const [presetCat, setPresetCat] = useState<string>("metal");
   const s = style;
+
+  const applyStylePreset = (preset: StylePreset) => {
+    onChange({
+      // Clear conflicting modes first
+      extrudeEnabled: false,
+      longShadowEnabled: false,
+      glow: false,
+      shadow: false,
+      gradientEnabled: false,
+      preset3D: undefined,
+      mode3D: false,
+      ...preset.style,
+    });
+  };
 
   useEffect(() => {
     if (!fontOpen) return;
@@ -428,8 +454,101 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
   const hasTransform = !!(s.rotation || s.skewX || s.skewY);
   const hasBlend = !!(s.blendMode && s.blendMode !== "normal");
 
+  const filteredPresets = STYLE_PRESETS.filter(p => p.category === presetCat);
+
   return (
     <div className="mt-2 space-y-1.5" dir="rtl">
+
+      {/* ── סגנונות מהירים ─────────────────────────────────────────── */}
+      <Section title="✨ פריסטים פרמיום" defaultOpen={false}>
+        {/* Category tabs */}
+        <div className="flex gap-1 flex-wrap">
+          {STYLE_PRESET_CATEGORIES.map(cat => (
+            <button key={cat.id} onClick={() => setPresetCat(cat.id)}
+              className={`px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all ${
+                presetCat === cat.id
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-primary/20 text-muted-foreground hover:bg-primary/10"
+              }`}>
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Preset grid — 3 columns */}
+        <div className="grid grid-cols-3 gap-1.5 max-h-64 overflow-y-auto pr-0.5">
+          {filteredPresets.map(preset => {
+            const isActive =
+              (preset.style.preset3D && s.preset3D === preset.style.preset3D) ||
+              (!preset.style.preset3D && s.color === preset.style.color && !s.preset3D);
+
+            const previewTextStyle: React.CSSProperties = (() => {
+              const st = preset.style;
+              let shadow = "none";
+              if (st.preset3D && st.preset3D !== "none") {
+                const p3 = PRESETS_3D.find(p => p.id === st.preset3D);
+                if (p3) {
+                  shadow = build3DShadows(
+                    p3.id, p3.defaultAngle,
+                    Math.min(p3.defaultDepth, 3),
+                    p3.defaultShadowStr, p3.defaultHighlight,
+                    p3.defaultGlow, st.glowColor || p3.glowColor || p3.color,
+                  ).join(", ");
+                }
+              } else if (st.shadow) {
+                shadow = `${st.shadowX ?? 1}px ${st.shadowY ?? 1}px ${st.shadowBlur ?? 3}px ${st.shadowColor ?? "rgba(0,0,0,0.6)"}`;
+              }
+              if (st.glow && st.glowColor) {
+                const r = st.glowRadius ?? 10;
+                const gShadow = `0 0 ${r}px ${st.glowColor}, 0 0 ${r * 2}px ${st.glowColor}`;
+                shadow = shadow === "none" ? gShadow : `${shadow}, ${gShadow}`;
+              }
+              const base: React.CSSProperties = {
+                fontFamily: "'Frank Ruhl Libre', serif",
+                fontSize: 22,
+                fontWeight: 900,
+                lineHeight: 1,
+                userSelect: "none",
+                textShadow: shadow,
+              };
+              if (st.gradientEnabled && st.gradientFrom && st.gradientTo) {
+                return {
+                  ...base,
+                  color: "transparent",
+                  backgroundImage: `linear-gradient(${st.gradientAngle ?? 160}deg, ${st.gradientFrom}, ${st.gradientTo})`,
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                };
+              }
+              return { ...base, color: st.color || "#ffffff" };
+            })();
+
+            return (
+              <button key={preset.id} onClick={() => applyStylePreset(preset)}
+                className={`relative flex flex-col items-center rounded-xl border p-1 transition-all duration-200 ${
+                  isActive
+                    ? "border-primary bg-primary/15 shadow-md shadow-primary/20"
+                    : "border-primary/15 hover:border-primary/40 bg-background/40 hover:bg-primary/5"
+                }`}
+              >
+                <div className="w-full rounded-lg flex items-center justify-center overflow-hidden mb-0.5"
+                  style={{ height: 38, background: preset.previewBg }}>
+                  <span style={previewTextStyle}>הדר</span>
+                </div>
+                <span className="text-[8.5px] font-semibold text-center leading-tight text-muted-foreground truncate w-full text-center">
+                  {preset.name}
+                </span>
+                {isActive && (
+                  <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-primary rounded-full flex items-center justify-center">
+                    <span className="text-[7px] text-white font-bold">✓</span>
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </Section>
 
       {/* ── גופן ואותיות ───────────────────────────────────────────── */}
       <Section title="גופן ואותיות" defaultOpen={true}
@@ -648,10 +767,108 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
           </div>
         )}
 
-        {!has3D && (
+        {!has3D && !s.mode3D && (
           <p className="text-[10px] text-muted-foreground text-center py-1">
             בחר סגנון כדי להפוך את הטקסט לתלת-מימד
           </p>
+        )}
+
+        {/* ── 3D Engine divider ─────────────────────── */}
+        <div className="flex items-center gap-2 mt-1">
+          <div className="flex-1 h-px bg-primary/15" />
+          <span className="text-[9px] font-semibold text-primary/50 uppercase tracking-widest">מנוע תלת-מימד אמיתי</span>
+          <div className="flex-1 h-px bg-primary/15" />
+        </div>
+
+        {/* 2D / 3D engine toggle */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onChange({ mode3D: false })}
+            className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
+              !s.mode3D
+                ? "bg-primary/20 text-primary border-primary/40"
+                : "border-primary/15 text-muted-foreground hover:bg-primary/10"
+            }`}
+          >
+            2D מצב
+          </button>
+          <button
+            onClick={() => onChange({ mode3D: true, material3D: s.material3D ?? "gold", depth3DEngine: s.depth3DEngine ?? 8, bevel3D: s.bevel3D ?? 3 })}
+            className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
+              s.mode3D
+                ? "bg-primary/20 text-primary border-primary/40"
+                : "border-primary/15 text-muted-foreground hover:bg-primary/10"
+            }`}
+          >
+            ✦ 3D מצב
+          </button>
+        </div>
+
+        {/* Three.js 3D engine panel */}
+        {s.mode3D && (
+          <div className="space-y-2.5">
+            {/* Live Three.js preview */}
+            <Text3DCanvas
+              text="הדר"
+              fontFamily={s.fontFamily}
+              fontSize={s.fontSize ?? 40}
+              bold={s.bold}
+              color={s.color}
+              gradientEnabled={s.gradientEnabled}
+              gradientFrom={s.gradientFrom}
+              gradientTo={s.gradientTo}
+              gradientAngle={s.gradientAngle}
+              material3D={s.material3D ?? "gold"}
+              depth={s.depth3DEngine ?? 8}
+              bevel={s.bevel3D ?? 3}
+              cameraAngleX={s.cameraAngleX ?? 12}
+              cameraAngleY={s.cameraAngleY ?? -18}
+              autoRotate={s.autoRotate3D}
+            />
+
+            {/* Material preset buttons */}
+            <div className="space-y-1">
+              <p className="text-[9px] font-semibold text-primary/60 uppercase tracking-wider">חומר</p>
+              <div className="grid grid-cols-3 gap-1">
+                {MATERIAL_3D_OPTIONS.map(mat => (
+                  <button key={mat.id}
+                    onClick={() => onChange({ material3D: mat.id })}
+                    className={`flex items-center gap-1 px-1.5 py-1 rounded-lg border text-[9px] font-medium transition-all ${
+                      (s.material3D ?? "gold") === mat.id
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-primary/15 text-muted-foreground hover:border-primary/30"
+                    }`}
+                  >
+                    <span className="w-3 h-3 rounded-full shrink-0 border border-white/20"
+                      style={{ background: mat.color }} />
+                    {mat.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3D sliders */}
+            <div className="space-y-1.5 pr-2 border-r-2 border-primary/30">
+              <SliderRow label="עומק" min={1} max={30} step={1}
+                value={s.depth3DEngine} defaultValue={8}
+                onChange={v => onChange({ depth3DEngine: v })} unit="px" />
+              <SliderRow label="בֵּוֶל" min={0} max={10} step={1}
+                value={s.bevel3D} defaultValue={3}
+                onChange={v => onChange({ bevel3D: v })} />
+              <SliderRow label="הטיה אנכית" min={-30} max={30} step={1}
+                value={s.cameraAngleX} defaultValue={12}
+                onChange={v => onChange({ cameraAngleX: v })} unit="°" />
+              <SliderRow label="סיבוב אופקי" min={-60} max={60} step={1}
+                value={s.cameraAngleY} defaultValue={-18}
+                onChange={v => onChange({ cameraAngleY: v })} unit="°" />
+            </div>
+
+            {/* Auto-rotate toggle */}
+            <div className="flex items-center gap-2">
+              <ToggleChip label="סיבוב אוטומטי" active={!!s.autoRotate3D} onClick={() => onChange({ autoRotate3D: !s.autoRotate3D })} />
+              <span className="text-[9px] text-muted-foreground">מסתובב אוטומטית</span>
+            </div>
+          </div>
         )}
       </Section>
 

@@ -25,6 +25,7 @@ import { RichTextSlot } from "@/components/RichTextSlot";
 import { SlotStylePanel, SlotStyle } from "@/components/SlotStylePanel";
 import { build3DShadows, PRESETS_3D } from "@/lib/3d-presets";
 import { SvgWarpText, WarpType } from "@/components/SvgWarpText";
+import { Text3DCanvas } from "@/components/Text3DCanvas";
 
 export interface LogoPos { x: number; y: number; width: number; }
 
@@ -461,7 +462,28 @@ function InteractiveCanvas({
             onPointerDown={e => handleSlotPointerDown(slot.id, e)}
             onClick={e => e.stopPropagation()}
           >
-            {warpType && warpType !== "none" ? (
+            {slotStyles[slot.id]?.mode3D ? (
+              <div style={{ width: "100%", minHeight: 90 }}>
+                <Text3DCanvas
+                  text={plainText}
+                  fontFamily={slotStyles[slot.id]?.fontFamily}
+                  fontSize={slotStyles[slot.id]?.fontSize}
+                  bold={slotStyles[slot.id]?.bold}
+                  color={slotStyles[slot.id]?.color}
+                  gradientEnabled={slotStyles[slot.id]?.gradientEnabled}
+                  gradientFrom={slotStyles[slot.id]?.gradientFrom}
+                  gradientTo={slotStyles[slot.id]?.gradientTo}
+                  gradientAngle={slotStyles[slot.id]?.gradientAngle}
+                  material3D={slotStyles[slot.id]?.material3D ?? "gold"}
+                  depth={slotStyles[slot.id]?.depth3DEngine ?? 8}
+                  bevel={slotStyles[slot.id]?.bevel3D ?? 3}
+                  cameraAngleX={slotStyles[slot.id]?.cameraAngleX ?? 12}
+                  cameraAngleY={slotStyles[slot.id]?.cameraAngleY ?? -18}
+                  autoRotate={slotStyles[slot.id]?.autoRotate3D}
+                  fitToContainer
+                />
+              </div>
+            ) : warpType && warpType !== "none" ? (
               <div className="flex justify-center" style={{ width: "100%", overflow: "visible" }}>
                 <SvgWarpText
                   text={plainText}
