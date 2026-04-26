@@ -1,65 +1,72 @@
-/* RTL & Hadar brand overrides for Polotno SDK */
+/* ============================================================
+   Hadar editor overrides — ALL rules scoped to .editor-shell
+   so they NEVER bleed into the gallery, homepage, or admin.
+   ============================================================ */
 
-/* ── Blueprint core resets ── */
-.bp5-portal { direction: ltr; }
+/* ── Blueprint portal: always LTR (portals live outside the shell) ── */
+.bp5-portal { direction: ltr !important; }
 
-/* ── Side panel Hebrew labels ── */
-.polotno-side-panel,
-.polotno-side-tabs {
+/* ── Side panel — Hebrew font ── */
+.editor-shell .polotno-side-panel,
+.editor-shell .polotno-side-tabs {
   font-family: Heebo, Arial, sans-serif;
 }
 
 /* ── Toolbar ── */
-.polotno-toolbar-wrapper {
-  background: var(--card, #0f1e3d) !important;
+.editor-shell .polotno-toolbar-wrapper {
+  background: #0f1e3d !important;
   border-bottom: 1px solid rgba(214,168,79,0.2) !important;
 }
 
-/* ── Side panel background ── */
-.bp5-panel-stack-view,
-.polotno-side-panel-content {
-  background: var(--card, #0f1e3d) !important;
-  color: var(--foreground, #F8F1E3) !important;
+/* ── Side panel background / text ── */
+.editor-shell .bp5-panel-stack-view,
+.editor-shell .polotno-side-panel-content {
+  background: #0f1e3d !important;
+  color: #F8F1E3 !important;
 }
 
-/* ── Workspace canvas background ── */
-.polotno-workspace-container canvas {
-  cursor: default;
+/* ── Blueprint nav + tab selected colour ── */
+.editor-shell .bp5-tab[aria-selected="true"] {
+  color: #D6A84F !important;
+  box-shadow: inset 0 -2px 0 #D6A84F !important;
 }
 
-/* ── Blueprint button colours → gold accent ── */
-.bp5-button.bp5-intent-primary {
+/* ── Blueprint primary button → gold ── */
+.editor-shell .bp5-button.bp5-intent-primary {
   background-color: #D6A84F !important;
   color: #0B1833 !important;
 }
-.bp5-button.bp5-intent-primary:hover {
+.editor-shell .bp5-button.bp5-intent-primary:hover {
   background-color: #c4983f !important;
 }
 
 /* ── Input fields ── */
-.bp5-input {
+.editor-shell .bp5-input {
   direction: rtl;
   font-family: Heebo, sans-serif;
 }
 
-/* ── Color swatch labels ── */
-.polotno-color-picker { direction: ltr; }
+/* ── Color swatch — keep LTR ── */
+.editor-shell .polotno-color-picker { direction: ltr; }
 
 /* ── Font picker dropdown ── */
-.polotno-font-family-select .bp5-popover-content {
+.editor-shell .polotno-font-family-select .bp5-popover-content {
   direction: ltr;
 }
 
-/* ── Layer panel ── */
-.polotno-layers-panel {
-  direction: rtl;
-}
+/* ── Layers panel ── */
+.editor-shell .polotno-layers-panel { direction: rtl; }
 
-/* ── Text alignment buttons ── */
-.polotno-text-align-button[data-direction="right"] { order: -1; }
+/* ── RTL text-align button order ── */
+.editor-shell .polotno-text-align-button[data-direction="right"] { order: -1; }
 
-/* ── Prevent Blueprint overlay from blocking RTL header ── */
+/* ── Konva stage: no outline ── */
+.editor-shell .konvajs-content { outline: none; }
+
+/* ── Blueprint overlay z-index (must sit above our header at z-20) ── */
 .bp5-overlay-backdrop { z-index: 30; }
 
-/* ── Konva stage wrapper → full height ── */
-.konvajs-content { outline: none; }
+/* ── Scrollbar ── */
+.editor-shell ::-webkit-scrollbar { width: 6px; }
+.editor-shell ::-webkit-scrollbar-track { background: #0B1833; }
+.editor-shell ::-webkit-scrollbar-thumb { background: rgba(214,168,79,0.4); border-radius: 3px; }

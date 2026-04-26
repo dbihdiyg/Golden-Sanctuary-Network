@@ -7,8 +7,10 @@ import { SidePanel, TextSection, ElementsSection, BackgroundSection, LayersSecti
 import { Toolbar } from "polotno/toolbar";
 import { PolotnoContainer, SidePanelWrap, WorkspaceWrap } from "polotno";
 import type { StoreType } from "polotno/model/store";
-import "polotno/polotno.blueprint.css";
-import "@/styles/polotno-rtl.css";
+// CSS imported as raw strings so they are injected/removed dynamically.
+// This prevents Polotno's Blueprint CSS from polluting every other page.
+import blueprintCssRaw from "polotno/polotno.blueprint.css?raw";
+import editorCssRaw from "@/styles/polotno-rtl.css?raw";
 
 import {
   ArrowRight, Crown, Download, CheckCircle2, Loader2, Save, MessageCircle,
@@ -190,6 +192,25 @@ export default function PolotnoEditor() {
   const [storeReady, setStoreReady] = useState(false);
 
   const store = getStore();
+
+  // ── Inject Polotno CSS on mount, remove on unmount ─────────────────────────
+  // This keeps Polotno's Blueprint CSS from polluting any other page.
+  useEffect(() => {
+    const tag1 = document.createElement("style");
+    tag1.id = "polotno-blueprint-css";
+    tag1.textContent = blueprintCssRaw;
+    document.head.appendChild(tag1);
+
+    const tag2 = document.createElement("style");
+    tag2.id = "polotno-editor-css";
+    tag2.textContent = editorCssRaw;
+    document.head.appendChild(tag2);
+
+    return () => {
+      document.getElementById("polotno-blueprint-css")?.remove();
+      document.getElementById("polotno-editor-css")?.remove();
+    };
+  }, []);
 
   // ── Load custom fonts from API ──────────────────────────────────────────────
   useEffect(() => {
@@ -417,7 +438,7 @@ export default function PolotnoEditor() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-dvh overflow-hidden" dir="rtl" style={{ fontFamily: "Heebo, sans-serif" }}>
+    <div className="editor-shell flex flex-col h-dvh overflow-hidden" dir="rtl" style={{ fontFamily: "Heebo, sans-serif" }}>
 
       {/* ── Header ── */}
       <header className="shrink-0 h-12 bg-card border-b border-primary/20 flex items-center px-3 gap-2 z-20">
