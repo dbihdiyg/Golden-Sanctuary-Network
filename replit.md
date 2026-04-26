@@ -173,11 +173,13 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 4. **זוהר ואור** — glow (glowColor, glowRadius, glowIntensity 1–4 layers)
 5. **גרדיאנט ומרקם** — gradient (from/to/angle) + 5 built-in textures: gold-foil, silver, fire, neon, rainbow
 6. **קו ומסגרת** — stroke (color+width), Glass background (blur+color+borderRadius), Blend mode (multiply/screen/overlay/soft-light)
-7. **עיקום טקסט** — warpType: none/arc-up/arc-down/wave/circle, arcDegrees (-80–80)
+7. **עיקום טקסט** — warpType: none/arc-up/arc-down/arch/bulge/wave/circle; warpAmount 1–100
 
 **Rendering:**
 - Gradient/texture uses CSS `-webkit-background-clip: text` with `WebkitTextFillColor: transparent`
-- All warps use `SvgWarpText` SVG component — arc uses circular arc path, wave uses sinusoidal polyline, circle uses full circular textPath
+- All warps use `SvgWarpText` (Canvas-based pixel displacement engine, NOT SVG textPath).
+  Approach: (1) render text horizontally on offscreen canvas with `ctx.direction="rtl"` for correct Hebrew;
+  (2) apply per-column inverse displacement map to produce the curve. No per-glyph rotation.
 - Shadow/glow/3D extrude/long-shadow all rendered via `text-shadow` chain built by `buildTextShadows()`
 - Wrapper-level effects (rotation, skew, opacity, blend mode, glass) applied by `buildSlotWrapperCSS()`
 
