@@ -718,7 +718,7 @@ export default function Editor() {
   const [downloading, setDownloading] = useState(false);
   const [designId, setDesignId] = useState<number | null>(designIdParam ? Number(designIdParam) : null);
   const [designName, setDesignName] = useState("עיצוב שלי");
-  const [selectedFont, setSelectedFont] = useState(DEFAULT_FONT);
+  const [layerFontOpen, setLayerFontOpen] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoPos, setLogoPos] = useState<LogoPos>({ x: 30, y: 2, width: 40 });
   const [placedElements, setPlacedElements] = useState<PlacedElement[]>([]);
@@ -733,7 +733,6 @@ export default function Editor() {
   const [hiddenSlots, setHiddenSlots] = useState<Set<string>>(new Set());
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
   const [rightTab, setRightTab] = useState<"text" | "elements" | "design">("text");
-  const [elementsTab, setElementsTab] = useState(false);
   const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
 
   const previewRef = useRef<HTMLDivElement>(null);
@@ -746,6 +745,9 @@ export default function Editor() {
 
   // ── Load default font ─────────────────────────────────────────────────────────
   useEffect(() => { loadGoogleFont(DEFAULT_FONT); }, []);
+
+  // ── Close per-layer font picker when active slot changes ──────────────────────
+  useEffect(() => { setLayerFontOpen(false); }, [activeSlotId]);
 
   // ── Initialize slot values + positions when template loads ────────────────────
   const initValues = useCallback(() => {
@@ -790,7 +792,19 @@ export default function Editor() {
           setDesignName(data.designName || "עיצוב שלי");
           if (data.status === "paid") setPaySuccess(true);
           try { const els = JSON.parse(fv["__elements"] || "[]"); if (Array.isArray(els)) setPlacedElements(els); } catch {}
-          try { const ss = JSON.parse(fv["__slotStyles"] || "{}"); if (ss && typeof ss === "object") setSlotStyles(ss); } catch {}
+          try {
+            const ss = JSON.parse(fv["__slotStyles"] || "{}");
+            if (ss && typeof ss === "object") {
+              setSlotStyles(ss);
+              // Load all per-slot fonts that were saved
+              Object.values(ss as Record<string, SlotStyle>).forEach(st => {
+                if (!st.fontFamily) return;
+                const isLocal = LOCAL_BA_FONTS.some(f => f.family === st.fontFamily);
+                if (isLocal) loadLocalFont(st.fontFamily!);
+                else loadGoogleFont(st.fontFamily!);
+              });
+            }
+          } catch {}
           try { const lp = JSON.parse(fv["__logoPos"] || "null"); if (lp && typeof lp === "object") setLogoPos(lp); } catch {}
           try {
             const sp = JSON.parse(fv["__slotPositions"] || "{}");
@@ -868,7 +882,7 @@ export default function Editor() {
     setUserSlots(prev => [...prev, newSlot]);
     setSlotPositions(prev => ({ ...prev, [newId]: { x: 50, y: 50 + Object.keys(prev).length * 5, width: 70 } }));
     setValues(prev => ({ ...prev, [newId]: "טקסט חדש" }));
-    setSlotStyles(prev => ({ ...prev, [newId]: { fontSize: 16, color: "#F8F1E3" } }));
+    setSlotStyles(prev => ({ ...prev, [newId]: { fontSize: 16, color: "#F8F1E3", fontFamily: DEFAULT_FONT } }));
     setActiveSlotId(newId);
     setSaved(false);
   };
@@ -1327,7 +1341,7 @@ export default function Editor() {
               allSlots={visibleSlots}
               activeSlotId={viewMode === "preview" ? null : activeSlotId}
               lockedSlots={lockedSlots}
-              fontOverride={selectedFont}
+              fontOverride={DEFAULT_FONT}
               logoUrl={logoUrl}
               logoPos={logoPos}
               placedElements={placedElements}
@@ -1407,19 +1421,52 @@ export default function Editor() {
                   </div>
                 )}
 
-                {/* Global font */}
+                {/* Per-layer font picker */}
                 <div className="border-b border-primary/10">
-                  <button className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-primary/5 transition-colors"
-                    onClick={() => setElementsTab(o => !o)}>
-                    <div className="flex items-center gap-2">
-                      <Type className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-xs font-semibold">פונט גלובלי</span>
-                      <span className="text-xs text-muted-foreground" style={{ fontFamily: `'${selectedFont}', serif` }}>{selectedFont}</span>
+                  <button
+                    className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-primary/5 transition-colors"
+                    onClick={() => {
+                      if (!activeSlotId) return;
+                      setLayerFontOpen(o => !o);
+                    }}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Type className="w-3.5 h-3.5 text-primary shrink-0" />
+                      {activeSlotId ? (
+                        <>
+                          <span className="text-xs font-semibold shrink-0">גופן שכבה:</span>
+                          <span
+                            className="text-xs text-primary truncate"
+                            style={{ fontFamily: `'${slotStyles[activeSlotId]?.fontFamily || DEFAULT_FONT}', serif` }}
+                          >
+                            {slotStyles[activeSlotId]?.fontFamily || DEFAULT_FONT}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-xs font-semibold text-muted-foreground">גופן שכבה</span>
+                          <span className="text-[10px] text-muted-foreground">— בחרו שכבה</span>
+                        </>
+                      )}
                     </div>
-                    {elementsTab ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                    {activeSlotId
+                      ? (layerFontOpen ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />)
+                      : <span className="w-3.5 h-3.5 shrink-0" />
+                    }
                   </button>
-                  {elementsTab && (
-                    <FontPickerPanel selected={selectedFont} onChange={f => { setSelectedFont(f); setSaved(false); }} />
+                  {layerFontOpen && activeSlotId && (
+                    <FontPickerPanel
+                      selected={slotStyles[activeSlotId]?.fontFamily || DEFAULT_FONT}
+                      onChange={f => {
+                        setSlotStyles(prev => ({ ...prev, [activeSlotId]: { ...(prev[activeSlotId] || {}), fontFamily: f } }));
+                        setSaved(false);
+                      }}
+                    />
+                  )}
+                  {!activeSlotId && (
+                    <div className="px-4 pb-3 text-[11px] text-muted-foreground leading-relaxed">
+                      לחצו על שכבת טקסט בקנבס או ברשימה כדי לשנות את הגופן שלה בנפרד.
+                    </div>
                   )}
                 </div>
 
@@ -1598,7 +1645,11 @@ export default function Editor() {
                   <div className="p-4 space-y-3">
                     {/* All slots list */}
                     <p className="text-xs text-muted-foreground">בחרו שדה טקסט לעריכה — לחצו עליו בקנבס או כאן:</p>
-                    {allSlots.filter(s => !SYSTEM_SLOT_IDS.has(s.id)).map((slot, i) => (
+                    {allSlots.filter(s => !SYSTEM_SLOT_IDS.has(s.id)).map((slot, i) => {
+                      const slotFont = slotStyles[slot.id]?.fontFamily || DEFAULT_FONT;
+                      const slotColor = slotStyles[slot.id]?.color;
+                      const slotFontSize = slotStyles[slot.id]?.fontSize;
+                      return (
                       <div
                         key={slot.id}
                         className="bg-background border border-primary/10 rounded-xl px-3 py-2.5 cursor-pointer hover:border-primary/30 transition-all"
@@ -1609,6 +1660,20 @@ export default function Editor() {
                             {slot.fixed ? <Lock className="w-2.5 h-2.5" /> : i + 1}
                           </div>
                           <span className="text-[11px] font-semibold">{slot.label}</span>
+                          {/* Font + color indicators */}
+                          <div className="flex items-center gap-1 mr-auto shrink-0">
+                            {slotColor && (
+                              <span className="w-3 h-3 rounded-sm border border-white/20 shrink-0"
+                                style={{ background: slotColor }} title={slotColor} />
+                            )}
+                            <span
+                              className="text-[9px] text-muted-foreground truncate max-w-[64px]"
+                              style={{ fontFamily: `'${slotFont}', serif` }}
+                              title={`גופן: ${slotFont}${slotFontSize ? ` | גודל: ${slotFontSize}` : ""}`}
+                            >
+                              {slotFont.split(" ").slice(-1)[0]}
+                            </span>
+                          </div>
                         </div>
                         {!slot.fixed ? (
                           <RichTextSlot
@@ -1625,7 +1690,8 @@ export default function Editor() {
                           </div>
                         )}
                       </div>
-                    ))}
+                    );
+                    })}
                     <button
                       onClick={addTextBox}
                       className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-primary hover:bg-primary/10 rounded-xl transition-colors border border-dashed border-primary/30"
