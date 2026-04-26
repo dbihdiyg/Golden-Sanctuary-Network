@@ -244,17 +244,39 @@ router.post("/hadar/webhook", async (req, res) => {
 
     // ── Video job payment ───────────────────────────────────────────────────
     if (type === "video_job" && videoJobId) {
-      const { hadarVideoJobs } = await import("@workspace/db/schema");
+      const { hadarVideoJobs, hadarVideoTemplates } = await import("@workspace/db/schema");
+
+      // Fetch job to get priority + template details for ETA
+      const [job] = await db.select().from(hadarVideoJobs).where(eq(hadarVideoJobs.id, videoJobId));
+      const priority = (job?.priority ?? "standard") as "standard" | "premium";
+
+      // Get template for timeout calc
+      let maxRenderSeconds = 300;
+      if (job?.templateId) {
+        const [tmpl] = await db.select().from(hadarVideoTemplates).where(eq(hadarVideoTemplates.id, job.templateId));
+        maxRenderSeconds = tmpl?.maxRenderSeconds ?? 300;
+      }
+
+      // Compute initial ETA from queue
+      const { renderQueue } = await import("../lib/renderQueue");
+      const { processVideoJob } = await import("../lib/videoRenderer");
+
+      // Register processor (idempotent — only takes effect if not already set)
+      renderQueue.setProcessor(processVideoJob);
+
+      // Compute ETA before enqueuing (position not yet updated)
+      const queueStats = renderQueue.getStats();
+      const estimatedWaitSecs =
+        Math.ceil((queueStats.queuedCount + queueStats.activeCount) / Math.max(1, queueStats.concurrency))
+        * ((priority === "premium" ? 180 : 120));
+      const estimatedCompletionAt = new Date(Date.now() + (estimatedWaitSecs + maxRenderSeconds) * 1000);
+
       await db.update(hadarVideoJobs)
-        .set({ status: "paid", updatedAt: new Date() })
+        .set({ status: "queued", estimatedCompletionAt, updatedAt: new Date() })
         .where(eq(hadarVideoJobs.id, videoJobId));
-      console.log(`[HADAR] video job ${videoJobId} marked paid — starting render`);
-      // Kick off background render (non-blocking)
-      import("../lib/videoRenderer").then(({ processVideoJob }) => {
-        processVideoJob(videoJobId).catch((err: Error) => {
-          console.error(`[HADAR] background render failed for job ${videoJobId}:`, err.message);
-        });
-      });
+
+      console.log(`[HADAR] video job ${videoJobId} queued (${priority}) — ETA: ${estimatedCompletionAt.toISOString()}`);
+      renderQueue.enqueue(videoJobId, priority);
     }
   }
 

@@ -8,14 +8,14 @@ import { objectStorageClient } from "../lib/objectStorage";
 import { randomUUID } from "node:crypto";
 import { getUncachableStripeClient } from "../stripeClient";
 import { logger } from "../lib/logger";
+import { renderQueue } from "../lib/renderQueue";
 import type { Request, Response, NextFunction } from "express";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
 
-const VIDEO_PRICE_AGOROT = 4900; // ₪49
+const VIDEO_PRICE_AGOROT = 4900;
 
-// ── Admin auth middleware ────────────────────────────────────────────────────
 function adminAuth(req: Request, res: Response, next: NextFunction) {
   const secret =
     req.headers["x-admin-secret"] ||
@@ -26,7 +26,6 @@ function adminAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-// ── Storage helper ───────────────────────────────────────────────────────────
 async function uploadVideoToStorage(buffer: Buffer, mimetype: string, folder: string, ext: string): Promise<string> {
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
   if (!bucketId) throw new Error("Object storage not configured");
@@ -68,7 +67,7 @@ router.get("/hadar/video-templates/:slug", async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════
-// ADMIN — CRUD
+// ADMIN — CRUD + Queue
 // ════════════════════════════════════════════════════════════════════════════
 
 router.get("/hadar/admin/video-templates", adminAuth, async (_req, res) => {
@@ -85,21 +84,30 @@ router.get("/hadar/admin/video-templates", adminAuth, async (_req, res) => {
 
 router.post("/hadar/admin/video-templates", adminAuth, async (req, res) => {
   try {
-    const { slug, title, description, category, price, fields, overlays, videoDuration, videoWidth, videoHeight } = req.body;
+    const {
+      slug, title, description, category, price, fields, overlays,
+      videoDuration, videoWidth, videoHeight,
+      tier, maxRenderSeconds, renderPreset, renderCrf, aeCompositionName, preRenderedAssets,
+    } = req.body;
     if (!slug || !title) return res.status(400).json({ error: "slug and title required" });
     const [created] = await db
       .insert(hadarVideoTemplates)
       .values({
-        slug,
-        title,
+        slug, title,
         description: description ?? "",
         category: category ?? "",
+        tier: tier ?? "standard",
         price: price ?? VIDEO_PRICE_AGOROT,
         fields: fields ?? [],
         overlays: overlays ?? [],
         videoDuration: videoDuration ?? 15,
         videoWidth: videoWidth ?? 1920,
         videoHeight: videoHeight ?? 1080,
+        maxRenderSeconds: maxRenderSeconds ?? 300,
+        renderPreset: renderPreset ?? "fast",
+        renderCrf: renderCrf ?? 22,
+        aeCompositionName: aeCompositionName ?? null,
+        preRenderedAssets: preRenderedAssets ?? [],
       })
       .returning();
     res.json(created);
@@ -111,13 +119,18 @@ router.post("/hadar/admin/video-templates", adminAuth, async (req, res) => {
 router.put("/hadar/admin/video-templates/:id", adminAuth, async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const { title, description, category, price, fields, overlays, videoDuration, videoWidth, videoHeight, isActive } = req.body;
+    const {
+      title, description, category, price, fields, overlays,
+      videoDuration, videoWidth, videoHeight, isActive,
+      tier, maxRenderSeconds, renderPreset, renderCrf, aeCompositionName, preRenderedAssets,
+    } = req.body;
     const [updated] = await db
       .update(hadarVideoTemplates)
       .set({
         ...(title !== undefined && { title }),
         ...(description !== undefined && { description }),
         ...(category !== undefined && { category }),
+        ...(tier !== undefined && { tier }),
         ...(price !== undefined && { price }),
         ...(fields !== undefined && { fields }),
         ...(overlays !== undefined && { overlays }),
@@ -125,6 +138,11 @@ router.put("/hadar/admin/video-templates/:id", adminAuth, async (req, res) => {
         ...(videoWidth !== undefined && { videoWidth }),
         ...(videoHeight !== undefined && { videoHeight }),
         ...(isActive !== undefined && { isActive }),
+        ...(maxRenderSeconds !== undefined && { maxRenderSeconds }),
+        ...(renderPreset !== undefined && { renderPreset }),
+        ...(renderCrf !== undefined && { renderCrf }),
+        ...(aeCompositionName !== undefined && { aeCompositionName }),
+        ...(preRenderedAssets !== undefined && { preRenderedAssets }),
         updatedAt: new Date(),
       })
       .where(eq(hadarVideoTemplates.id, id))
@@ -136,21 +154,102 @@ router.put("/hadar/admin/video-templates/:id", adminAuth, async (req, res) => {
   }
 });
 
-// Upload base video (large file — up to 500 MB)
 router.post("/hadar/admin/video-templates/:id/upload-video", adminAuth, upload.single("video"), async (req: any, res) => {
   try {
     const id = Number(req.params.id);
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-    const { type } = req.body; // "base" | "preview"
+    const { type } = req.body;
     const ext = req.file.originalname.split(".").pop()?.toLowerCase() || "mp4";
     const url = await uploadVideoToStorage(req.file.buffer, req.file.mimetype, "hadar-videos/templates", ext);
-    const field = type === "preview" ? { previewVideoUrl: url } : type === "thumb" ? { previewImageUrl: url } : { baseVideoUrl: url };
+    const field =
+      type === "preview" ? { previewVideoUrl: url } :
+      type === "thumb" ? { previewImageUrl: url } :
+      { baseVideoUrl: url };
     const [updated] = await db
       .update(hadarVideoTemplates)
       .set({ ...field, updatedAt: new Date() })
       .where(eq(hadarVideoTemplates.id, id))
       .returning();
     res.json({ url, template: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Upload a pre-rendered asset (intro, outro) and append it to template's preRenderedAssets list */
+router.post("/hadar/admin/video-templates/:id/upload-asset", adminAuth, upload.single("asset"), async (req: any, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!req.file) return res.status(400).json({ error: "No file" });
+    const { assetType, label, durationSecs } = req.body;
+    if (!["intro", "outro", "overlay"].includes(assetType)) {
+      return res.status(400).json({ error: "assetType must be intro|outro|overlay" });
+    }
+    const ext = req.file.originalname.split(".").pop()?.toLowerCase() || "mp4";
+    const url = await uploadVideoToStorage(req.file.buffer, req.file.mimetype, "hadar-videos/assets", ext);
+
+    const [tmpl] = await db.select().from(hadarVideoTemplates).where(eq(hadarVideoTemplates.id, id));
+    if (!tmpl) return res.status(404).json({ error: "Template not found" });
+
+    const existing = (tmpl.preRenderedAssets as any[]) ?? [];
+    const newAsset = {
+      id: randomUUID(),
+      label: label ?? assetType,
+      url,
+      type: assetType,
+      durationSecs: durationSecs ? Number(durationSecs) : null,
+    };
+    const [updated] = await db
+      .update(hadarVideoTemplates)
+      .set({ preRenderedAssets: [...existing, newAsset], updatedAt: new Date() })
+      .where(eq(hadarVideoTemplates.id, id))
+      .returning();
+    res.json({ asset: newAsset, template: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Admin: live render queue stats */
+router.get("/hadar/admin/video-queue", adminAuth, (_req, res) => {
+  res.json(renderQueue.getStats());
+});
+
+/** Admin: retry a failed job */
+router.post("/hadar/admin/video-jobs/:id/retry", adminAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [job] = await db.select().from(hadarVideoJobs).where(eq(hadarVideoJobs.id, id));
+    if (!job) return res.status(404).json({ error: "Not found" });
+    if (job.status !== "failed") return res.status(400).json({ error: "Only failed jobs can be retried" });
+
+    const [tmpl] = await db.select().from(hadarVideoTemplates).where(eq(hadarVideoTemplates.id, job.templateId));
+    const priority = (job.priority as "standard" | "premium") ?? "standard";
+
+    await db
+      .update(hadarVideoJobs)
+      .set({ status: "queued", errorMessage: null, progressPct: 0, updatedAt: new Date() })
+      .where(eq(hadarVideoJobs.id, id));
+
+    const eta = renderQueue.getEta(id, priority) ?? new Date(Date.now() + (tmpl?.maxRenderSeconds ?? 300) * 1000);
+    await db.update(hadarVideoJobs).set({ estimatedCompletionAt: eta }).where(eq(hadarVideoJobs.id, id));
+
+    renderQueue.enqueue(id, priority);
+    res.json({ queued: true, jobId: id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Admin: all jobs list */
+router.get("/hadar/admin/video-jobs", adminAuth, async (_req, res) => {
+  try {
+    const jobs = await db
+      .select({ job: hadarVideoJobs, template: hadarVideoTemplates })
+      .from(hadarVideoJobs)
+      .innerJoin(hadarVideoTemplates, eq(hadarVideoJobs.templateId, hadarVideoTemplates.id))
+      .orderBy(desc(hadarVideoJobs.createdAt));
+    res.json(jobs);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -165,9 +264,11 @@ router.post("/hadar/video-checkout", requireAuth(), async (req: any, res) => {
     const { userId } = getAuth(req);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-    const { templateSlug, fieldValues } = req.body as {
+    const { templateSlug, fieldValues, userEmail, userName } = req.body as {
       templateSlug: string;
       fieldValues: Record<string, string>;
+      userEmail?: string;
+      userName?: string;
     };
 
     const [template] = await db
@@ -176,7 +277,8 @@ router.post("/hadar/video-checkout", requireAuth(), async (req: any, res) => {
       .where(eq(hadarVideoTemplates.slug, templateSlug));
     if (!template) return res.status(404).json({ error: "Template not found" });
 
-    // Create job in pending_payment state
+    const priority = (template.tier === "premium" ? "premium" : "standard") as "standard" | "premium";
+
     const [job] = await db
       .insert(hadarVideoJobs)
       .values({
@@ -184,7 +286,10 @@ router.post("/hadar/video-checkout", requireAuth(), async (req: any, res) => {
         templateId: template.id,
         fieldValues: fieldValues ?? {},
         status: "pending_payment",
+        priority,
         pricePaid: template.price,
+        userEmail: userEmail ?? null,
+        userName: userName ?? null,
       })
       .returning();
 
@@ -207,9 +312,9 @@ router.post("/hadar/video-checkout", requireAuth(), async (req: any, res) => {
       success_url: `${process.env.APP_URL || "http://localhost"}${basePath}/my-videos?videoJobId=${job.id}&payment=success`,
       cancel_url: `${process.env.APP_URL || "http://localhost"}${basePath}/video/${templateSlug}`,
       metadata: { videoJobId: String(job.id), type: "video_job" },
+      ...(userEmail && { customer_email: userEmail }),
     });
 
-    // Link the session
     await db
       .update(hadarVideoJobs)
       .set({ stripeSessionId: session.id })
@@ -250,7 +355,20 @@ router.get("/hadar/video-jobs/:id", requireAuth(), async (req: any, res) => {
       .from(hadarVideoJobs)
       .where(and(eq(hadarVideoJobs.id, id), eq(hadarVideoJobs.clerkUserId, userId)));
     if (!job) return res.status(404).json({ error: "Not found" });
-    res.json(job);
+
+    // Attach live queue info
+    const priority = (job.priority as "standard" | "premium") ?? "standard";
+    const queuePosition = renderQueue.getQueuePosition(id);
+    const isActive = renderQueue.isActive(id);
+    const eta = job.estimatedCompletionAt
+      ?? (isActive || queuePosition !== null ? renderQueue.getEta(id, priority) : null);
+
+    res.json({
+      ...job,
+      queuePosition,
+      isRendering: isActive,
+      estimatedCompletionAt: eta?.toISOString() ?? null,
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -271,22 +389,7 @@ router.get("/hadar/video-jobs/:id/download", requireAuth(), async (req: any, res
     if (job.status !== "ready" || !job.outputUrl) {
       return res.status(403).json({ error: "Video is not ready yet" });
     }
-    // Redirect to the media proxy URL which serves the file from object storage
     res.redirect(job.outputUrl);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Admin list all jobs
-router.get("/hadar/admin/video-jobs", adminAuth, async (_req, res) => {
-  try {
-    const jobs = await db
-      .select({ job: hadarVideoJobs, template: hadarVideoTemplates })
-      .from(hadarVideoJobs)
-      .innerJoin(hadarVideoTemplates, eq(hadarVideoJobs.templateId, hadarVideoTemplates.id))
-      .orderBy(desc(hadarVideoJobs.createdAt));
-    res.json(jobs);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

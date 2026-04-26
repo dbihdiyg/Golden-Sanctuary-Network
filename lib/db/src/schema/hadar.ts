@@ -110,6 +110,8 @@ export const hadarVideoTemplates = pgTable("hadar_video_templates", {
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
   category: text("category").notNull().default(""),
+  // "standard" | "premium"
+  tier: text("tier").notNull().default("standard"),
   price: integer("price").notNull().default(4900), // agorot
   baseVideoUrl: text("base_video_url"),            // source MP4
   previewVideoUrl: text("preview_video_url"),       // short loop for gallery
@@ -121,6 +123,14 @@ export const hadarVideoTemplates = pgTable("hadar_video_templates", {
   videoDuration: integer("video_duration").default(15), // seconds
   videoWidth: integer("video_width").default(1920),
   videoHeight: integer("video_height").default(1080),
+  // Render quality settings
+  maxRenderSeconds: integer("max_render_seconds").default(300), // kill ffmpeg after this
+  renderPreset: text("render_preset").notNull().default("fast"), // ultrafast|fast|medium|slow
+  renderCrf: integer("render_crf").default(22),                  // 0-51, lower=better quality
+  // After Effects / pre-rendered assets support
+  aeCompositionName: text("ae_composition_name"),                // for documentation only
+  // [{id,label,url,type:'intro'|'outro'|'overlay',durationSecs}]
+  preRenderedAssets: jsonb("pre_rendered_assets").notNull().default(sql`'[]'::jsonb`),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -132,12 +142,23 @@ export const hadarVideoJobs = pgTable("hadar_video_jobs", {
   clerkUserId: text("clerk_user_id").notNull(),
   templateId: integer("template_id").notNull().references(() => hadarVideoTemplates.id),
   fieldValues: jsonb("field_values").notNull().default(sql`'{}'::jsonb`),
-  // pending_payment | paid | rendering | ready | failed
+  // pending_payment | queued | rendering | ready | failed
   status: text("status").notNull().default("pending_payment"),
+  // "standard" | "premium" — premium jobs jump the queue
+  priority: text("priority").notNull().default("standard"),
   stripeSessionId: text("stripe_session_id"),
   outputUrl: text("output_url"),
   errorMessage: text("error_message"),
   pricePaid: integer("price_paid"),
+  // Notification fields
+  userEmail: text("user_email"),
+  userName: text("user_name"),
+  notifiedAt: timestamp("notified_at"),
+  // Render tracking
+  renderStartedAt: timestamp("render_started_at"),
+  renderCompletedAt: timestamp("render_completed_at"),
+  progressPct: integer("progress_pct").notNull().default(0),       // 0-100
+  estimatedCompletionAt: timestamp("estimated_completion_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

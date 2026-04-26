@@ -26,4 +26,12 @@ app.listen(port, (err) => {
 
   // Pre-warm DB connections so the first real request isn't slow
   pool.query("SELECT 1").catch(() => {});
+
+  // Initialize render queue processor (must happen after server is listening)
+  import("./lib/renderQueue").then(({ renderQueue }) => {
+    import("./lib/videoRenderer").then(({ processVideoJob }) => {
+      renderQueue.setProcessor(processVideoJob);
+      logger.info(`[RenderQueue] Processor registered. Concurrency: ${renderQueue.concurrency}`);
+    });
+  }).catch((err: Error) => logger.error({ err }, "Failed to initialize render queue"));
 });
