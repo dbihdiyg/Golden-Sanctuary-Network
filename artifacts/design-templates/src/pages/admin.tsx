@@ -467,8 +467,8 @@ function TemplateEditor({
     });
   }
 
-  async function handleSave() {
-    if (!form.slug || !form.title) { setSaveError("slug וכותרת הם חובה"); setSaveState("error"); return; }
+  async function handleSave(attempt = 1) {
+    if (!form.slug || !form.title) { setSaveError("חסרים: slug וכותרת"); setSaveState("error"); return; }
     setSaveState("saving"); setSaveError(null);
     try {
       const id = (initial as DBTemplate)?.id;
@@ -479,7 +479,13 @@ function TemplateEditor({
       setTimeout(() => setSaveState("idle"), 3000);
       onSave(result);
     } catch (err: any) {
-      setSaveError(err.message);
+      const msg: string = err.message || "שגיאה לא ידועה";
+      // Auto-retry once on gateway/network errors (502, 503, 504, ECONNRESET)
+      if (attempt === 1 && /50[234]|ECONN|network/i.test(msg)) {
+        await new Promise(r => setTimeout(r, 1500));
+        return handleSave(2);
+      }
+      setSaveError(msg);
       setSaveState("error");
     }
   }
@@ -500,13 +506,20 @@ function TemplateEditor({
           {canvasBg && <span className="text-[11px] text-muted-foreground">לחץ על הקנבס להוספת שדה | גרור שדה לשינוי מיקום</span>}
         </div>
         <div className="flex items-center gap-2">
-          {saveError && <span className="text-xs text-destructive max-w-48 truncate">{saveError}</span>}
+          {saveError && (
+            <div className="flex flex-col items-end gap-0.5 max-w-xs">
+              <span className="text-[10px] font-semibold text-destructive">שגיאת שמירה:</span>
+              <span className="text-[10px] text-destructive/80 break-all leading-tight" title={saveError}>
+                {saveError.length > 80 ? saveError.slice(0, 80) + "…" : saveError}
+              </span>
+            </div>
+          )}
           <Button
-            onClick={handleSave}
+            onClick={() => handleSave()}
             disabled={saveState === "saving"}
             className={`gap-2 transition-all min-w-24 ${
               saveState === "saved" ? "bg-green-600 hover:bg-green-700 text-white" :
-              saveState === "error" ? "bg-destructive hover:bg-destructive text-white" :
+              saveState === "error" ? "bg-destructive hover:bg-destructive/80 text-white" :
               "bg-primary text-primary-foreground"
             }`}
           >
@@ -516,7 +529,7 @@ function TemplateEditor({
              <Check className="w-4 h-4" />}
             {saveState === "saving" ? "שומר..." :
              saveState === "saved"  ? "נשמר ✓" :
-             saveState === "error"  ? "שגיאה" : "שמור"}
+             saveState === "error"  ? "נסה שוב" : "שמור"}
           </Button>
         </div>
       </header>
