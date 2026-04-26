@@ -802,6 +802,37 @@ export default function Editor() {
     if (designId) return;
     setValues(initValues());
     setSlotPositions(initPositions(template.slots || []));
+    // Initialize slotStyles from template slot data so admin-designed effects
+    // (gradients, 3D, shadows, fonts) are visible to users out of the box
+    const initSS: Record<string, SlotStyle> = {};
+    (template.slots || []).filter(s => !SYSTEM_SLOT_IDS.has(s.id)).forEach(s => {
+      const base: SlotStyle = {};
+      const a = s as any;
+      // Copy all style-relevant fields from the template slot
+      if (a.fontFamily) base.fontFamily = a.fontFamily;
+      if (a.fontSizePx) base.fontSize = a.fontSizePx;
+      if (a.color)      base.color = a.color;
+      if (a.bold)       base.bold = a.bold;
+      if (a.italic)     base.italic = a.italic;
+      if (a.letterSpacing != null) base.letterSpacing = a.letterSpacing;
+      if (a.lineHeight  != null)   base.lineHeight = a.lineHeight;
+      if (a.shadow)     base.shadow = a.shadow;
+      if (a.opacity != null && a.opacity !== 1) base.opacity = a.opacity;
+      if (a.zIndex != null) base.zIndex = a.zIndex;
+      if (a.warpType && a.warpType !== "none") { base.warpType = a.warpType; base.warpAmount = a.warpAmount ?? a.arcDegrees; }
+      if (a.gradientEnabled) { base.gradientEnabled = a.gradientEnabled; base.gradientFrom = a.gradientFrom; base.gradientTo = a.gradientTo; base.gradientAngle = a.gradientAngle; }
+      if (a.textureType && a.textureType !== "none") base.textureType = a.textureType;
+      if (a.preset3D && a.preset3D !== "none") { base.preset3D = a.preset3D; (base as any).depth3D = a.depth3D; (base as any).lightAngle3D = a.lightAngle3D; (base as any).shadowStr3D = a.shadowStr3D; (base as any).highlight3D = a.highlight3D; (base as any).glow3D = a.glow3D; }
+      if (a.strokeWidth) { base.strokeWidth = a.strokeWidth; base.strokeColor = a.strokeColor; }
+      if (a.extrudeEnabled) { base.extrudeEnabled = a.extrudeEnabled; base.extrudeDepth = a.extrudeDepth; base.extrudeAngle = a.extrudeAngle; base.extrudeColor = a.extrudeColor; }
+      if (a.glassEnabled) { base.glassEnabled = a.glassEnabled; base.glassBlur = a.glassBlur; base.glassColor = a.glassColor; base.glassBorderRadius = a.glassBorderRadius; }
+      if (a.blendMode && a.blendMode !== "normal") base.blendMode = a.blendMode;
+      if (a.rotation) base.rotation = a.rotation;
+      if (a.skewX) base.skewX = a.skewX;
+      if (a.skewY) base.skewY = a.skewY;
+      if (Object.keys(base).length > 0) initSS[s.id] = base;
+    });
+    if (Object.keys(initSS).length > 0) setSlotStyles(initSS);
   }, [template]);
 
   // ── Load existing design ──────────────────────────────────────────────────────

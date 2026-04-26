@@ -156,12 +156,42 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 ### Admin Template Editor (Rich Design Tools)
 - `/admin` — password-protected admin panel (ADMIN_PASSWORD env var → ADMIN_SECRET token)
 - Full visual slot editor with live text preview on canvas
-- **Typography**: full Hebrew font picker (16 fonts via HEBREW_FONTS + custom DB fonts), exact px font size slider (8–120px), bold/italic/underline toggles
-- **Color**: hex color picker + 12 presets (gold, cream, white, navy, etc.)
-- **Spacing**: letter-spacing slider (-10–30px), line-height slider (0.6–4.0)
-- **Layout**: x/y/width/z-index number inputs, align buttons (RTL-aware)
-- **Behavior**: multiline toggle, `fixed` toggle (locks slot for customers)
+
+**Canvas (stable, aspect-ratio locked):**
+- Fixed `aspectRatio` from template dimensions (width/height), max-width 520px — matches user editor exactly
+- Background image: `position: absolute, objectFit: contain` — never distorts
+- Slot overlays: `left: x%, top: y%, transform: translateX(-50%)` — center-anchor convention matching user editor
+- Font sizes/colors/gradients/3D effects all rendered identically to user editor via `buildAdminSlotCSS` / `buildAdminWrapperCSS`
+
+**Layers Panel:**
+- Every slot shown as a named layer row
+- Eye icon (👁) — show/hide slot on canvas; saves `visible` field
+- Lock icon (🔒) — prevents dragging on canvas; saves `locked` field
+- ↑ ↓ arrows — reorder layer z-order
+- Copy button — duplicates slot with "(עותק)" label
+- Delete button — removes slot
+- Layers sorted by z-index descending (highest layer at top)
+
+**Save States:**
+- Button shows "שומר..." (Loader spinner) while saving
+- On success: turns green, shows "נשמר ✓", resets after 3s
+- On error: turns red, shows error message
+
+**Coordinate Convention (center-anchor):**
+- `slot.x` = center X% of slot (matches `left: x%; transform: translateX(-50%)` in user editor)
+- `slot.y` = top Y% of slot
+- Both admin and user editor use same convention → positions match exactly
+
+**Typography**: full Hebrew font picker (16 fonts via HEBREW_FONTS + custom DB fonts), exact px font size slider (8–120px), bold/italic/underline toggles
+**Color**: hex color picker + 12 presets (gold, cream, white, navy, etc.)
+**Spacing**: letter-spacing slider (-10–30px), line-height slider (0.6–4.0)
+**Behavior**: multiline toggle, `fixed` toggle (locks slot for customers)
 - Google Fonts loaded dynamically when font family changes in admin
+
+**User Editor Sync:**
+- When user opens a fresh template (no saved design), `slotStyles` initialized from template slot data
+- This carries over admin-set font, color, gradients, 3D effects, positions to user editor
+- Saved designs always load their own `__slotStyles` override (unchanged)
 
 ### Customer Text Effects (SlotStylePanel) — Advanced
 `SlotStyle` interface in `src/components/SlotStylePanel.tsx`. Applied in `buildSlotCSS` / `buildSlotWrapperCSS` in editor.tsx.

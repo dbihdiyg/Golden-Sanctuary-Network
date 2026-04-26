@@ -4,8 +4,9 @@ import hadarLogo from "@/assets/logo-hadar.png";
 import { useCombinedFonts, loadAnyFont } from "@/lib/fonts";
 import { SlotStylePanel, SlotStyle } from "@/components/SlotStylePanel";
 import { SvgWarpText, WarpType } from "@/components/SvgWarpText";
+import { PRESETS_3D, build3DShadows } from "@/lib/3d-presets";
 import {
-  Lock, Plus, Trash2, Edit2, Eye, Package, ShoppingBag,
+  Lock, Unlock, Plus, Trash2, Edit2, Eye, EyeOff, Copy, Package, ShoppingBag,
   BarChart3, LogOut, Check, X, ImagePlus, GripVertical,
   RefreshCw, ArrowRight, ChevronDown, ChevronUp, Loader2,
   AlertCircle, Users, DollarSign, Clock, ToggleLeft, ToggleRight, Upload,
@@ -84,6 +85,8 @@ interface AdminSlot extends SlotStyle {
   align: "center" | "right" | "left";
   multiline: boolean;
   fixed?: boolean;
+  visible?: boolean;
+  locked?: boolean;
 }
 
 function slotToStyle(s: AdminSlot): SlotStyle {
@@ -98,6 +101,123 @@ function patchFromStyle(patch: Partial<SlotStyle>): Partial<AdminSlot> {
   const r: Partial<AdminSlot> = { ...patch } as any;
   if (patch.fontSize !== undefined) r.fontSizePx = patch.fontSize;
   return r;
+}
+
+// ─── Admin slot CSS renderers (mirrors user editor exactly) ───────────────────
+function buildAdminTextShadows(slot: AdminSlot): string {
+  const parts: string[] = [];
+  const baseColor = slot.color || "#D6A84F";
+
+  if (slot.preset3D && slot.preset3D !== "none") {
+    const preset = PRESETS_3D.find(p => p.id === slot.preset3D);
+    const glowCol = (slot as any).glowColor || preset?.glowColor || baseColor;
+    const shadows = build3DShadows(
+      slot.preset3D,
+      (slot as any).lightAngle3D ?? preset?.defaultAngle ?? 45,
+      (slot as any).depth3D ?? preset?.defaultDepth ?? 6,
+      (slot as any).shadowStr3D ?? preset?.defaultShadowStr ?? 70,
+      (slot as any).highlight3D ?? preset?.defaultHighlight ?? 60,
+      (slot as any).glow3D ?? preset?.defaultGlow ?? 0,
+      glowCol,
+    );
+    parts.push(...shadows);
+  }
+
+  if (slot.shadow || (slot as any).shadowX != null || (slot as any).shadowColor) {
+    const x = (slot as any).shadowX ?? 2, y = (slot as any).shadowY ?? 2;
+    const blur = (slot as any).shadowBlur ?? 6;
+    const col = (slot as any).shadowColor || "rgba(0,0,0,0.7)";
+    parts.push(`${x}px ${y}px ${blur}px ${col}`);
+  }
+
+  if ((slot as any).glow || (slot as any).glowColor || (slot as any).glowRadius) {
+    const gc = (slot as any).glowColor || baseColor;
+    const gr = (slot as any).glowRadius ?? 12;
+    const intensity = (slot as any).glowIntensity ?? 2;
+    for (let i = 0; i < intensity; i++) parts.push(`0 0 ${gr * (i + 1)}px ${gc}`);
+  }
+
+  if ((slot as any).extrudeEnabled && !slot.preset3D) {
+    const depth = (slot as any).extrudeDepth ?? 5;
+    const angle = ((slot as any).extrudeAngle ?? 225) * Math.PI / 180;
+    const col = (slot as any).extrudeColor || "rgba(0,0,0,0.6)";
+    for (let i = 1; i <= depth; i++) parts.push(`${(Math.cos(angle) * i).toFixed(1)}px ${(Math.sin(angle) * i).toFixed(1)}px 0 ${col}`);
+  }
+
+  if ((slot as any).longShadowEnabled && !slot.preset3D) {
+    const len = (slot as any).longShadowLength ?? 40;
+    const angle = ((slot as any).longShadowAngle ?? 135) * Math.PI / 180;
+    const col = (slot as any).longShadowColor || "rgba(0,0,0,0.15)";
+    for (let i = 1; i <= len; i++) parts.push(`${(Math.cos(angle) * i).toFixed(1)}px ${(Math.sin(angle) * i).toFixed(1)}px 0 ${col}`);
+  }
+
+  return parts.join(", ");
+}
+
+function buildAdminTextureGradient(type?: string): string | undefined {
+  switch (type) {
+    case "gold-foil": return "linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%)";
+    case "silver":    return "linear-gradient(135deg, #8e9eab 0%, #eef2f3 30%, #9da9b0 60%, #eef2f3 80%, #8e9eab 100%)";
+    case "fire":      return "linear-gradient(0deg, #ff4500 0%, #ff8c00 30%, #ffd700 60%, #fff44f 100%)";
+    case "neon":      return "linear-gradient(135deg, #a855f7 0%, #ec4899 35%, #3b82f6 70%, #a855f7 100%)";
+    case "rainbow":   return "linear-gradient(90deg, #ff0000, #ff7700, #ffff00, #00ff00, #0000ff, #8b00ff)";
+    default:          return undefined;
+  }
+}
+
+function buildAdminSlotCSS(slot: AdminSlot): React.CSSProperties {
+  const fontFamily = slot.fontFamily && slot.fontFamily !== "serif" && slot.fontFamily !== "sans"
+    ? `'${slot.fontFamily}', serif`
+    : slot.fontFamily === "sans" ? "sans-serif" : "serif";
+
+  const textShadow = buildAdminTextShadows(slot);
+
+  const texGrad = (slot as any).textureType && (slot as any).textureType !== "none"
+    ? buildAdminTextureGradient((slot as any).textureType)
+    : undefined;
+  const useGrad = !!(slot as any).gradientEnabled || !!texGrad;
+  const gradBg = texGrad ?? ((slot as any).gradientEnabled
+    ? `linear-gradient(${(slot as any).gradientAngle ?? 90}deg, ${(slot as any).gradientFrom || "#D6A84F"}, ${(slot as any).gradientTo || "#F8F1E3"})`
+    : undefined);
+
+  const strokeW = (slot as any).strokeWidth ?? 0;
+  const stroke = strokeW > 0 ? `${strokeW}px ${(slot as any).strokeColor || slot.color || "#D6A84F"}` : undefined;
+
+  const base: React.CSSProperties = {
+    fontSize: slot.fontSizePx ?? 18,
+    fontFamily,
+    fontWeight: slot.bold ? 700 : 400,
+    fontStyle: slot.italic ? "italic" : "normal",
+    textDecoration: (slot as any).underline ? "underline" : undefined,
+    letterSpacing: slot.letterSpacing ? `${slot.letterSpacing}px` : undefined,
+    lineHeight: slot.lineHeight ?? 1.35,
+    WebkitTextStroke: stroke,
+    textShadow: textShadow || undefined,
+  };
+
+  if (useGrad && gradBg) {
+    return { ...base, backgroundImage: gradBg, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", color: "transparent" };
+  }
+  return { ...base, color: slot.color || "#D6A84F" };
+}
+
+function buildAdminWrapperCSS(slot: AdminSlot): React.CSSProperties {
+  const ss = slot as any;
+  const transforms: string[] = ["translateX(-50%)"];
+  if (ss.rotation) transforms.push(`rotate(${ss.rotation}deg)`);
+  if (ss.skewX) transforms.push(`skewX(${ss.skewX}deg)`);
+  if (ss.skewY) transforms.push(`skewY(${ss.skewY}deg)`);
+  const style: React.CSSProperties = { transform: transforms.join(" ") };
+  if (slot.opacity != null && slot.opacity !== 1) style.opacity = slot.opacity;
+  if (ss.blendMode && ss.blendMode !== "normal") style.mixBlendMode = ss.blendMode;
+  if (ss.glassEnabled) {
+    style.background = ss.glassColor || "rgba(255,255,255,0.08)";
+    style.backdropFilter = `blur(${ss.glassBlur ?? 8}px)`;
+    (style as any).WebkitBackdropFilter = `blur(${ss.glassBlur ?? 8}px)`;
+    style.borderRadius = `${ss.glassBorderRadius ?? 8}px`;
+    style.padding = `${ss.glassPadding ?? 8}px ${(ss.glassPadding ?? 8) * 2}px`;
+  }
+  return style;
 }
 
 interface DBTemplate {
@@ -122,12 +242,13 @@ const emptySlot = (): AdminSlot => ({
   label: "שדה חדש",
   placeholder: "",
   defaultValue: "טקסט לדוגמה",
-  x: 10, y: 10, width: 80,
-  fontSizePx: 18, fontFamily: "Frank Ruhl Libre",
+  x: 50, y: 50, width: 80,
+  fontSizePx: 28, fontFamily: "Frank Ruhl Libre",
   bold: false, italic: false,
   color: "#D6A84F", opacity: 1,
   shadow: false, letterSpacing: 0, lineHeight: 1.35,
   align: "center", multiline: false, fixed: false,
+  visible: true, locked: false,
 });
 
 const ORDER_STATUS_LABELS: Record<string, { label: string; cls: string }> = {
@@ -250,51 +371,86 @@ function TemplateEditor({
   const combinedFonts = useCombinedFonts();
 
   const [form, setForm] = useState<Omit<DBTemplate, "id" | "createdAt">>({
-    slug: initial?.slug ?? "",
-    title: initial?.title ?? "",
-    subtitle: initial?.subtitle ?? "",
-    category: initial?.category ?? "",
-    style: initial?.style ?? "",
-    price: initial?.price ?? 4900,
-    imageUrl: initial?.imageUrl ?? null,
+    slug:            initial?.slug ?? "",
+    title:           initial?.title ?? "",
+    subtitle:        initial?.subtitle ?? "",
+    category:        initial?.category ?? "",
+    style:           initial?.style ?? "",
+    price:           initial?.price ?? 4900,
+    imageUrl:        initial?.imageUrl ?? null,
     galleryImageUrl: initial?.galleryImageUrl ?? null,
     displayImageUrl: initial?.displayImageUrl ?? null,
-    dimensions: initial?.dimensions ?? { preset: "Custom", width: 800, height: 1100, unit: "px" },
-    slots: (initial?.slots as AdminSlot[]) ?? [],
-    isActive: initial?.isActive ?? true,
+    dimensions:      initial?.dimensions ?? { preset: "Custom", width: 800, height: 1100, unit: "px" },
+    slots:           (initial?.slots as AdminSlot[]) ?? [],
+    isActive:        initial?.isActive ?? true,
   });
 
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ id: string; sx: number; sy: number; sl: number; st: number } | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const selectedSlot = form.slots.find(s => s.id === selectedSlotId) ?? null;
+
   const updateSlot = useCallback((id: string, patch: Partial<AdminSlot>) =>
     setForm(p => ({ ...p, slots: p.slots.map(s => s.id === id ? { ...s, ...patch } : s) })), []);
+
+  const duplicateSlot = useCallback((id: string) => {
+    setForm(p => {
+      const slot = p.slots.find(s => s.id === id);
+      if (!slot) return p;
+      const dup: AdminSlot = { ...slot, id: `slot_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, label: `${slot.label} (עותק)`, x: Math.min(95, slot.x + 3), y: Math.min(95, slot.y + 3) };
+      return { ...p, slots: [...p.slots, dup] };
+    });
+  }, []);
+
+  const deleteSlot = useCallback((id: string) => {
+    setForm(p => ({ ...p, slots: p.slots.filter(s => s.id !== id) }));
+    setSelectedSlotId(prev => prev === id ? null : prev);
+  }, []);
+
+  const reorderSlot = useCallback((id: string, dir: -1 | 1) => {
+    setForm(p => {
+      const idx = p.slots.findIndex(s => s.id === id);
+      const newIdx = idx + dir;
+      if (idx < 0 || newIdx < 0 || newIdx >= p.slots.length) return p;
+      const next = [...p.slots];
+      [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+      return { ...p, slots: next };
+    });
+  }, []);
 
   useEffect(() => {
     form.slots.forEach(s => { if (s.fontFamily) loadAnyFont(s.fontFamily); });
   }, [form.slots]);
 
   const canvasBg = form.displayImageUrl || form.imageUrl;
+  const isGradientBg = canvasBg ? /gradient|linear|radial/i.test(canvasBg) : false;
 
+  // ── Canvas aspect ratio based on template dimensions ──────────────────────
+  const tmplW = form.dimensions?.width ?? 800;
+  const tmplH = form.dimensions?.height ?? 1100;
+  const aspectRatio = `${tmplW} / ${tmplH}`;
+
+  // ── Canvas click → add a new slot centered at the click point ─────────────
   function handleCanvasClick(e: React.MouseEvent<HTMLDivElement>) {
     if (dragging) return;
     const target = e.target as HTMLElement;
-    if (target.closest("[data-slot]")) return;
+    if (target.closest("[data-slot-admin]")) return;
+    if (!canvasBg) return;
     const rect = canvasRef.current!.getBoundingClientRect();
     const x = +((e.clientX - rect.left) / rect.width * 100).toFixed(1);
     const y = +((e.clientY - rect.top) / rect.height * 100).toFixed(1);
-    const slot = { ...emptySlot(), x, y };
+    const slot: AdminSlot = { ...emptySlot(), x, y };
     setForm(p => ({ ...p, slots: [...p.slots, slot] }));
     setSelectedSlotId(slot.id);
   }
 
   function onSlotPointerDown(e: React.PointerEvent, id: string) {
+    const slot = form.slots.find(s => s.id === id);
+    if (!slot || slot.locked) return;
     e.stopPropagation();
-    const slot = form.slots.find(s => s.id === id)!;
     setDragging({ id, sx: e.clientX, sy: e.clientY, sl: slot.x, st: slot.y });
     setSelectedSlotId(id);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -306,143 +462,171 @@ function TemplateEditor({
     const dx = (e.clientX - dragging.sx) / rect.width * 100;
     const dy = (e.clientY - dragging.sy) / rect.height * 100;
     updateSlot(dragging.id, {
-      x: Math.max(0, Math.min(95, dragging.sl + dx)),
-      y: Math.max(0, Math.min(95, dragging.st + dy)),
+      x: +Math.max(0, Math.min(100, dragging.sl + dx)).toFixed(1),
+      y: +Math.max(0, Math.min(100, dragging.st + dy)).toFixed(1),
     });
   }
 
   async function handleSave() {
-    if (!form.slug || !form.title) { setError("slug וכותרת הם חובה"); return; }
-    setSaving(true); setError(null);
+    if (!form.slug || !form.title) { setSaveError("slug וכותרת הם חובה"); setSaveState("error"); return; }
+    setSaveState("saving"); setSaveError(null);
     try {
-      let result: DBTemplate;
-      if ((initial as DBTemplate)?.id) {
-        result = await adminFetch(`/hadar/admin/templates/${(initial as DBTemplate).id}`, token, {
-          method: "PUT", body: JSON.stringify(form),
-        });
-      } else {
-        result = await adminFetch("/hadar/admin/templates", token, {
-          method: "POST", body: JSON.stringify(form),
-        });
-      }
+      const id = (initial as DBTemplate)?.id;
+      const result: DBTemplate = id
+        ? await adminFetch(`/hadar/admin/templates/${id}`, token, { method: "PUT",  body: JSON.stringify(form) })
+        : await adminFetch("/hadar/admin/templates",           token, { method: "POST", body: JSON.stringify(form) });
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 3000);
       onSave(result);
     } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
+      setSaveError(err.message);
+      setSaveState("error");
     }
   }
 
+  // ── Sorted layers (top z-index first for layers panel) ────────────────────
+  const layersSorted = [...form.slots].sort((a, b) => (b.zIndex ?? 10) - (a.zIndex ?? 10));
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col" dir="rtl">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-3 border-b border-primary/10 bg-card/80 backdrop-blur">
+
+      {/* ── Header ── */}
+      <header className="flex items-center justify-between px-5 py-3 border-b border-primary/10 bg-card/90 backdrop-blur shrink-0">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={onClose} className="gap-1 text-muted-foreground">
             <ArrowRight className="w-4 h-4" /> חזרה
           </Button>
           <span className="text-foreground font-semibold">{form.title || "תבנית חדשה"}</span>
-          {canvasBg && <span className="text-xs text-muted-foreground">לחץ על התמונה להוספת שדה | גרור שדה לשינוי מיקום</span>}
+          {canvasBg && <span className="text-[11px] text-muted-foreground">לחץ על הקנבס להוספת שדה | גרור שדה לשינוי מיקום</span>}
         </div>
         <div className="flex items-center gap-2">
-          {error && <span className="text-xs text-destructive">{error}</span>}
-          <Button onClick={handleSave} disabled={saving} className="bg-primary text-primary-foreground gap-2">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-            שמור
+          {saveError && <span className="text-xs text-destructive max-w-48 truncate">{saveError}</span>}
+          <Button
+            onClick={handleSave}
+            disabled={saveState === "saving"}
+            className={`gap-2 transition-all min-w-24 ${
+              saveState === "saved" ? "bg-green-600 hover:bg-green-700 text-white" :
+              saveState === "error" ? "bg-destructive hover:bg-destructive text-white" :
+              "bg-primary text-primary-foreground"
+            }`}
+          >
+            {saveState === "saving" ? <Loader2 className="w-4 h-4 animate-spin" /> :
+             saveState === "saved"  ? <Check className="w-4 h-4" /> :
+             saveState === "error"  ? <X className="w-4 h-4" /> :
+             <Check className="w-4 h-4" />}
+            {saveState === "saving" ? "שומר..." :
+             saveState === "saved"  ? "נשמר ✓" :
+             saveState === "error"  ? "שגיאה" : "שמור"}
           </Button>
         </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* ── Canvas ── */}
-        <div className="flex-1 bg-gray-900 overflow-auto flex items-start justify-center p-8">
-          {canvasBg ? (
-            <div ref={canvasRef} className="relative select-none"
-              style={{ cursor: "crosshair", maxWidth: 640 }}
-              onClick={handleCanvasClick}
-              onPointerMove={onPointerMove}
-              onPointerUp={() => setDragging(null)}
-              onPointerLeave={() => setDragging(null)}
-            >
-              {/gradient|linear|radial/i.test(canvasBg)
-                ? <div className="w-full rounded-lg" style={{ background: canvasBg, minHeight: 400, height: 640 }} />
-                : <img src={canvasBg} alt="תמונת תבנית" className="block w-full" style={{ maxHeight: "75vh", objectFit: "contain" }} draggable={false} />
-              }
-              {form.slots.map(slot => {
-                const isSelected = selectedSlotId === slot.id;
-                const fontFamily = slot.fontFamily && slot.fontFamily !== "serif" && slot.fontFamily !== "sans"
-                  ? `'${slot.fontFamily}', serif`
-                  : slot.fontFamily === "sans" ? "sans-serif" : "serif";
-                const hasWarp = !!(slot.warpType && slot.warpType !== "none");
-                const warpAmt = slot.warpAmount ?? (slot.arcDegrees != null ? Math.abs(slot.arcDegrees) : 40);
-                const slotCSS: React.CSSProperties = {
-                  fontSize: slot.fontSizePx ?? 14, fontFamily,
-                  fontWeight: slot.bold ? 700 : 400, fontStyle: slot.italic ? "italic" : "normal",
-                  color: slot.color || "#D6A84F",
-                  letterSpacing: slot.letterSpacing ? `${slot.letterSpacing}px` : undefined,
-                  lineHeight: slot.lineHeight ?? 1.35,
-                  textShadow: slot.shadow ? "1px 1px 4px rgba(0,0,0,0.7)" : undefined,
-                };
-                return (
-                  <div key={slot.id} data-slot={slot.id}
-                    onPointerDown={e => onSlotPointerDown(e, slot.id)}
-                    onClick={e => { e.stopPropagation(); setSelectedSlotId(slot.id); }}
-                    style={{
-                      position: "absolute", left: `${slot.x}%`, top: `${slot.y}%`, width: `${slot.width}%`,
-                      outline: isSelected ? "2px solid #D6A84F" : "1.5px dashed rgba(214,168,79,0.5)",
-                      background: isSelected ? "rgba(214,168,79,0.1)" : "transparent",
-                      cursor: "move", padding: "2px 4px", borderRadius: 3, minHeight: 18,
-                      touchAction: "none", opacity: slot.opacity ?? 1, zIndex: slot.zIndex ?? undefined,
-                      textAlign: slot.align ?? "center", direction: "rtl",
-                      overflow: "visible",
-                    }}
-                  >
-                    {hasWarp ? (
-                      <div style={{ pointerEvents: "none", overflow: "visible" }}>
-                        <SvgWarpText
-                          text={slot.defaultValue || slot.label}
-                          warpType={slot.warpType as WarpType}
-                          warpAmount={warpAmt}
-                          cssStyle={slotCSS}
-                          pathWidth={220}
-                        />
-                      </div>
-                    ) : (
-                      <span style={{ ...slotCSS, userSelect: "none", display: "block", whiteSpace: "pre-line", pointerEvents: "none" }}>
-                        {slot.defaultValue || slot.label}
-                      </span>
-                    )}
-                    {isSelected && (
-                      <span style={{ position: "absolute", top: -18, right: 0, fontSize: 9, color: "#D6A84F", background: "rgba(0,0,0,0.7)", padding: "1px 5px", borderRadius: 3, whiteSpace: "nowrap", pointerEvents: "none" }}>
-                        {slot.label}{slot.fixed ? " 🔒" : ""}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-6">
-              <div className="text-center text-primary/40 text-sm">העלה תמונת תצוגה כדי להתחיל לערוך שדות</div>
-              <div className="w-64 h-64 border-2 border-dashed border-primary/20 rounded-2xl flex items-center justify-center">
-                <ImagePlus className="w-12 h-12 text-primary/20" />
+
+        {/* ══ Canvas area ══════════════════════════════════════════════════════ */}
+        <div className="flex-1 bg-[#0a0f1e] overflow-auto flex items-start justify-center p-8">
+          <div
+            ref={canvasRef}
+            className="relative select-none rounded-xl border border-primary/20 shadow-2xl overflow-hidden"
+            style={{
+              width: "100%",
+              maxWidth: 520,
+              aspectRatio,
+              cursor: canvasBg ? "crosshair" : "default",
+            }}
+            onClick={handleCanvasClick}
+            onPointerMove={onPointerMove}
+            onPointerUp={() => setDragging(null)}
+            onPointerLeave={() => setDragging(null)}
+          >
+            {/* Background */}
+            {canvasBg ? (
+              isGradientBg
+                ? <div className="absolute inset-0" style={{ background: canvasBg }} />
+                : <img src={canvasBg} alt="רקע" className="absolute inset-0 w-full h-full pointer-events-none" style={{ objectFit: "contain" }} draggable={false} />
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#0B1833]">
+                <ImagePlus className="w-14 h-14 text-primary/20" />
+                <p className="text-sm text-primary/30">העלה תמונת תצוגה מהפאנל מימין</p>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* ── Slot overlays ── */}
+            {form.slots.map(slot => {
+              if (slot.visible === false) return null;
+              const isSelected = selectedSlotId === slot.id;
+              const css = buildAdminSlotCSS(slot);
+              const wrapCSS = buildAdminWrapperCSS(slot);
+              const hasWarp = !!(slot.warpType && slot.warpType !== "none");
+              const warpAmt = (slot as any).warpAmount ?? (slot.arcDegrees != null ? Math.abs(slot.arcDegrees) : 40);
+              const zIdx = slot.zIndex ?? 10;
+
+              return (
+                <div
+                  key={slot.id}
+                  data-slot-admin={slot.id}
+                  onPointerDown={e => onSlotPointerDown(e, slot.id)}
+                  onClick={e => { e.stopPropagation(); setSelectedSlotId(slot.id); }}
+                  style={{
+                    position: "absolute",
+                    left: `${slot.x}%`,
+                    top: `${slot.y}%`,
+                    width: `${slot.width}%`,
+                    ...wrapCSS,
+                    cursor: slot.locked ? "not-allowed" : "move",
+                    zIndex: zIdx,
+                    textAlign: slot.align ?? "center",
+                    direction: "rtl",
+                    userSelect: "none",
+                    touchAction: "none",
+                    outline: isSelected ? "2px solid #D6A84F" : "1.5px dashed rgba(214,168,79,0.35)",
+                    outlineOffset: 2,
+                  }}
+                >
+                  {hasWarp ? (
+                    <SvgWarpText
+                      text={slot.defaultValue || slot.label}
+                      warpType={slot.warpType as WarpType}
+                      warpAmount={warpAmt}
+                      cssStyle={css}
+                      pathWidth={Math.round(slot.width / 100 * tmplW * 0.9)}
+                    />
+                  ) : (
+                    <span style={{ ...css, display: "block", whiteSpace: "pre-line", pointerEvents: "none" }}>
+                      {slot.defaultValue || slot.label}
+                    </span>
+                  )}
+
+                  {/* Selection label */}
+                  {isSelected && (
+                    <span style={{
+                      position: "absolute", bottom: "100%", right: 0,
+                      fontSize: 9, color: "#D6A84F",
+                      background: "rgba(0,0,0,0.75)",
+                      padding: "1px 5px", borderRadius: "3px 3px 0 0",
+                      whiteSpace: "nowrap", pointerEvents: "none",
+                    }}>
+                      {slot.label}{slot.fixed ? " 🔒" : ""}{slot.locked ? " ⚓" : ""}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* ── Right panel ── */}
-        <div className="w-80 border-r border-primary/10 bg-card flex flex-col">
+        {/* ══ Right panel ══════════════════════════════════════════════════════ */}
+        <div className="w-80 border-r border-primary/10 bg-card flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto divide-y divide-primary/10">
 
-            {/* ── Images section ── */}
+            {/* ── Images ── */}
             <section className="p-4 space-y-4">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <ImagePlus className="w-3 h-3" /> תמונות
               </p>
               <ImageUploadButton token={token} label="תמונת עורך (רקע לשדות)" value={form.displayImageUrl || form.imageUrl}
                 onChange={url => setForm(p => ({ ...p, displayImageUrl: url, imageUrl: url || p.imageUrl }))} />
-              <ImageUploadButton token={token} label="תמונת גלריה (כרטיסייה בגלריה)" value={form.galleryImageUrl}
+              <ImageUploadButton token={token} label="תמונת גלריה (כרטיסייה)" value={form.galleryImageUrl}
                 onChange={url => setForm(p => ({ ...p, galleryImageUrl: url }))} />
             </section>
 
@@ -454,27 +638,25 @@ function TemplateEditor({
             {/* ── Template metadata ── */}
             <section className="p-4 space-y-3">
               <p className="text-xs font-semibold text-muted-foreground">פרטי התבנית</p>
-              {[
-                { key: "title", label: "כותרת" },
-                { key: "subtitle", label: "תת-כותרת" },
-                { key: "slug", label: "מזהה (slug)", dir: "ltr" },
-                { key: "category", label: "קטגוריה" },
-                { key: "style", label: "סגנון" },
-              ].map(({ key, label, dir }) => (
+              {(([
+                { key: "title",    label: "כותרת",          dir: undefined },
+                { key: "subtitle", label: "תת-כותרת",       dir: undefined },
+                { key: "slug",     label: "מזהה (slug)",    dir: "ltr" as const },
+                { key: "category", label: "קטגוריה",        dir: undefined },
+                { key: "style",    label: "סגנון",          dir: undefined },
+              ]) as { key: string; label: string; dir?: "ltr" }[]).map(({ key, label, dir }) => (
                 <div key={key}>
                   <Label className="text-xs text-muted-foreground">{label}</Label>
-                  <Input dir={dir as any} className="mt-1 h-8 text-sm bg-background border-primary/20"
+                  <Input dir={dir} className="mt-1 h-8 text-sm bg-background border-primary/20"
                     value={(form as any)[key] ?? ""}
-                    onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
-                  />
+                    onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} />
                 </div>
               ))}
               <div>
-                <Label className="text-xs text-muted-foreground">מחיר (אגורות, ₪49 = 4900)</Label>
+                <Label className="text-xs text-muted-foreground">מחיר (אגורות — ₪49 = 4900)</Label>
                 <Input type="number" dir="ltr" className="mt-1 h-8 text-sm bg-background border-primary/20"
                   value={form.price}
-                  onChange={e => setForm(p => ({ ...p, price: Number(e.target.value) }))}
-                />
+                  onChange={e => setForm(p => ({ ...p, price: Number(e.target.value) }))} />
               </div>
               <div className="flex items-center gap-2">
                 <Label className="text-xs text-muted-foreground flex-1">תבנית פעילה</Label>
@@ -484,55 +666,111 @@ function TemplateEditor({
               </div>
             </section>
 
-            {/* ── Slots management ── */}
+            {/* ══ Layers panel ════════════════════════════════════════════════ */}
             <section className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-muted-foreground">שדות טקסט ({form.slots.length})</p>
+                <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5" /> שכבות ({form.slots.length})
+                </p>
                 <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-primary hover:bg-primary/10"
-                  onClick={() => { const slot = emptySlot(); setForm(p => ({ ...p, slots: [...p.slots, slot] })); setSelectedSlotId(slot.id); }}>
-                  <Plus className="w-3 h-3" /> הוסף שדה
+                  onClick={() => {
+                    const slot = emptySlot();
+                    setForm(p => ({ ...p, slots: [...p.slots, slot] }));
+                    setSelectedSlotId(slot.id);
+                  }}>
+                  <Plus className="w-3 h-3" /> הוסף שכבה
                 </Button>
               </div>
-              <div className="space-y-1 max-h-44 overflow-y-auto">
-                {form.slots.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-3">
-                    {canvasBg ? "לחץ על התמונה להוספת שדה" : "העלה תמונה קודם"}
-                  </p>
-                )}
-                {form.slots.map(slot => (
-                  <div key={slot.id} onClick={() => setSelectedSlotId(slot.id)}
-                    className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-sm transition-colors ${selectedSlotId === slot.id ? "bg-primary/10 text-primary" : "hover:bg-primary/5 text-foreground"}`}
-                  >
-                    <GripVertical className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                    <span className="flex-1 truncate">{slot.label}{slot.fixed ? " 🔒" : ""}</span>
-                    <button onClick={e => {
-                      e.stopPropagation();
-                      setForm(p => ({ ...p, slots: p.slots.filter(s => s.id !== slot.id) }));
-                      if (selectedSlotId === slot.id) setSelectedSlotId(null);
-                    }} className="text-destructive/60 hover:text-destructive p-0.5 rounded">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
+
+              {form.slots.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4">
+                  {canvasBg ? "לחץ על הקנבס להוספת שכבה" : "העלה תמונה קודם"}
+                </p>
+              )}
+
+              {/* Layer rows — shown in reverse z-order (highest z = top in list) */}
+              <div className="space-y-0.5">
+                {layersSorted.map((slot, lIdx) => {
+                  const origIdx = form.slots.findIndex(s => s.id === slot.id);
+                  const isVis = slot.visible !== false;
+                  const isLocked = !!slot.locked;
+                  const isSel = selectedSlotId === slot.id;
+                  return (
+                    <div
+                      key={slot.id}
+                      onClick={() => setSelectedSlotId(slot.id)}
+                      className={`group flex items-center gap-1 px-2 py-1.5 rounded-lg cursor-pointer border transition-all ${
+                        isSel ? "bg-primary/10 border-primary/40" : "border-transparent hover:bg-primary/5 hover:border-primary/10"
+                      }`}
+                    >
+                      {/* Eye */}
+                      <button title="הצג/הסתר"
+                        onClick={e => { e.stopPropagation(); updateSlot(slot.id, { visible: !isVis }); }}
+                        className={`shrink-0 p-0.5 rounded transition-colors ${isVis ? "text-primary/70 hover:text-primary" : "text-muted-foreground/30 hover:text-muted-foreground"}`}>
+                        {isVis ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                      </button>
+
+                      {/* Lock */}
+                      <button title={isLocked ? "שחרר נעילה" : "נעל שכבה"}
+                        onClick={e => { e.stopPropagation(); updateSlot(slot.id, { locked: !isLocked }); }}
+                        className={`shrink-0 p-0.5 rounded transition-colors ${isLocked ? "text-amber-400 hover:text-amber-300" : "text-muted-foreground/30 hover:text-muted-foreground"}`}>
+                        {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                      </button>
+
+                      {/* Label */}
+                      <span className={`flex-1 text-xs truncate ${isSel ? "text-primary font-medium" : "text-foreground"} ${!isVis ? "opacity-40 line-through" : ""}`}>
+                        {slot.label}{slot.fixed ? " 🔒" : ""}
+                      </span>
+
+                      {/* Reorder */}
+                      <button title="העלה שכבה"
+                        onClick={e => { e.stopPropagation(); reorderSlot(slot.id, -1); }}
+                        className="opacity-0 group-hover:opacity-100 shrink-0 p-0.5 text-muted-foreground hover:text-foreground transition-all">
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button title="הורד שכבה"
+                        onClick={e => { e.stopPropagation(); reorderSlot(slot.id, 1); }}
+                        className="opacity-0 group-hover:opacity-100 shrink-0 p-0.5 text-muted-foreground hover:text-foreground transition-all">
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Duplicate */}
+                      <button title="שכפל"
+                        onClick={e => { e.stopPropagation(); duplicateSlot(slot.id); }}
+                        className="opacity-0 group-hover:opacity-100 shrink-0 p-0.5 text-muted-foreground hover:text-primary transition-all">
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Delete */}
+                      <button title="מחק"
+                        onClick={e => { e.stopPropagation(); deleteSlot(slot.id); }}
+                        className="opacity-0 group-hover:opacity-100 shrink-0 p-0.5 text-destructive/50 hover:text-destructive transition-all">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </section>
 
-            {/* ── Selected slot properties ── */}
+            {/* ══ Selected slot properties ════════════════════════════════════ */}
             {selectedSlot && (
               <section className="p-4 space-y-5" dir="rtl">
                 <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <Edit2 className="w-3.5 h-3.5 text-primary" />
-                  עריכת שדה: <span className="text-primary">{selectedSlot.label}</span>
+                  עריכת שכבה: <span className="text-primary">{selectedSlot.label}</span>
                 </p>
 
                 {/* Content */}
                 <div className="space-y-2">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Type className="w-3 h-3" /> תוכן</p>
-                  {[
-                    { key: "label", label: "תווית (לניהול)" },
-                    { key: "placeholder", label: "טקסט עזר ללקוח" },
-                    { key: "defaultValue", label: "ערך ברירת מחדל" },
-                  ].map(({ key, label }) => (
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <Type className="w-3 h-3" /> תוכן
+                  </p>
+                  {([
+                    { key: "label",        label: "שם שכבה (לניהול)" },
+                    { key: "placeholder",  label: "טקסט עזר ללקוח" },
+                    { key: "defaultValue", label: "ערך ברירת מחדל (מה שיופיע)" },
+                  ] as const).map(({ key, label }) => (
                     <div key={key}>
                       <Label className="text-[10px] text-muted-foreground">{label}</Label>
                       <Input className="mt-0.5 h-7 text-xs bg-background border-primary/20"
@@ -544,7 +782,7 @@ function TemplateEditor({
 
                 <hr className="border-primary/10" />
 
-                {/* ── Full style panel (same as customer editor + more) ── */}
+                {/* Full style panel */}
                 <SlotStylePanel
                   slotId={selectedSlot.id}
                   style={slotToStyle(selectedSlot)}
@@ -554,35 +792,38 @@ function TemplateEditor({
 
                 <hr className="border-primary/10" />
 
-                {/* Layout */}
+                {/* Layout — position/size/z-index */}
                 <div className="space-y-3">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Move className="w-3 h-3" /> פריסה</p>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <Move className="w-3 h-3" /> מיקום ופריסה
+                  </p>
                   <div className="grid grid-cols-4 gap-1.5">
-                    {[
-                      { key: "x",      label: "X%",   min: 0,  max: 100 },
-                      { key: "y",      label: "Y%",   min: 0,  max: 100 },
-                      { key: "width",  label: "רוחב%", min: 1, max: 100 },
-                      { key: "zIndex", label: "שכבה", min: 0,  max: 99  },
-                    ].map(({ key, label, min, max }) => (
+                    {([
+                      { key: "x",      label: "מרכז X%", min: 0,  max: 100 },
+                      { key: "y",      label: "עליון Y%", min: 0,  max: 100 },
+                      { key: "width",  label: "רוחב%",   min: 1,  max: 100 },
+                      { key: "zIndex", label: "שכבה Z",  min: 0,  max: 99  },
+                    ] as const).map(({ key, label, min, max }) => (
                       <div key={key}>
-                        <Label className="text-[9px] text-muted-foreground">{label}</Label>
+                        <Label className="text-[9px] text-muted-foreground leading-tight block mb-0.5">{label}</Label>
                         <Input type="number" dir="ltr" min={min} max={max}
-                          className="mt-0.5 h-7 text-xs bg-background border-primary/20 px-1.5"
+                          className="h-7 text-xs bg-background border-primary/20 px-1.5"
                           value={Math.round((selectedSlot as any)[key] ?? 0)}
                           onChange={e => updateSlot(selectedSlot.id, { [key]: Number(e.target.value) })} />
                       </div>
                     ))}
                   </div>
+                  {/* Alignment */}
                   <div>
-                    <Label className="text-[10px] text-muted-foreground mb-1 block">יישור</Label>
+                    <Label className="text-[10px] text-muted-foreground mb-1 block">יישור טקסט</Label>
                     <div className="flex gap-1">
-                      {[
+                      {([
                         { v: "right",  Icon: AlignRight,  title: "ימין" },
                         { v: "center", Icon: AlignCenter, title: "מרכז" },
                         { v: "left",   Icon: AlignLeft,   title: "שמאל" },
-                      ].map(({ v, Icon, title }) => (
+                      ] as const).map(({ v, Icon, title }) => (
                         <button key={v} title={title}
-                          onClick={() => updateSlot(selectedSlot.id, { align: v as any })}
+                          onClick={() => updateSlot(selectedSlot.id, { align: v })}
                           className={`flex-1 h-8 flex items-center justify-center rounded-md border transition-all ${selectedSlot.align === v ? "border-primary bg-primary/20 text-primary" : "border-primary/20 text-muted-foreground hover:border-primary/40"}`}>
                           <Icon className="w-4 h-4" />
                         </button>
@@ -593,14 +834,14 @@ function TemplateEditor({
 
                 <hr className="border-primary/10" />
 
-                {/* Behavior */}
+                {/* Behavior flags */}
                 <div className="space-y-2">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Layers className="w-3 h-3" /> התנהגות</p>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">אפשרויות</p>
                   <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { key: "multiline", label: "מספר שורות", desc: "ללקוח" },
-                      { key: "fixed",     label: "🔒 קבוע",    desc: "לקוח לא יכול לערוך" },
-                    ].map(({ key, label, desc }) => (
+                    {([
+                      { key: "multiline", label: "מספר שורות",  desc: "ללקוח" },
+                      { key: "fixed",     label: "🔒 קבוע",      desc: "לקוח לא יכול לערוך" },
+                    ] as const).map(({ key, label, desc }) => (
                       <label key={key} className={`flex flex-col gap-0.5 p-2 rounded-lg border cursor-pointer transition-all ${(selectedSlot as any)[key] ? "border-primary/50 bg-primary/10" : "border-primary/10 hover:border-primary/30"}`}>
                         <div className="flex items-center gap-1.5">
                           <input type="checkbox" checked={(selectedSlot as any)[key] ?? false}
@@ -616,11 +857,12 @@ function TemplateEditor({
 
                 <Button variant="ghost" size="sm"
                   className="w-full text-destructive/70 hover:text-destructive hover:bg-destructive/10 gap-1 h-8"
-                  onClick={() => { setForm(p => ({ ...p, slots: p.slots.filter(s => s.id !== selectedSlot.id) })); setSelectedSlotId(null); }}>
-                  <Trash2 className="w-3.5 h-3.5" /> מחק שדה זה
+                  onClick={() => deleteSlot(selectedSlot.id)}>
+                  <Trash2 className="w-3.5 h-3.5" /> מחק שכבה זו
                 </Button>
               </section>
             )}
+
           </div>
         </div>
       </div>
