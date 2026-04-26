@@ -131,245 +131,196 @@ export default function Home() {
       className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/30 selection:text-primary-foreground transition-colors duration-300"
     >
       
-      {/* Header/Nav */}
-      <motion.header 
-        initial={{ y: -80 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
-        className={`border-b border-white/5 sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'bg-background/95 backdrop-blur-xl shadow-[0_4px_20px_-10px_rgba(214,168,79,0.3)] border-b-primary/20' : 'bg-background/90 backdrop-blur-md'}`}
+      {/* Fixed Header — transparent at top, solid when scrolled */}
+      <header
+        style={{
+          position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
+          transition: "background 0.35s, backdrop-filter 0.35s, box-shadow 0.35s, border-color 0.35s",
+          background: scrolled ? "rgba(12,12,12,0.96)" : "transparent",
+          backdropFilter: scrolled ? "blur(14px)" : "none",
+          borderBottom: scrolled ? "1px solid rgba(214,168,79,0.1)" : "1px solid transparent",
+          boxShadow: scrolled ? "0 4px 30px rgba(0,0,0,0.4)" : "none",
+        }}
       >
-        <div className="container mx-auto px-4 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Link href="/">
-              <div className="flex flex-col items-center justify-center text-primary cursor-pointer relative">
-                <Crown className="w-5 h-5 absolute -top-4 text-primary" strokeWidth={2.5} />
-                <span className="font-serif font-bold text-3xl text-foreground tracking-wide">הדר</span>
-              </div>
-            </Link>
-          </div>
-          
-          <nav className="hidden md:flex items-center gap-8 text-base font-medium">
-            <Link href="/"><span className="text-primary transition-colors cursor-pointer">{t("nav_home", lang)}</span></Link>
-            <a href="#services" className="text-muted-foreground hover:text-foreground transition-colors">{t("nav_services", lang)}</a>
-            <a href="#gallery" className="text-muted-foreground hover:text-foreground transition-colors">{t("nav_gallery", lang)}</a>
-            <Link href="/order"><span className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer">{t("nav_order", lang)}</span></Link>
-            <Link href="/help"><span className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer">{t("nav_help", lang)}</span></Link>
-            <a href="#contact" className="text-muted-foreground hover:text-foreground transition-colors">{t("nav_contact", lang)}</a>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 36px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          {/* Left: nav links (hidden on mobile) */}
+          <nav className="hidden md:flex" style={{ gap: 28, direction: "ltr" }}>
+            <a href="#gallery" style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, letterSpacing: 2, textDecoration: "none", fontFamily: "monospace", transition: "color 0.2s" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "rgba(214,168,79,0.8)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}
+            >GALLERY</a>
+            <a href="#services" style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, letterSpacing: 2, textDecoration: "none", fontFamily: "monospace", transition: "color 0.2s" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "rgba(214,168,79,0.8)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}
+            >STUDIO</a>
+            <Link href="/help"><span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, letterSpacing: 2, fontFamily: "monospace", cursor: "pointer", transition: "color 0.2s" }}
+              onMouseEnter={(e: any) => (e.currentTarget.style.color = "rgba(214,168,79,0.8)")}
+              onMouseLeave={(e: any) => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}
+            >GUIDES</span></Link>
           </nav>
 
-          <div className="flex items-center gap-2">
-            <AuthNavButton />
-            <button onClick={toggleLang} className="rounded border border-primary/30 text-primary px-2 py-1 text-xs font-bold hover:bg-primary/10 transition-colors">
+          {/* Center: logo */}
+          <Link href="/">
+            <div style={{ fontFamily: "serif", fontSize: 22, fontWeight: 700, color: "#fff", letterSpacing: 4, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <Crown style={{ width: 14, height: 14, color: "#D6A84F", marginBottom: 2 }} strokeWidth={2.5} />
+              הדר
+            </div>
+          </Link>
+
+          {/* Right: auth + controls */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="hidden md:block">
+              <AuthNavButton />
+            </div>
+            <button onClick={toggleLang} style={{ padding: "6px 12px", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 3, color: "rgba(255,255,255,0.45)", fontSize: 10, letterSpacing: 2, background: "transparent", cursor: "pointer", fontFamily: "monospace" }}>
               {lang === "he" ? "EN" : "עב"}
             </button>
-            <button onClick={toggle} className="rounded-full p-2 border border-primary/30 text-primary hover:bg-primary/10 transition-colors">
-              {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            <button onClick={toggle} style={{ padding: 7, border: "1px solid rgba(255,255,255,0.12)", borderRadius: 3, color: "rgba(255,255,255,0.45)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}>
+              {theme === "dark" ? <Sun style={{ width: 14, height: 14 }} /> : <Moon style={{ width: 14, height: 14 }} />}
             </button>
-            <div className="md:hidden">
-              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-foreground p-2">
-                {isMenuOpen ? <X /> : <Menu />}
-              </button>
-            </div>
+            <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)} style={{ padding: 7, border: "1px solid rgba(255,255,255,0.12)", borderRadius: 3, color: "rgba(255,255,255,0.45)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}>
+              {isMenuOpen ? <X style={{ width: 16, height: 16 }} /> : <Menu style={{ width: 16, height: 16 }} />}
+            </button>
           </div>
         </div>
 
         {/* Mobile menu */}
         {isMenuOpen && (
-          <div className="md:hidden absolute top-20 left-0 w-full bg-background border-b border-white/5 py-4 px-4 flex flex-col gap-4 shadow-xl">
-            <Link href="/"><span className="text-primary font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>{t("nav_home", lang)}</span></Link>
-            <a href="#services" className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>{t("nav_services", lang)}</a>
-            <a href="#gallery" className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>{t("nav_gallery", lang)}</a>
-            <Link href="/order"><span className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>{t("nav_order", lang)}</span></Link>
-            <Link href="/help"><span className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>{t("nav_help", lang)}</span></Link>
-            <a href="#contact" className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>{t("nav_contact", lang)}</a>
+          <div style={{ background: "#0c0c0c", borderBottom: "1px solid rgba(214,168,79,0.1)", padding: "16px 36px", display: "flex", flexDirection: "column", gap: 16 }}>
+            <Link href="/"><span style={{ color: "#D6A84F", fontSize: 13, display: "block", cursor: "pointer" }} onClick={() => setIsMenuOpen(false)}>{t("nav_home", lang)}</span></Link>
+            <a href="#gallery" style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, display: "block" }} onClick={() => setIsMenuOpen(false)}>{t("nav_gallery", lang)}</a>
+            <a href="#services" style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, display: "block" }} onClick={() => setIsMenuOpen(false)}>{t("nav_services", lang)}</a>
+            <Link href="/order"><span style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, display: "block", cursor: "pointer" }} onClick={() => setIsMenuOpen(false)}>{t("nav_order", lang)}</span></Link>
+            <Link href="/help"><span style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, display: "block", cursor: "pointer" }} onClick={() => setIsMenuOpen(false)}>{t("nav_help", lang)}</span></Link>
+            <a href="#contact" style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, display: "block" }} onClick={() => setIsMenuOpen(false)}>{t("nav_contact", lang)}</a>
+            <div style={{ paddingTop: 8 }}><AuthNavButton /></div>
           </div>
         )}
-      </motion.header>
+      </header>
 
-      {/* Hero Section — Split Screen */}
-      <section className="relative overflow-hidden" style={{ minHeight: "calc(100vh - 80px)" }}>
+      {/* ═══════════════════════════════════════════
+           CINEMATIC HERO — full-viewport split screen
+          ═══════════════════════════════════════════ */}
+      <section style={{ height: "100vh", overflow: "hidden", display: "flex", background: "#0c0c0c", direction: "ltr" }}>
 
-        {/* Full-bleed background */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 80% 70% at 70% 40%, rgba(214,168,79,0.07) 0%, transparent 60%)" }} />
-          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 60% 60% at 20% 60%, rgba(11,24,51,0.8) 0%, transparent 70%)" }} />
-          {/* Subtle grid */}
-          <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: "linear-gradient(rgba(214,168,79,1) 1px, transparent 1px), linear-gradient(90deg, rgba(214,168,79,1) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
-        </div>
-
-        <div className="relative z-10 container mx-auto px-6 h-full flex items-center" style={{ minHeight: "calc(100vh - 80px)" }}>
-          <div className="w-full grid grid-cols-1 lg:grid-cols-[55%_45%] gap-0 items-center py-16 lg:py-0">
-
-            {/* ── RIGHT TEXT PANEL (RTL: displayed first) ── */}
-            <div className="order-2 lg:order-1 flex flex-col items-start gap-6 lg:pr-12" dir="rtl">
-
-              {/* Badge */}
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-primary/25 bg-primary/5 backdrop-blur-sm"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                <span className="text-primary text-xs font-medium tracking-widest">סטודיו לעיצוב הזמנות · {new Date().getFullYear()}</span>
-              </motion.div>
-
-              {/* Tag line */}
-              <motion.p
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="text-xs tracking-[0.3em] text-muted-foreground/60 uppercase font-light"
-              >
-                INVITATION DESIGN STUDIO
-              </motion.p>
-
-              {/* Main heading */}
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <h1 className="font-serif font-bold leading-[0.9] text-foreground" style={{ fontSize: "clamp(72px, 10vw, 120px)", animation: "goldGlow 5s infinite alternate ease-in-out" }}>
-                  עיצוב<br />
-                  <span className="text-primary" style={{ textShadow: "0 0 60px rgba(214,168,79,0.4)" }}>מהוד</span><br />
-                  ומהדר
-                </h1>
-              </motion.div>
-
-              {/* Golden divider */}
-              <motion.div
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-                className="h-px bg-primary/40 origin-right"
-                style={{ width: 64 }}
-              />
-
-              {/* Subtitle */}
-              <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.5 }}
-                className="text-muted-foreground leading-relaxed text-base md:text-lg max-w-md"
-              >
-                הזמנות חרדיות ברמה גבוהה — ערכו את הטקסטים בעצמכם,<br className="hidden md:block" />
-                שלמו פעם אחת, קבלו קבצי דפוס תוך דקות.
-              </motion.p>
-
-              {/* CTAs */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.6 }}
-                className="flex flex-wrap gap-3"
-              >
-                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                  <Button
-                    size="lg"
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold px-8 h-12 shadow-[0_0_40px_-8px_rgba(214,168,79,0.5)] text-base"
-                    onClick={() => document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth" })}
-                  >
-                    {t("cta_gallery", lang)} ←
-                  </Button>
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                  <Link href="/order">
-                    <Button size="lg" variant="outline" className="border-primary/30 text-primary hover:bg-primary/10 font-medium px-8 h-12 text-base">
-                      {t("cta_order", lang)}
-                    </Button>
-                  </Link>
-                </motion.div>
-              </motion.div>
-
-              {/* Stats strip */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.75 }}
-                className="flex items-center gap-6 pt-2"
-                dir="rtl"
-              >
-                {[["500+", "עיצובים"], ["₪49", "מחיר קבוע"], ["3 דק׳", "זמן עריכה"]].map(([val, lbl], i) => (
-                  <div key={i} className="flex flex-col">
-                    <span className="font-serif font-bold text-primary text-xl leading-tight">{val}</span>
-                    <span className="text-muted-foreground/60 text-xs">{lbl}</span>
-                  </div>
-                ))}
-              </motion.div>
-            </div>
-
-            {/* ── LEFT VISUAL PANEL ── */}
-            <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.9, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="order-1 lg:order-2 relative flex items-center justify-center"
-              style={{ minHeight: 480 }}
-            >
-              {/* Ambient glow */}
-              <div className="absolute" style={{ width: 380, height: 380, borderRadius: "50%", background: "radial-gradient(circle, rgba(214,168,79,0.1) 0%, transparent 70%)", filter: "blur(40px)", top: "50%", left: "50%", transform: "translate(-50%,-50%)" }} />
-
-              {/* Back card */}
-              <motion.div
-                animate={{ y: [0, -8, 0] }}
-                transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 0.5 }}
-                className="absolute"
-                style={{ width: 220, height: 310, borderRadius: 12, background: "linear-gradient(145deg, #0d1520 0%, #0a1018 100%)", border: "1px solid rgba(100,150,255,0.1)", top: "50%", left: "50%", transform: "translate(-30%, -42%) rotate(7deg)", opacity: 0.55 }}
-              />
-
-              {/* Main invitation card */}
-              <motion.div
-                animate={{ y: [0, -12, 0] }}
-                transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-                className="relative z-10 flex flex-col items-center justify-center gap-2.5"
-                style={{ width: 240, height: 340, borderRadius: 14, background: "linear-gradient(160deg, #1a1508 0%, #241c0a 50%, #1a1306 100%)", border: "1px solid rgba(214,168,79,0.3)", boxShadow: "0 40px 100px rgba(0,0,0,0.6), 0 0 80px rgba(214,168,79,0.08)", padding: "28px 20px" }}
-                dir="rtl"
-              >
-                <div style={{ width: 36, height: 1, background: "rgba(214,168,79,0.6)" }} />
-                <div style={{ color: "rgba(214,168,79,0.45)", fontSize: 8, letterSpacing: 3, fontFamily: "serif" }}>בסייעתא דשמיא</div>
-                <div style={{ fontFamily: "serif", fontSize: 22, fontWeight: 700, color: "#D6A84F", textAlign: "center", lineHeight: 1.25, marginTop: 4 }}>שמחת<br />בר המצווה</div>
-                <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 11, textAlign: "center", lineHeight: 1.9 }}>ראובן בן שמעון<br />ח׳ אדר תשפ״ו</div>
-                <div style={{ width: 36, height: 1, background: "rgba(214,168,79,0.3)", margin: "2px 0" }} />
-                <div style={{ color: "rgba(255,255,255,0.22)", fontSize: 9.5, textAlign: "center", lineHeight: 1.9 }}>יש לנו את הכבוד להזמינכם<br />לסעודת מצווה</div>
-                <div style={{ color: "rgba(255,255,255,0.18)", fontSize: 9, textAlign: "center" }}>יום שישי פרשת בשלח · אולם שמחות המלך</div>
-                <div style={{ width: 36, height: 1, background: "rgba(214,168,79,0.6)", marginTop: 4 }} />
-                {/* Hadar watermark */}
-                <div style={{ position: "absolute", bottom: 12, left: 0, right: 0, textAlign: "center", color: "rgba(214,168,79,0.2)", fontSize: 8, letterSpacing: 4, fontFamily: "serif" }}>הדר</div>
-              </motion.div>
-
-              {/* Third card — behind-left */}
-              <div style={{ position: "absolute", width: 180, height: 260, borderRadius: 10, background: "linear-gradient(145deg, #0f1a0a 0%, #0a1208 100%)", border: "1px solid rgba(80,180,80,0.06)", top: "50%", left: "50%", transform: "translate(-68%, -48%) rotate(-9deg)", opacity: 0.3 }} />
-
-              {/* Frame dots */}
-              <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }}>
-                {[1,2,3,4].map(i => (
-                  <div key={i} style={{ width: i === 1 ? 20 : 5, height: 2, borderRadius: 1, background: i === 1 ? "#D6A84F" : "rgba(255,255,255,0.15)", transition: "all 0.3s" }} />
-                ))}
-              </div>
-
-              {/* Corner label */}
-              <div style={{ position: "absolute", top: 20, right: 20, color: "rgba(255,255,255,0.15)", fontSize: 10, fontFamily: "monospace", letterSpacing: 2 }}>01 / 12</div>
-            </motion.div>
-
-          </div>
-        </div>
-
-        {/* Bottom scroll hint */}
+        {/* LEFT — text panel (55%) */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5"
+          transition={{ duration: 0.7 }}
+          style={{ width: "55%", background: "#0c0c0c", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "100px 60px 60px", position: "relative", overflow: "hidden" }}
         >
-          <span className="text-muted-foreground/30 text-xs tracking-widest">גלגלו למטה</span>
+          {/* Ambient glow */}
+          <div style={{ position: "absolute", bottom: 200, right: -50, width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(214,168,79,0.06) 0%, transparent 70%)" }} />
+
+          {/* Studio label */}
           <motion.div
-            animate={{ y: [0, 5, 0] }}
-            transition={{ repeat: Infinity, duration: 1.5 }}
-            className="w-4 h-7 rounded-full border border-primary/20 flex items-start justify-center pt-1.5"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            style={{ color: "rgba(255,255,255,0.2)", fontSize: 11, letterSpacing: 6, marginBottom: 24, fontFamily: "monospace" }}
           >
-            <div className="w-1 h-1.5 rounded-full bg-primary/40" />
+            INVITATION DESIGN STUDIO — {new Date().getFullYear()}
           </motion.div>
+
+          {/* Main heading */}
+          <motion.h1
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            style={{ fontFamily: "serif", fontSize: "clamp(60px, 7vw, 90px)", fontWeight: 700, color: "#fff", lineHeight: 0.95, margin: "0 0 32px", direction: "rtl" }}
+          >
+            עיצוב<br />
+            <span style={{ color: "#D6A84F" }}>מהוד</span><br />
+            ומהדר
+          </motion.h1>
+
+          {/* Gold divider */}
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.7, delay: 0.55 }}
+            style={{ width: 48, height: 1, background: "#D6A84F", marginBottom: 24, transformOrigin: "left" }}
+          />
+
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.65 }}
+            style={{ color: "rgba(255,255,255,0.35)", fontSize: 14, lineHeight: 1.9, maxWidth: 360, direction: "rtl" }}
+          >
+            הזמנות חרדיות בסטנדרט הגבוה ביותר.<br />
+            עריכה עצמית, תשלום חד-פעמי של ₪49,<br />
+            קבלת קבצי דפוס תוך דקות.
+          </motion.p>
+
+          {/* CTA buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.8 }}
+            style={{ display: "flex", gap: 12, marginTop: 36 }}
+          >
+            <motion.button
+              whileHover={{ scale: 1.03, boxShadow: "0 0 30px rgba(214,168,79,0.3)" }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth" })}
+              style={{ padding: "14px 32px", border: "none", borderRadius: 4, background: "#D6A84F", color: "#0c0c0c", fontSize: 13, fontWeight: 700, letterSpacing: 1, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              לגלריה ←
+            </motion.button>
+            <Link href="/order">
+              <motion.button
+                whileHover={{ borderColor: "rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.75)" }}
+                whileTap={{ scale: 0.97 }}
+                style={{ padding: "14px 32px", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, background: "transparent", color: "rgba(255,255,255,0.5)", fontSize: 13, letterSpacing: 1, cursor: "pointer", fontFamily: "monospace" }}
+              >
+                ORDER NOW
+              </motion.button>
+            </Link>
+          </motion.div>
+        </motion.div>
+
+        {/* RIGHT — visual panel (45%) */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.1 }}
+          style={{ width: "45%", position: "relative", overflow: "hidden" }}
+        >
+          {/* Panel background */}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg, #1a1007 0%, #0d0d0d 100%)" }} />
+
+          {/* Ambient light */}
+          <div style={{ position: "absolute", top: "30%", left: "50%", transform: "translateX(-50%)", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(214,168,79,0.08) 0%, transparent 70%)", filter: "blur(30px)" }} />
+
+          {/* Second card (behind) */}
+          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-35%, -45%) rotate(6deg)", width: 240, height: 340, borderRadius: 12, background: "linear-gradient(145deg, #0d1520 0%, #0a1018 100%)", border: "1px solid rgba(100,150,255,0.1)", opacity: 0.6 }} />
+
+          {/* Main invitation card */}
+          <motion.div
+            animate={{ y: [0, -10, 0] }}
+            transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
+            style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%) rotate(-4deg)", width: 240, height: 340, borderRadius: 12, background: "linear-gradient(145deg, #1a1508 0%, #241c0a 100%)", border: "1px solid rgba(214,168,79,0.25)", boxShadow: "0 40px 100px rgba(0,0,0,0.7), 0 0 60px rgba(214,168,79,0.08)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 24, direction: "rtl" }}
+          >
+            <div style={{ width: 40, height: 1, background: "rgba(214,168,79,0.5)" }} />
+            <div style={{ color: "rgba(214,168,79,0.4)", fontSize: 9, letterSpacing: 3, fontFamily: "serif" }}>בסייעתא דשמיא</div>
+            <div style={{ fontFamily: "serif", fontSize: 26, fontWeight: 700, color: "#D6A84F", textAlign: "center", lineHeight: 1.2 }}>שמחת<br />בר המצווה</div>
+            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, textAlign: "center", lineHeight: 1.8 }}>ראובן בן שמעון<br />ח׳ אדר תשפ״ו</div>
+            <div style={{ color: "rgba(255,255,255,0.2)", fontSize: 10, textAlign: "center", lineHeight: 1.8 }}>יש לנו את הכבוד להזמינכם<br />לסעודת מצווה</div>
+            <div style={{ width: 40, height: 1, background: "rgba(214,168,79,0.5)" }} />
+          </motion.div>
+
+          {/* Frame counter — bottom right */}
+          <div style={{ position: "absolute", bottom: 24, right: 24, color: "rgba(255,255,255,0.2)", fontSize: 11, fontFamily: "monospace", letterSpacing: 3 }}>01 / 12</div>
+
+          {/* Frame dots — bottom left */}
+          <div style={{ position: "absolute", bottom: 24, left: 24, display: "flex", gap: 6 }}>
+            {[1,2,3].map(i => (
+              <div key={i} style={{ width: i === 1 ? 20 : 6, height: 2, borderRadius: 1, background: i === 1 ? "#D6A84F" : "rgba(255,255,255,0.2)" }} />
+            ))}
+          </div>
         </motion.div>
       </section>
 
