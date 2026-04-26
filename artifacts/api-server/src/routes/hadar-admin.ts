@@ -1,13 +1,13 @@
 import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { db } from "@workspace/db";
-import { hadarDesigns, hadarOrders, hadarTemplates, hadarElements } from "@workspace/db/schema";
+import { hadarDesigns, hadarOrders, hadarTemplates, hadarElements, hadarFonts } from "@workspace/db/schema";
 import { eq, desc, sql, count, sum } from "drizzle-orm";
 import { objectStorageClient } from "../lib/objectStorage";
 import { randomUUID } from "crypto";
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 // ─── Login: exchange ADMIN_PASSWORD for ADMIN_SECRET token ──────────────────
 router.post("/hadar/admin/auth", (req, res) => {
@@ -28,42 +28,52 @@ function adminAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// ─── Shared upload helper ─────────────────────────────────────────────────────
+async function uploadToStorage(buffer: Buffer, mimetype: string, folder: string, ext: string): Promise<string> {
+  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  if (!bucketId) throw new Error("Object storage not configured");
+  const fileName = `${folder}/${randomUUID()}.${ext}`;
+  const bucket = objectStorageClient.bucket(bucketId);
+  const file = bucket.file(fileName);
+  await file.save(buffer, { metadata: { contentType: mimetype } });
+  return `/api/hadar/media/${fileName}`;
+}
+
 // ─── Image upload ────────────────────────────────────────────────────────────
 router.post("/hadar/admin/upload", adminAuth, upload.single("image"), async (req: any, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-
-    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-    if (!bucketId) return res.status(500).json({ error: "Object storage not configured" });
-
     const ext = (req.file.originalname.split(".").pop() || "png").toLowerCase();
-    const fileName = `hadar-templates/${randomUUID()}.${ext}`;
-    const bucket = objectStorageClient.bucket(bucketId);
-    const file = bucket.file(fileName);
-
-    // Upload without public: true — the bucket enforces public access prevention.
-    // Files are served via the /api/hadar/media/* proxy route below.
-    await file.save(req.file.buffer, {
-      metadata: { contentType: req.file.mimetype },
-    });
-
-    // Return a proxy URL served through our own API (no GCS ACL required)
-    const proxyUrl = `/api/hadar/media/${fileName}`;
-    res.json({ url: proxyUrl, fileName });
+    const proxyUrl = await uploadToStorage(req.file.buffer, req.file.mimetype, "hadar-templates", ext);
+    res.json({ url: proxyUrl });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ─── Media proxy (serve uploaded template images without public GCS ACL) ─────
-// Use router.use to avoid path-to-regexp v8 wildcard restrictions
+// ─── Font upload ──────────────────────────────────────────────────────────────
+router.post("/hadar/admin/upload-font", adminAuth, upload.single("font"), async (req: any, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const { name, displayName } = req.body;
+    if (!name || !displayName) return res.status(400).json({ error: "name and displayName required" });
+    const ext = (req.file.originalname.split(".").pop() || "ttf").toLowerCase();
+    const mimeType = ext === "woff2" ? "font/woff2" : ext === "woff" ? "font/woff" : ext === "otf" ? "font/otf" : "font/ttf";
+    const fileUrl = await uploadToStorage(req.file.buffer, mimeType, "hadar-fonts", ext);
+    const [font] = await db.insert(hadarFonts).values({ name, displayName, fileUrl, mimeType }).returning();
+    res.json(font);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Media proxy (serve uploaded files without public GCS ACL) ───────────────
 router.use("/hadar/media", async (req: Request, res: Response, next: NextFunction) => {
   if (req.method !== "GET") return next();
   try {
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
     if (!bucketId) return res.status(500).send("Storage not configured");
 
-    // req.path is the remainder after /hadar/media, e.g. /hadar-templates/uuid.png
     const filePath = req.path.replace(/^\//, "");
     if (!filePath || filePath.includes("..")) return res.status(400).send("Invalid path");
 
@@ -74,13 +84,56 @@ router.use("/hadar/media", async (req: Request, res: Response, next: NextFunctio
 
     const [metadata] = await file.getMetadata();
     const contentType = (metadata.contentType as string) || "application/octet-stream";
-
     res.setHeader("Content-Type", contentType);
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-
+    res.setHeader("Access-Control-Allow-Origin", "*");
     file.createReadStream().pipe(res);
   } catch (err: any) {
     res.status(500).send(err.message);
+  }
+});
+
+// ─── Public: list active fonts ────────────────────────────────────────────────
+router.get("/hadar/public-fonts", async (_req, res) => {
+  try {
+    const fonts = await db.select().from(hadarFonts).where(eq(hadarFonts.isActive, true)).orderBy(hadarFonts.createdAt);
+    res.json(fonts);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Admin: list all fonts ────────────────────────────────────────────────────
+router.get("/hadar/admin/fonts", adminAuth, async (_req, res) => {
+  try {
+    const fonts = await db.select().from(hadarFonts).orderBy(desc(hadarFonts.createdAt));
+    res.json(fonts);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Admin: update font (toggle active, rename) ───────────────────────────────
+router.patch("/hadar/admin/fonts/:id", adminAuth, async (req, res) => {
+  try {
+    const { displayName, isActive } = req.body;
+    const patch: Record<string, any> = {};
+    if (displayName !== undefined) patch.displayName = displayName;
+    if (isActive !== undefined) patch.isActive = isActive;
+    const [updated] = await db.update(hadarFonts).set(patch).where(eq(hadarFonts.id, Number(req.params.id))).returning();
+    res.json(updated);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Admin: delete font ───────────────────────────────────────────────────────
+router.delete("/hadar/admin/fonts/:id", adminAuth, async (req, res) => {
+  try {
+    await db.delete(hadarFonts).where(eq(hadarFonts.id, Number(req.params.id)));
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -156,10 +209,7 @@ router.get("/hadar/admin/stats", adminAuth, async (_req, res) => {
 // ─── Templates ───────────────────────────────────────────────────────────────
 router.get("/hadar/admin/templates", adminAuth, async (_req, res) => {
   try {
-    const templates = await db
-      .select()
-      .from(hadarTemplates)
-      .orderBy(desc(hadarTemplates.createdAt));
+    const templates = await db.select().from(hadarTemplates).orderBy(desc(hadarTemplates.createdAt));
     res.json(templates);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -168,11 +218,22 @@ router.get("/hadar/admin/templates", adminAuth, async (_req, res) => {
 
 router.post("/hadar/admin/templates", adminAuth, async (req, res) => {
   try {
-    const { slug, title, subtitle, category, style, price, imageUrl, slots } = req.body;
+    const { slug, title, subtitle, category, style, price, imageUrl, galleryImageUrl, displayImageUrl, dimensions, slots } = req.body;
     if (!slug || !title) return res.status(400).json({ error: "slug and title required" });
     const [template] = await db
       .insert(hadarTemplates)
-      .values({ slug, title, subtitle: subtitle || "", category: category || "", style: style || "", price: price || 4900, imageUrl: imageUrl || null, slots: slots || [] })
+      .values({
+        slug, title,
+        subtitle: subtitle || "",
+        category: category || "",
+        style: style || "",
+        price: price || 4900,
+        imageUrl: imageUrl || null,
+        galleryImageUrl: galleryImageUrl || null,
+        displayImageUrl: displayImageUrl || null,
+        dimensions: dimensions || { preset: "custom", width: 800, height: 1100, unit: "px" },
+        slots: slots || [],
+      })
       .returning();
     res.json(template);
   } catch (err: any) {
@@ -182,10 +243,10 @@ router.post("/hadar/admin/templates", adminAuth, async (req, res) => {
 
 router.put("/hadar/admin/templates/:id", adminAuth, async (req, res) => {
   try {
-    const { title, subtitle, category, style, price, imageUrl, slots, isActive } = req.body;
+    const { title, subtitle, category, style, price, imageUrl, galleryImageUrl, displayImageUrl, dimensions, slots, isActive } = req.body;
     const [template] = await db
       .update(hadarTemplates)
-      .set({ title, subtitle, category, style, price, imageUrl, slots, isActive, updatedAt: new Date() })
+      .set({ title, subtitle, category, style, price, imageUrl, galleryImageUrl, displayImageUrl, dimensions, slots, isActive, updatedAt: new Date() })
       .where(eq(hadarTemplates.id, Number(req.params.id)))
       .returning();
     if (!template) return res.status(404).json({ error: "Not found" });
@@ -234,18 +295,18 @@ router.get("/hadar/templates/:slug", async (req, res) => {
 
 // ─── Admin: seed default templates ────────────────────────────────────────────
 const DEFAULT_SEEDS = [
-  { slug: "kiddush-classic",  title: "שבת שבתון",         subtitle: "הזמנה לקידוש",        category: "הזמנות לקידוש",   style: "זהב",        price: 2900,  imageUrl: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)" },
-  { slug: "wedding-luxury",   title: "יום שמחתנו",         subtitle: "הזמנה לחתונה",        category: "הזמנות לחתונה",   style: "יוקרתי",    price: 7900,  imageUrl: null },
-  { slug: "bar-mitzvah",      title: "כי הגיע הזמן",       subtitle: "מודעה לבר מצווה",     category: "מודעות לאירועים", style: "קלאסי",     price: 4900,  imageUrl: null },
-  { slug: "torah-class",      title: "עמוד ישיבה",          subtitle: "מודעה לשיעור תורה",  category: "מודעות לישיבות",  style: "מינימליסטי", price: 1900,  imageUrl: null },
-  { slug: "parasha",          title: "פרשת השבוע",         subtitle: "עיצוב לשבת",          category: "מודעות לאירועים", style: "מודרני",    price: 2500,  imageUrl: "linear-gradient(135deg, #331520 0%, #1a0b10 100%)" },
-  { slug: "charity",          title: "יד עוזרת",            subtitle: "פוסטר גיוס תרומות",  category: "מודעות לאירועים", style: "חסידי",     price: 3900,  imageUrl: null },
-  { slug: "housewarming",     title: "בית חדש שמחה חדשה", subtitle: "הזמנה לחנוכת הבית",  category: "הזמנות לקידוש",   style: "זהב",        price: 3500,  imageUrl: "linear-gradient(135deg, #172554 0%, #082f49 100%)" },
-  { slug: "yeshiva-event",    title: "ערב עיון",            subtitle: "מודעה לאירוע ישיבה", category: "מודעות לישיבות",  style: "קלאסי",     price: 2900,  imageUrl: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)" },
-  { slug: "wedding-video",    title: "ברוכים הבאים",       subtitle: "קליפ וידאו לחתונה",   category: "תבניות וידאו",    style: "יוקרתי",    price: 12000, imageUrl: null },
-  { slug: "passover",         title: "ליל הסדר",           subtitle: "עיצוב לחג הפסח",      category: "עיצובים לחגים",   style: "מינימליסטי", price: 4500,  imageUrl: "linear-gradient(135deg, #2e1065 0%, #4c1d95 100%)" },
-  { slug: "brit-milah",       title: "שמחת הברית",         subtitle: "הזמנה לברית מילה",   category: "הזמנות לקידוש",   style: "זהב",        price: 5500,  imageUrl: "linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%)" },
-  { slug: "kol-kore",         title: "קול קורא",            subtitle: "פוסטר לאסיפה חשובה", category: "מודעות לישיבות",  style: "חסידי",     price: 2200,  imageUrl: "linear-gradient(135deg, #022c22 0%, #450a0a 100%)" },
+  { slug: "kiddush-classic",  title: "שבת שבתון",         subtitle: "הזמנה לקידוש",        category: "הזמנות לקידוש",   style: "זהב",        price: 2900,  imageUrl: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)", dimensions: { preset: "A5", width: 559, height: 794, unit: "px" } },
+  { slug: "wedding-luxury",   title: "יום שמחתנו",         subtitle: "הזמנה לחתונה",        category: "הזמנות לחתונה",   style: "יוקרתי",    price: 7900,  imageUrl: null, dimensions: { preset: "A4", width: 794, height: 1123, unit: "px" } },
+  { slug: "bar-mitzvah",      title: "כי הגיע הזמן",       subtitle: "מודעה לבר מצווה",     category: "מודעות לאירועים", style: "קלאסי",     price: 4900,  imageUrl: null, dimensions: { preset: "A4", width: 794, height: 1123, unit: "px" } },
+  { slug: "torah-class",      title: "עמוד ישיבה",          subtitle: "מודעה לשיעור תורה",  category: "מודעות לישיבות",  style: "מינימליסטי", price: 1900,  imageUrl: null, dimensions: { preset: "Post", width: 1080, height: 1080, unit: "px" } },
+  { slug: "parasha",          title: "פרשת השבוע",         subtitle: "עיצוב לשבת",          category: "מודעות לאירועים", style: "מודרני",    price: 2500,  imageUrl: "linear-gradient(135deg, #331520 0%, #1a0b10 100%)", dimensions: { preset: "Story", width: 1080, height: 1920, unit: "px" } },
+  { slug: "charity",          title: "יד עוזרת",            subtitle: "פוסטר גיוס תרומות",  category: "מודעות לאירועים", style: "חסידי",     price: 3900,  imageUrl: null, dimensions: { preset: "Post", width: 1080, height: 1080, unit: "px" } },
+  { slug: "housewarming",     title: "בית חדש שמחה חדשה", subtitle: "הזמנה לחנוכת הבית",  category: "הזמנות לקידוש",   style: "זהב",        price: 3500,  imageUrl: "linear-gradient(135deg, #172554 0%, #082f49 100%)", dimensions: { preset: "A5", width: 559, height: 794, unit: "px" } },
+  { slug: "yeshiva-event",    title: "ערב עיון",            subtitle: "מודעה לאירוע ישיבה", category: "מודעות לישיבות",  style: "קלאסי",     price: 2900,  imageUrl: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)", dimensions: { preset: "A4", width: 794, height: 1123, unit: "px" } },
+  { slug: "wedding-video",    title: "ברוכים הבאים",       subtitle: "קליפ וידאו לחתונה",   category: "תבניות וידאו",    style: "יוקרתי",    price: 12000, imageUrl: null, dimensions: { preset: "Story", width: 1080, height: 1920, unit: "px" } },
+  { slug: "passover",         title: "ליל הסדר",           subtitle: "עיצוב לחג הפסח",      category: "עיצובים לחגים",   style: "מינימליסטי", price: 4500,  imageUrl: "linear-gradient(135deg, #2e1065 0%, #4c1d95 100%)", dimensions: { preset: "A4", width: 794, height: 1123, unit: "px" } },
+  { slug: "brit-milah",       title: "שמחת הברית",         subtitle: "הזמנה לברית מילה",   category: "הזמנות לקידוש",   style: "זהב",        price: 5500,  imageUrl: "linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%)", dimensions: { preset: "A5", width: 559, height: 794, unit: "px" } },
+  { slug: "kol-kore",         title: "קול קורא",            subtitle: "פוסטר לאסיפה חשובה", category: "מודעות לישיבות",  style: "חסידי",     price: 2200,  imageUrl: "linear-gradient(135deg, #022c22 0%, #450a0a 100%)", dimensions: { preset: "A4", width: 794, height: 1123, unit: "px" } },
 ];
 
 router.post("/hadar/admin/seed", adminAuth, async (_req, res) => {
@@ -264,10 +325,10 @@ router.post("/hadar/admin/seed", adminAuth, async (_req, res) => {
   }
 });
 
-// ─── Admin: quick patch (price / isActive / title) ────────────────────────────
+// ─── Admin: quick patch ────────────────────────────────────────────────────────
 router.patch("/hadar/admin/templates/:id", adminAuth, async (req, res) => {
   try {
-    const allowed = ["price", "isActive", "title", "subtitle", "category", "style"] as const;
+    const allowed = ["price", "isActive", "title", "subtitle", "category", "style", "galleryImageUrl", "displayImageUrl", "dimensions"] as const;
     const patch: Record<string, any> = {};
     for (const key of allowed) {
       if (key in req.body) patch[key] = req.body[key];
@@ -288,11 +349,7 @@ router.patch("/hadar/admin/templates/:id", adminAuth, async (req, res) => {
 // ─── Elements library (public read) ──────────────────────────────────────────
 router.get("/hadar/public-elements", async (_req, res) => {
   try {
-    const els = await db
-      .select()
-      .from(hadarElements)
-      .where(eq(hadarElements.isActive, true))
-      .orderBy(hadarElements.createdAt);
+    const els = await db.select().from(hadarElements).where(eq(hadarElements.isActive, true)).orderBy(hadarElements.createdAt);
     res.json(els);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -304,10 +361,8 @@ router.post("/hadar/admin/elements", adminAuth, upload.single("file"), async (re
   try {
     const { name, category } = req.body;
     if (!name) return res.status(400).json({ error: "name required" });
-
     let fileContent: string;
     let mimeType: string;
-
     if (req.file) {
       mimeType = req.file.mimetype || "image/svg+xml";
       const base64 = req.file.buffer.toString("base64");
@@ -318,18 +373,13 @@ router.post("/hadar/admin/elements", adminAuth, upload.single("file"), async (re
     } else {
       return res.status(400).json({ error: "file or fileContent required" });
     }
-
-    const [el] = await db
-      .insert(hadarElements)
-      .values({ name, category: category || "general", fileContent, mimeType })
-      .returning();
+    const [el] = await db.insert(hadarElements).values({ name, category: category || "general", fileContent, mimeType }).returning();
     res.json(el);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ─── Admin: list all elements ──────────────────────────────────────────────
 router.get("/hadar/admin/elements", adminAuth, async (_req, res) => {
   try {
     const els = await db.select().from(hadarElements).orderBy(desc(hadarElements.createdAt));
@@ -339,7 +389,6 @@ router.get("/hadar/admin/elements", adminAuth, async (_req, res) => {
   }
 });
 
-// ─── Admin: toggle element active ─────────────────────────────────────────
 router.patch("/hadar/admin/elements/:id", adminAuth, async (req, res) => {
   try {
     const { name, category, isActive } = req.body;
@@ -347,18 +396,13 @@ router.patch("/hadar/admin/elements/:id", adminAuth, async (req, res) => {
     if (name !== undefined) patch.name = name;
     if (category !== undefined) patch.category = category;
     if (isActive !== undefined) patch.isActive = isActive;
-    const [updated] = await db
-      .update(hadarElements)
-      .set(patch)
-      .where(eq(hadarElements.id, Number(req.params.id)))
-      .returning();
+    const [updated] = await db.update(hadarElements).set(patch).where(eq(hadarElements.id, Number(req.params.id))).returning();
     res.json(updated);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ─── Admin: delete element ─────────────────────────────────────────────────
 router.delete("/hadar/admin/elements/:id", adminAuth, async (req, res) => {
   try {
     await db.delete(hadarElements).where(eq(hadarElements.id, Number(req.params.id)));

@@ -51,7 +51,7 @@ export function TemplateCard({ template, index }: TemplateCardProps) {
             className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
           />
         )}
-        <div className="absolute top-4 right-4 flex gap-2">
+        <div className="absolute top-4 right-4 flex gap-2 flex-wrap">
           <Badge variant="secondary" className="bg-background/90 backdrop-blur-md border-primary/30 text-primary text-xs font-medium px-3 py-1">
             {template.category}
           </Badge>
@@ -59,6 +59,15 @@ export function TemplateCard({ template, index }: TemplateCardProps) {
             {template.style}
           </Badge>
         </div>
+        {template.dimensions && (
+          <div className="absolute bottom-4 left-4">
+            <Badge variant="secondary" className="bg-black/60 backdrop-blur-sm border-primary/20 text-primary/80 text-[10px] font-mono px-2 py-0.5">
+              {template.dimensions.preset !== "Custom"
+                ? template.dimensions.preset
+                : `${template.dimensions.width}×${template.dimensions.height}`}
+            </Badge>
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-secondary via-secondary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
 

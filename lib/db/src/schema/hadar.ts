@@ -37,6 +37,9 @@ export const hadarTemplates = pgTable("hadar_templates", {
   style: text("style").notNull().default(""),
   price: integer("price").notNull().default(4900),
   imageUrl: text("image_url"),
+  galleryImageUrl: text("gallery_image_url"),
+  displayImageUrl: text("display_image_url"),
+  dimensions: jsonb("dimensions").default(sql`'{"preset":"custom","width":800,"height":1100,"unit":"px"}'::jsonb`),
   slots: jsonb("slots").notNull().default(sql`'[]'::jsonb`),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -53,7 +56,18 @@ export const hadarElements = pgTable("hadar_elements", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const hadarFonts = pgTable("hadar_fonts", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  displayName: text("display_name").notNull(),
+  fileUrl: text("file_url").notNull(),
+  mimeType: text("mime_type").notNull().default("font/ttf"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export type HadarElement = typeof hadarElements.$inferSelect;
+export type HadarFont = typeof hadarFonts.$inferSelect;
 
 export const insertHadarDesignSchema = createInsertSchema(hadarDesigns).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertHadarDesign = z.infer<typeof insertHadarDesignSchema>;

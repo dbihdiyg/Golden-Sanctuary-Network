@@ -25,17 +25,23 @@ function useGalleryTemplates() {
       .then(r => r.json())
       .then((data: any[]) => {
         if (Array.isArray(data) && data.length > 0) {
-          const mapped: Template[] = data.map(t => ({
-            id: String(t.id),
-            title: t.title,
-            subtitle: t.subtitle,
-            category: t.category,
-            style: t.style,
-            price: Math.round(t.price / 100),
-            image: t.imageUrl || "linear-gradient(135deg, #0B1833 0%, #1a2d54 100%)",
-            isGradient: !t.imageUrl || /gradient|linear|radial/i.test(t.imageUrl),
-            slots: t.slots,
-          }));
+          const mapped: Template[] = data.map(t => {
+            const galleryImg = t.galleryImageUrl || t.imageUrl;
+            return {
+              id: String(t.id),
+              title: t.title,
+              subtitle: t.subtitle,
+              category: t.category,
+              style: t.style,
+              price: Math.round(t.price / 100),
+              image: galleryImg || "linear-gradient(135deg, #0B1833 0%, #1a2d54 100%)",
+              isGradient: !galleryImg || /gradient|linear|radial/i.test(galleryImg),
+              slots: t.slots,
+              galleryImageUrl: t.galleryImageUrl,
+              displayImageUrl: t.displayImageUrl,
+              dimensions: t.dimensions,
+            };
+          });
           setTemplates(mapped);
           setCategories([...new Set(mapped.map(t => t.category).filter(Boolean))]);
           setStyles([...new Set(mapped.map(t => t.style).filter(Boolean))]);
@@ -83,7 +89,7 @@ function AuthNavButton() {
             העיצובים שלי
           </Button>
         </Link>
-        <UserButton afterSignOutUrl="/" appearance={{ variables: { colorPrimary: "#D6A84F" } }} />
+        <UserButton appearance={{ variables: { colorPrimary: "#D6A84F" } }} />
       </div>
     );
   }
@@ -329,23 +335,21 @@ export default function Home() {
 
   const [count, setCount] = useState(0);
   useEffect(() => {
-    if (clockIntersecting) {
-      let start = 0;
-      const end = 24;
-      const duration = 1500;
-      const increment = end / (duration / 16);
-      
-      const timer = setInterval(() => {
-        start += increment;
-        if (start >= end) {
-          setCount(end);
-          clearInterval(timer);
-        } else {
-          setCount(Math.floor(start));
-        }
-      }, 16);
-      return () => clearInterval(timer);
-    }
+    if (!clockIntersecting) return;
+    let start = 0;
+    const end = 24;
+    const duration = 1500;
+    const increment = end / (duration / 16);
+    const timer = setInterval(() => {
+      start += increment;
+      if (start >= end) {
+        setCount(end);
+        clearInterval(timer);
+      } else {
+        setCount(Math.floor(start));
+      }
+    }, 16);
+    return () => clearInterval(timer);
   }, [clockIntersecting]);
 
   const filteredTemplates = templates.filter(t => {

@@ -6,7 +6,7 @@ import { ArrowRight, Crown, MessageCircle, Download, RotateCcw, CheckCircle2, Zo
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { templates, TextSlot } from "@/lib/data";
-import { HEBREW_FONTS, loadGoogleFont } from "@/lib/fonts";
+import { HEBREW_FONTS, loadGoogleFont, useCombinedFonts, injectCustomFont } from "@/lib/fonts";
 import { useTheme } from "@/hooks/useTheme";
 import { motion, AnimatePresence } from "framer-motion";
 import { ElementsPanel, PlacedElement, colorToFilter } from "@/components/ElementsPanel";
@@ -65,21 +65,24 @@ function loadLocalFont(family: string) {
   document.head.appendChild(style);
 }
 
-const TAB_LABELS: Record<"serif" | "sans" | "local", string> = {
-  serif: "סריף",
-  sans:  "סאנס",
-  local: "עברית",
+const TAB_LABELS: Record<"serif" | "sans" | "local" | "custom", string> = {
+  serif:  "סריף",
+  sans:   "סאנס",
+  local:  "עברית",
+  custom: "מותאם",
 };
 
 function FontSelector({ selected, onChange }: { selected: string; onChange: (f: string) => void }) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"serif" | "sans" | "local">("serif");
+  const [tab, setTab] = useState<"serif" | "sans" | "local" | "custom">("serif");
+  const combinedFonts = useCombinedFonts();
 
-  const fonts = HEBREW_FONTS.filter(f => f.category === tab);
+  const hasCustom = combinedFonts.some(f => f.category === "custom");
+  const fonts = combinedFonts.filter(f => f.category === tab);
 
-  function handlePick(font: (typeof HEBREW_FONTS)[0]) {
+  function handlePick(font: typeof combinedFonts[0]) {
     if (font.category === "local") loadLocalFont(font.family);
-    else loadGoogleFont(font.family);
+    else if (font.category !== "custom") loadGoogleFont(font.family);
     onChange(font.family);
   }
 
@@ -102,8 +105,8 @@ function FontSelector({ selected, onChange }: { selected: string; onChange: (f: 
       {open && (
         <div className="px-4 pb-3 bg-card/30">
           {/* Category tabs */}
-          <div className="flex gap-1 mb-2.5">
-            {(["serif", "sans", "local"] as const).map(t => (
+          <div className="flex gap-1 mb-2.5 flex-wrap">
+            {(["serif", "sans", "local", ...(hasCustom ? ["custom" as const] : [])] as const).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -115,6 +118,9 @@ function FontSelector({ selected, onChange }: { selected: string; onChange: (f: 
           </div>
           {/* Font list */}
           <div className="flex flex-col gap-1 max-h-56 overflow-y-auto">
+            {fonts.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">אין פונטים מותאמים</p>
+            )}
             {fonts.map(font => (
               <button
                 key={font.family}
@@ -127,7 +133,9 @@ function FontSelector({ selected, onChange }: { selected: string; onChange: (f: 
               >
                 {font.category === "local"
                   ? <span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">BA</span>
-                  : <span className="text-xs text-muted-foreground">{font.category === "serif" ? "סריף" : "סאנס"}</span>
+                  : font.category === "custom"
+                    ? <span className="text-[10px] font-bold text-violet-400 bg-violet-400/10 px-1.5 py-0.5 rounded">✦</span>
+                    : <span className="text-xs text-muted-foreground">{font.category === "serif" ? "סריף" : "סאנס"}</span>
                 }
                 <span className="text-base leading-tight" style={{ fontFamily: `'${font.family}', serif`, direction: "rtl" }}>
                   {font.name}
@@ -1157,7 +1165,7 @@ export default function Editor() {
                               label=""
                               value={values[slot.id] ?? slot.defaultValue}
                               placeholder={slot.placeholder}
-                              multiline={slot.multiline}
+                              multiline={!!slot.multiline}
                               onChange={html => { updateValue(slot.id, html); setSaved(false); }}
                             />
                           )}

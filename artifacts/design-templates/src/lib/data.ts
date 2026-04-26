@@ -61,6 +61,9 @@ export interface Template {
   image: string;
   isGradient?: boolean;
   slots?: TextSlot[];
+  galleryImageUrl?: string | null;
+  displayImageUrl?: string | null;
+  dimensions?: { preset: string; width: number; height: number; unit: string } | null;
 }
 
 export const categories = [
