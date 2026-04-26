@@ -123,11 +123,13 @@ export default function TemplateDetail() {
               </div>
 
               <div className="flex flex-col gap-4">
-                <Button size="lg" className="w-full text-lg h-16 bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl shadow-primary/20 relative overflow-hidden group font-bold">
-                  <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                  <Palette className="w-6 h-6 ml-3 relative z-10" />
-                  <span className="relative z-10">התאמה אישית באונליין</span>
-                </Button>
+                <Link href={`/editor/${template.id}`}>
+                  <Button size="lg" className="w-full text-lg h-16 bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl shadow-primary/20 relative overflow-hidden group font-bold">
+                    <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                    <Palette className="w-6 h-6 ml-3 relative z-10" />
+                    <span className="relative z-10">ערכו את ההזמנה עכשיו</span>
+                  </Button>
+                </Link>
                 
                 <Button size="lg" variant="outline" className="w-full text-lg h-16 border-primary/50 text-primary hover:bg-primary/10 font-bold transition-colors">
                   <Download className="w-6 h-6 ml-3" />
