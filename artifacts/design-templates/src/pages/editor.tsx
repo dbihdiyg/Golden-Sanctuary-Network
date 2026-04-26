@@ -10,8 +10,8 @@ import { templates, TextSlot } from "@/lib/data";
 import { useTheme } from "@/hooks/useTheme";
 import { motion, AnimatePresence } from "framer-motion";
 
-// ─── Hebrew fonts — all free for commercial use (OFL / Google Fonts) ───────
-export const HEBREW_FONTS: { name: string; family: string; category: "serif" | "sans" }[] = [
+// ─── Hebrew fonts — Google Fonts (free / OFL) ────────────────────────────────
+export const HEBREW_FONTS: { name: string; family: string; category: "serif" | "sans" | "local" }[] = [
   { name: "Frank Ruhl Libre", family: "Frank Ruhl Libre",  category: "serif" },
   { name: "Noto Serif Hebrew", family: "Noto Serif Hebrew", category: "serif" },
   { name: "David Libre",       family: "David Libre",       category: "serif" },
@@ -28,6 +28,32 @@ export const HEBREW_FONTS: { name: string; family: string; category: "serif" | "
   { name: "Cousine",           family: "Cousine",           category: "sans"  },
 ];
 
+// ─── Local BA Hebrew fonts (uploaded by user) ─────────────────────────────────
+const LOCAL_BA_FONTS: {
+  name: string;
+  family: string;
+  files: { weight: number; src: string }[];
+}[] = [
+  { name: "ארזי הלבנון",    family: "BA Arzey Halevanon",   files: [{ weight: 300, src: "BAArzeyHalevanon-Light.ttf" }, { weight: 700, src: "BAArzeyHalevanon-Bold.ttf" }] },
+  { name: "ברקאי",          family: "BA Barkai",             files: [{ weight: 400, src: "BABarkai-Regular.otf" }] },
+  { name: "קזבלנקה",        family: "BA Casablanca",         files: [{ weight: 300, src: "BA-Casablanca-Light.otf" }] },
+  { name: "פונטוב",         family: "BA Fontov",             files: [{ weight: 400, src: "BA-Fontov-Regular.otf" }, { weight: 700, src: "BA-Fontov-Bold.otf" }] },
+  { name: "היצירה",         family: "BA HaYetzira",          files: [{ weight: 300, src: "BA-HaYetzira-Light.otf" }, { weight: 400, src: "BA-HaYetzira-Regular.otf" }] },
+  { name: "קריית קודש",     family: "BA Kiriat Kodesh",      files: [{ weight: 700, src: "BA-Kiriat-Kodesh-Bold.otf" }] },
+  { name: "מים חיים",       family: "BA Maim Haim",          files: [{ weight: 400, src: "BA-Maim-Haim-Regular.otf" }] },
+  { name: "מסובין",         family: "BA Mesubin Rolltext",   files: [{ weight: 400, src: "BA-Mesubin-Rolltext.otf" }] },
+  { name: "מומנט",          family: "BA Moment Original",    files: [{ weight: 400, src: "BA-Moment-Original.otf" }] },
+  { name: "נפלאות",         family: "BA Niflaot",            files: [{ weight: 900, src: "BANiflaot-Black.ttf" }] },
+  { name: "פלטפורמה",       family: "BA Platforma",          files: [{ weight: 300, src: "BAPlatforma-Light.otf" }, { weight: 700, src: "BAPlatforma-Bold.otf" }, { weight: 900, src: "BAPlatforma-Black.otf" }] },
+  { name: "ראדלהיים",       family: "BA Radlheim",           files: [{ weight: 700, src: "BARadlheim-Bold.otf" }] },
+  { name: "ראשון לציון",    family: "BA Rishon LeZion",      files: [{ weight: 400, src: "BARishonLezion-Regular.ttf" }] },
+];
+
+// merge local fonts into the shared list
+LOCAL_BA_FONTS.forEach(f =>
+  HEBREW_FONTS.push({ name: f.name, family: f.family, category: "local" })
+);
+
 const DEFAULT_FONT = "Frank Ruhl Libre";
 
 function loadGoogleFont(family: string) {
@@ -40,11 +66,45 @@ function loadGoogleFont(family: string) {
   document.head.appendChild(link);
 }
 
+function loadLocalFont(family: string) {
+  const id = `lfont-${family.replace(/\s/g, "-")}`;
+  if (document.getElementById(id)) return;
+  const meta = LOCAL_BA_FONTS.find(f => f.family === family);
+  if (!meta) return;
+  const base = import.meta.env.BASE_URL; // e.g. "/design-templates/"
+  const fmt = (src: string) => src.endsWith(".ttf") ? "truetype" : "opentype";
+  const css = meta.files.map(f => `
+    @font-face {
+      font-family: '${meta.family}';
+      src: url('${base}fonts/${f.src}') format('${fmt(f.src)}');
+      font-weight: ${f.weight};
+      font-style: normal;
+      font-display: swap;
+    }
+  `).join("\n");
+  const style = document.createElement("style");
+  style.id = id;
+  style.textContent = css;
+  document.head.appendChild(style);
+}
+
+const TAB_LABELS: Record<"serif" | "sans" | "local", string> = {
+  serif: "סריף",
+  sans:  "סאנס",
+  local: "עברית",
+};
+
 function FontSelector({ selected, onChange }: { selected: string; onChange: (f: string) => void }) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"serif" | "sans">("serif");
+  const [tab, setTab] = useState<"serif" | "sans" | "local">("serif");
 
   const fonts = HEBREW_FONTS.filter(f => f.category === tab);
+
+  function handlePick(font: (typeof HEBREW_FONTS)[0]) {
+    if (font.category === "local") loadLocalFont(font.family);
+    else loadGoogleFont(font.family);
+    onChange(font.family);
+  }
 
   return (
     <div className="border-b border-primary/10">
@@ -66,29 +126,32 @@ function FontSelector({ selected, onChange }: { selected: string; onChange: (f: 
         <div className="px-4 pb-3 bg-card/30">
           {/* Category tabs */}
           <div className="flex gap-1 mb-2.5">
-            {(["serif", "sans"] as const).map(t => (
+            {(["serif", "sans", "local"] as const).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={`flex-1 text-xs py-1 rounded-md font-medium transition-colors ${tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
-                {t === "serif" ? "סריף — יוקרתי" : "סאנס — מודרני"}
+                {TAB_LABELS[t]}
               </button>
             ))}
           </div>
           {/* Font list */}
-          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+          <div className="flex flex-col gap-1 max-h-56 overflow-y-auto">
             {fonts.map(font => (
               <button
                 key={font.family}
-                onClick={() => { loadGoogleFont(font.family); onChange(font.family); }}
+                onClick={() => handlePick(font)}
                 className={`flex items-center justify-between px-3 py-2 rounded-lg text-right transition-colors border ${
                   selected === font.family
                     ? "border-primary/40 bg-primary/10 text-primary"
                     : "border-transparent hover:border-primary/20 hover:bg-primary/5 text-foreground"
                 }`}
               >
-                <span className="text-xs text-muted-foreground">{font.category === "serif" ? "סריף" : "סאנס"}</span>
+                {font.category === "local"
+                  ? <span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">BA</span>
+                  : <span className="text-xs text-muted-foreground">{font.category === "serif" ? "סריף" : "סאנס"}</span>
+                }
                 <span className="text-base leading-tight" style={{ fontFamily: `'${font.family}', serif`, direction: "rtl" }}>
                   {font.name}
                 </span>
