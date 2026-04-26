@@ -26,9 +26,44 @@ if (!basePath) {
   );
 }
 
+// Vite plugin: inject a <script> at the very top of <head> that suppresses
+// Clerk network errors before the runtime-error-overlay plugin can catch them.
+const suppressClerkNetworkErrors = () => ({
+  name: "suppress-clerk-network-errors",
+  transformIndexHtml: {
+    order: "pre" as const,
+    handler(html: string) {
+      const snippet = `<script>
+(function(){
+  var _orig = window.addEventListener.bind(window);
+  function patchListener(type, fn, opts) {
+    if (type !== 'unhandledrejection') return _orig(type, fn, opts);
+    _orig(type, function(e) {
+      var msg = (e.reason && (e.reason.message || e.reason.toString())) || '';
+      if (msg.indexOf('ClerkJS') !== -1 || msg.indexOf('clerk.accounts.dev') !== -1) {
+        e.preventDefault(); return;
+      }
+      fn.call(this, e);
+    }, opts);
+  }
+  window.addEventListener = patchListener;
+  window.addEventListener('unhandledrejection', function(e){
+    var msg = (e.reason && (e.reason.message || e.reason.toString())) || '';
+    if (msg.indexOf('ClerkJS') !== -1 || msg.indexOf('clerk.accounts.dev') !== -1) {
+      e.preventDefault(); e.stopImmediatePropagation();
+    }
+  }, true);
+})();
+</script>`;
+      return html.replace('<head>', '<head>' + snippet);
+    },
+  },
+});
+
 export default defineConfig({
   base: basePath,
   plugins: [
+    suppressClerkNetworkErrors(),
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
