@@ -86,13 +86,115 @@ const WARP_OPTIONS = [
 ] as const;
 
 const TEXTURE_OPTIONS = [
-  { value: "none",      label: "ללא" },
-  { value: "gold-foil", label: "🥇 זהב" },
-  { value: "silver",    label: "🥈 כסף" },
-  { value: "fire",      label: "🔥 אש" },
-  { value: "neon",      label: "💜 ניאון" },
-  { value: "rainbow",   label: "🌈 קשת" },
+  { value: "none",      label: "ללא",  desc: "" },
+  { value: "gold-foil", label: "זהב",  desc: "🥇", bg: "linear-gradient(135deg,#BF953F,#FCF6BA,#B38728,#FBF5B7,#AA771C)" },
+  { value: "silver",    label: "כסף",  desc: "🥈", bg: "linear-gradient(135deg,#868686,#e8e8e8,#a0a0a0,#ffffff,#868686)" },
+  { value: "fire",      label: "אש",   desc: "🔥", bg: "linear-gradient(135deg,#f12711,#f5af19)" },
+  { value: "neon",      label: "ניאון", desc: "💜", bg: "linear-gradient(135deg,#b721ff,#21d4fd)" },
+  { value: "rainbow",   label: "קשת",  desc: "🌈", bg: "linear-gradient(135deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f)" },
 ] as const;
+
+interface GradientPreset {
+  id: string;
+  name: string;
+  from: string;
+  to: string;
+  angle: number;
+  mid?: string;
+}
+interface GradientCategory {
+  id: string;
+  label: string;
+  emoji: string;
+  presets: GradientPreset[];
+}
+
+const GRADIENT_LIBRARY: GradientCategory[] = [
+  {
+    id: "gold",
+    label: "זהב ויוקרה",
+    emoji: "✨",
+    presets: [
+      { id: "gold-classic",  name: "זהב קלאסי",   from: "#BF953F", to: "#FCF6BA", angle: 135 },
+      { id: "gold-royal",    name: "זהב מלכותי",  from: "#D6A84F", to: "#7B4F12", angle: 160 },
+      { id: "champagne",     name: "שמפניה",       from: "#F7E7CE", to: "#C9A857", angle: 120 },
+      { id: "platinum",      name: "פלטינום",      from: "#8E8E8E", to: "#E8E8E8", angle: 135 },
+      { id: "copper",        name: "נחושת",        from: "#B87333", to: "#F4A460", angle: 145 },
+      { id: "bronze",        name: "ברונזה",       from: "#614E1A", to: "#D4A853", angle: 130 },
+      { id: "antique-gold",  name: "זהב עתיק",    from: "#C6902E", to: "#FFF8DC", angle: 90 },
+    ],
+  },
+  {
+    id: "fire",
+    label: "אש ולהבה",
+    emoji: "🔥",
+    presets: [
+      { id: "fire-classic",  name: "אש קלאסית",   from: "#f12711", to: "#f5af19", angle: 135 },
+      { id: "lava",          name: "לבה",          from: "#8B0000", to: "#FF4500", angle: 160 },
+      { id: "sunset-red",    name: "שקיעה אדומה", from: "#FF416C", to: "#FF4B2B", angle: 120 },
+      { id: "summer",        name: "קיץ",          from: "#FF512F", to: "#DD2476", angle: 135 },
+      { id: "rays",          name: "קרני שמש",    from: "#F7971E", to: "#FFD200", angle: 90 },
+      { id: "volcano",       name: "וולקאנו",      from: "#4B0000", to: "#FF0000", angle: 150 },
+      { id: "ember",         name: "גחלים",        from: "#C0392B", to: "#F39C12", angle: 135 },
+    ],
+  },
+  {
+    id: "sky",
+    label: "שמיים ולילה",
+    emoji: "🌌",
+    presets: [
+      { id: "ocean-deep",    name: "ים עמוק",      from: "#1565C0", to: "#00BCD4", angle: 135 },
+      { id: "sapphire",      name: "ספיר",         from: "#1A237E", to: "#64B5F6", angle: 150 },
+      { id: "night-sky",     name: "שמיים בלילה", from: "#0F0C29", to: "#302B63", angle: 160 },
+      { id: "twilight",      name: "בין-ערביים",  from: "#2C3E50", to: "#4CA1AF", angle: 135 },
+      { id: "azure",         name: "תכלת",         from: "#0575E6", to: "#021B79", angle: 145 },
+      { id: "arctic",        name: "ארקטי",        from: "#B0E0E6", to: "#1565C0", angle: 135 },
+      { id: "midnight",      name: "חצות",         from: "#09203F", to: "#537895", angle: 155 },
+    ],
+  },
+  {
+    id: "nature",
+    label: "טבע ורענן",
+    emoji: "🌿",
+    presets: [
+      { id: "forest",        name: "יער",          from: "#134E5E", to: "#71B280", angle: 135 },
+      { id: "leaves",        name: "עלים",         from: "#56AB2F", to: "#A8E063", angle: 120 },
+      { id: "emerald",       name: "אמרלד",        from: "#0F9B58", to: "#00F260", angle: 135 },
+      { id: "sea-breeze",    name: "רוח ים",       from: "#00B4DB", to: "#0083B0", angle: 145 },
+      { id: "spring",        name: "אביב",         from: "#43C6AC", to: "#F8FFAE", angle: 130 },
+      { id: "jungle",        name: "ג׳ונגל",       from: "#1D4350", to: "#A43931", angle: 150 },
+      { id: "mint",          name: "מנטה",         from: "#00B09B", to: "#96C93D", angle: 135 },
+    ],
+  },
+  {
+    id: "romantic",
+    label: "רומנטי ועדין",
+    emoji: "🌸",
+    presets: [
+      { id: "rose",          name: "ורד",          from: "#FF9A9E", to: "#FECFEF", angle: 135 },
+      { id: "lavender",      name: "לבנדר",        from: "#A18CD1", to: "#FBC2EB", angle: 150 },
+      { id: "blush",         name: "סומק",         from: "#FFB7C5", to: "#FF6B9D", angle: 120 },
+      { id: "peach",         name: "אפרסק",        from: "#FDDB92", to: "#D1FDFF", angle: 135 },
+      { id: "cotton-candy",  name: "צמר גפן",     from: "#f794a4", to: "#fdd6bd", angle: 145 },
+      { id: "dusty-rose",    name: "ורד עתיק",    from: "#C79081", to: "#DFA579", angle: 130 },
+      { id: "sakura",        name: "סקורה",        from: "#FFC0CB", to: "#FF69B4", angle: 135 },
+    ],
+  },
+  {
+    id: "mystic",
+    label: "מסתורי ואפל",
+    emoji: "🔮",
+    presets: [
+      { id: "deep-purple",   name: "סגול כהה",    from: "#4A1942", to: "#C74B50", angle: 135 },
+      { id: "galaxy",        name: "גלקסיה",       from: "#200122", to: "#6f0000", angle: 160 },
+      { id: "shadow",        name: "צל",           from: "#0F0C29", to: "#24243E", angle: 150 },
+      { id: "amethyst",      name: "אמתיסט",      from: "#9D50BB", to: "#6E48AA", angle: 135 },
+      { id: "eggplant",      name: "חציל",         from: "#0A0A2A", to: "#4A0E8F", angle: 145 },
+      { id: "charcoal",      name: "פחם",          from: "#2C2C2C", to: "#6B6B6B", angle: 135 },
+      { id: "void",          name: "חלל",          from: "#1A1A2E", to: "#16213E", angle: 160 },
+    ],
+  },
+];
 
 const BLEND_OPTIONS = [
   { value: "normal",    label: "רגיל" },
@@ -208,6 +310,7 @@ interface Props {
 
 export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }: Props) {
   const [fontOpen, setFontOpen] = useState(false);
+  const [gradientCat, setGradientCat] = useState(GRADIENT_LIBRARY[0].id);
   const s = style;
 
   const customFonts = fonts.filter(f => f.category === "custom");
@@ -411,39 +514,113 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
       <Section title="גרדיאנט ומרקם" active={hasGradient || hasTexture}
         badge={hasTexture ? TEXTURE_OPTIONS.find(t => t.value === s.textureType)?.label : hasGradient ? "גרדיאנט" : undefined}>
 
-        {/* Gradient */}
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <ToggleChip label="גרדיאנט" active={hasGradient} onClick={() => onChange({ gradientEnabled: !s.gradientEnabled })} />
+        {/* ──── GRADIENT LIBRARY ──────────────────────────── */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground font-medium">ספריית גרדיאנטים</span>
+            {hasGradient && (
+              <button onClick={() => onChange({ gradientEnabled: false })}
+                className="text-[10px] text-primary/60 hover:text-primary transition-colors px-1.5 py-0.5 rounded hover:bg-primary/10">
+                ✕ נקה
+              </button>
+            )}
           </div>
+
+          {/* Category tabs */}
+          <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none">
+            {GRADIENT_LIBRARY.map(cat => (
+              <button key={cat.id}
+                onClick={() => setGradientCat(cat.id)}
+                className={`flex-none flex items-center gap-1 px-2 py-1 rounded-full text-[10px] border whitespace-nowrap transition-all ${gradientCat === cat.id ? "bg-primary/20 text-primary border-primary/40 font-semibold" : "border-primary/10 text-muted-foreground hover:bg-primary/8"}`}>
+                <span>{cat.emoji}</span>
+                <span>{cat.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Gradient swatches grid */}
+          {GRADIENT_LIBRARY.filter(c => c.id === gradientCat).map(cat => (
+            <div key={cat.id} className="grid grid-cols-4 gap-1.5">
+              {cat.presets.map(p => {
+                const isActive = hasGradient && s.gradientFrom === p.from && s.gradientTo === p.to;
+                return (
+                  <button key={p.id}
+                    title={p.name}
+                    onClick={() => onChange({
+                      gradientEnabled: true,
+                      gradientFrom: p.from,
+                      gradientTo: p.to,
+                      gradientAngle: p.angle,
+                    })}
+                    className={`group relative rounded-lg overflow-hidden border-2 transition-all ${isActive ? "border-primary scale-105 shadow-lg shadow-primary/30" : "border-transparent hover:border-primary/50 hover:scale-102"}`}
+                    style={{ height: 40 }}
+                  >
+                    <div className="absolute inset-0" style={{ background: `linear-gradient(${p.angle}deg, ${p.from}, ${p.to})` }} />
+                    {isActive && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                        <span className="text-white text-[10px]">✓</span>
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-1 pb-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-white text-[8px] leading-tight block truncate text-center">{p.name}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+
+          {/* Active gradient preview + manual tweaks */}
           {hasGradient && (
-            <div className="space-y-1.5 pr-2 border-r-2 border-primary/20">
+            <div className="space-y-1.5 pt-1 border-t border-primary/10">
+              {/* Live preview bar */}
+              <div className="h-5 rounded-md border border-primary/15" style={{
+                background: `linear-gradient(${s.gradientAngle ?? 90}deg, ${s.gradientFrom || "#D6A84F"}, ${s.gradientTo || "#F8F1E3"})`
+              }} />
+              {/* Manual fine-tune */}
               <div className="flex items-center gap-2 flex-wrap">
                 <ColorSwatch value={s.gradientFrom} onChange={v => onChange({ gradientFrom: v || "#D6A84F" })} label="מ-" />
                 <ColorSwatch value={s.gradientTo} onChange={v => onChange({ gradientTo: v || "#F8F1E3" })} label="ל-" />
               </div>
               <SliderRow label="זווית" min={0} max={360} step={15} value={s.gradientAngle} defaultValue={90} onChange={v => onChange({ gradientAngle: v })} unit="°" />
-              {/* Gradient preview */}
-              <div className="h-4 rounded" style={{
-                background: `linear-gradient(${s.gradientAngle ?? 90}deg, ${s.gradientFrom || "#D6A84F"}, ${s.gradientTo || "#F8F1E3"})`
-              }} />
             </div>
           )}
         </div>
 
-        {/* Texture */}
-        <div className="space-y-1">
-          <span className="text-[10px] text-muted-foreground">מרקם מובנה:</span>
-          <div className="flex flex-wrap gap-1">
-            {TEXTURE_OPTIONS.map(t => (
-              <button key={t.value}
-                onClick={() => onChange({ textureType: t.value as SlotStyle["textureType"] })}
-                className={`px-2 py-1 rounded text-[11px] border transition-all ${(s.textureType || "none") === t.value ? "bg-primary/20 text-primary border-primary/40" : "border-primary/15 text-muted-foreground hover:bg-primary/10"}`}>
-                {t.label}
+        {/* ──── TEXTURE LIBRARY ───────────────────────────── */}
+        <div className="space-y-1.5 pt-1 border-t border-primary/10">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground font-medium">מרקמים מיוחדים</span>
+            {hasTexture && (
+              <button onClick={() => onChange({ textureType: "none" })}
+                className="text-[10px] text-primary/60 hover:text-primary transition-colors px-1.5 py-0.5 rounded hover:bg-primary/10">
+                ✕ נקה
               </button>
-            ))}
+            )}
+          </div>
+          <div className="grid grid-cols-6 gap-1">
+            {TEXTURE_OPTIONS.map(t => {
+              const isActive = (s.textureType || "none") === t.value;
+              return (
+                <button key={t.value}
+                  title={t.label}
+                  onClick={() => onChange({ textureType: t.value as SlotStyle["textureType"] })}
+                  className={`relative flex flex-col items-center gap-0.5 rounded-lg p-1 border-2 transition-all ${isActive ? "border-primary scale-105 shadow-md shadow-primary/30" : "border-transparent hover:border-primary/40"}`}
+                >
+                  {t.value === "none" ? (
+                    <div className="w-full h-7 rounded flex items-center justify-center border border-primary/15 text-muted-foreground" style={{ fontSize: 9 }}>ללא</div>
+                  ) : (
+                    <div className="w-full h-7 rounded" style={{ background: t.bg ?? "#888" }} />
+                  )}
+                  <span className="text-[8px] text-muted-foreground leading-tight truncate w-full text-center">
+                    {t.value !== "none" ? t.desc : ""}{t.label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
+
       </Section>
 
       {/* ── קו ומסגרת ─────────────────────────────────────────────── */}
