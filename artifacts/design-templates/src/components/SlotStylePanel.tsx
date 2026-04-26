@@ -79,7 +79,6 @@ const PRESET_COLORS = [
   { label: "כתום", value: "#E67E22" },
 ];
 
-const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 42, 48, 60, 72, 96, 120];
 
 const WARP_OPTIONS = [
   { value: "none",     label: "ישר",       icon: "—" },
@@ -452,17 +451,23 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
           {/* Size buttons */}
           <div className="flex items-center gap-1 shrink-0">
             <button onClick={() => {
-              const idx = FONT_SIZES.indexOf(s.fontSize ?? 0);
-              onChange({ fontSize: idx > 0 ? FONT_SIZES[idx - 1] : Math.max(8, (s.fontSize ?? 14) - 2) });
+              const cur = typeof s.fontSize === "number" && s.fontSize > 0 ? s.fontSize : 16;
+              onChange({ fontSize: Math.max(8, cur - (cur > 24 ? 2 : 1)) });
             }} className="w-5 h-7 flex items-center justify-center rounded border border-primary/15 hover:bg-primary/10 text-primary font-bold text-sm">−</button>
-            <select value={s.fontSize ?? ""} onChange={e => onChange({ fontSize: e.target.value ? Number(e.target.value) : undefined })}
-              className="h-7 w-12 text-center text-xs rounded border border-primary/15 bg-background text-foreground px-0">
-              <option value="">גודל</option>
-              {FONT_SIZES.map(sz => <option key={sz} value={sz}>{sz}</option>)}
-            </select>
+            <input
+              type="number"
+              min={8}
+              max={200}
+              value={typeof s.fontSize === "number" ? s.fontSize : ""}
+              onChange={e => {
+                const v = parseInt(e.target.value, 10);
+                if (!isNaN(v) && v >= 8 && v <= 200) onChange({ fontSize: v });
+              }}
+              className="h-7 w-14 text-center text-xs rounded border border-primary/15 bg-background text-foreground px-1"
+            />
             <button onClick={() => {
-              const idx = FONT_SIZES.indexOf(s.fontSize ?? 0);
-              onChange({ fontSize: idx >= 0 && idx < FONT_SIZES.length - 1 ? FONT_SIZES[idx + 1] : Math.min(144, (s.fontSize ?? 14) + 2) });
+              const cur = typeof s.fontSize === "number" && s.fontSize > 0 ? s.fontSize : 16;
+              onChange({ fontSize: Math.min(200, cur + (cur >= 24 ? 2 : 1)) });
             }} className="w-5 h-7 flex items-center justify-center rounded border border-primary/15 hover:bg-primary/10 text-primary font-bold text-sm">+</button>
           </div>
         </div>

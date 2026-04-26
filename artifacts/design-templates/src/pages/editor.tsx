@@ -1871,7 +1871,10 @@ export default function Editor() {
                     {!activeSlot.fixed && (
                       <SlotStylePanel
                         slotId={activeSlot.id}
-                        style={slotStyles[activeSlot.id] || {}}
+                        style={{
+                          fontSize: activeSlot.fontSizePx ?? previewFontSizePx[activeSlot.fontSize || "sm"] ?? 16,
+                          ...slotStyles[activeSlot.id],
+                        }}
                         onChange={patch => {
                           setSlotStyles(prev => ({ ...prev, [activeSlot.id]: { ...(prev[activeSlot.id] || {}), ...patch } }));
                           setSaved(false);
