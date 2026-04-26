@@ -612,22 +612,30 @@ function AuthWall({ templateId }: { templateId: string }) {
   );
 }
 
-function PaymentWall({ onPay, loading, designName }: { onPay: () => void; loading: boolean; designName: string }) {
+function PaymentWall({ onPay, onClose, loading, designName }: { onPay: () => void; onClose: () => void; loading: boolean; designName: string }) {
   return (
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        onClick={onClose}
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-card border border-primary/20 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl"
+          onClick={e => e.stopPropagation()}
+          className="bg-card border border-primary/20 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl relative"
           dir="rtl"
         >
+          <button
+            onClick={onClose}
+            className="absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <XIcon className="w-4 h-4" />
+          </button>
           <Crown className="w-10 h-10 text-primary mx-auto mb-1" />
           <div className="w-16 h-px bg-primary/30 mx-auto mb-4" />
           <h2 className="font-serif text-2xl font-bold mb-2 text-foreground">קבלת העיצוב הסופי</h2>
@@ -685,6 +693,7 @@ export default function Editor() {
   const [showPayment, setShowPayment] = useState(false);
   const [payLoading, setPayLoading] = useState(false);
   const [paySuccess, setPaySuccess] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [designId, setDesignId] = useState<number | null>(designIdParam ? Number(designIdParam) : null);
   const [designName, setDesignName] = useState("עיצוב שלי");
   const [selectedFont, setSelectedFont] = useState(DEFAULT_FONT);
@@ -885,6 +894,39 @@ export default function Editor() {
     }
   };
 
+  const handleDownload = async () => {
+    if (!previewRef.current || downloading) return;
+    setDownloading(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      // Target the inner invitation div (first child = the scaled element)
+      const target = previewRef.current.children[0] as HTMLElement;
+      const savedTransform = target.style.transform;
+      const savedTransition = target.style.transition;
+      // Temporarily reset zoom so we capture at natural size
+      target.style.transform = "scale(1)";
+      target.style.transition = "none";
+      const canvas = await html2canvas(target, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        logging: false,
+        imageTimeout: 15000,
+      });
+      target.style.transform = savedTransform;
+      target.style.transition = savedTransition;
+      const link = document.createElement("a");
+      link.download = `${designName || "הזמנה"}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch {
+      alert("שגיאה בהורדה, נסו שוב");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const handleWhatsApp = () => {
     const msg = encodeURIComponent(`שלום, אני מעוניין לבצע הזמנה לתבנית "${template?.title}". כבר ערכתי את הפרטים באונליין.`);
     window.open(`https://wa.me/972500000000?text=${msg}`, "_blank");
@@ -907,7 +949,7 @@ export default function Editor() {
     <div className="min-h-screen bg-background text-foreground font-sans" dir="rtl">
 
       {showPayment && !paySuccess && (
-        <PaymentWall onPay={handlePay} loading={payLoading} designName={designName} />
+        <PaymentWall onPay={handlePay} onClose={() => setShowPayment(false)} loading={payLoading} designName={designName} />
       )}
 
       {/* Sticky Header */}
@@ -1128,10 +1170,20 @@ export default function Editor() {
           {/* Bottom action bar */}
           <div className="border-t border-primary/10 bg-card p-4 space-y-2">
             {paySuccess ? (
-              <Button onClick={handleWhatsApp} className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white gap-2 h-11 font-bold">
-                <MessageCircle className="w-4 h-4" />
-                צרו קשר לקבלת הקבצים
-              </Button>
+              <>
+                <Button
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-11 font-bold shadow-lg shadow-primary/20"
+                >
+                  {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  {downloading ? "מכין קובץ..." : "הורדת העיצוב (PNG איכות גבוהה)"}
+                </Button>
+                <Button onClick={handleWhatsApp} variant="outline" className="w-full border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10 gap-2 h-9 text-sm">
+                  <MessageCircle className="w-4 h-4" />
+                  שלחו לסטודיו לגרסת הדפוס
+                </Button>
+              </>
             ) : isSignedIn ? (
               <Button onClick={handleDownloadClick} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-11 font-bold shadow-lg shadow-primary/20">
                 <CreditCard className="w-4 h-4" />
@@ -1145,10 +1197,12 @@ export default function Editor() {
                 </Button>
               </SignInButton>
             )}
-            <Button onClick={handleWhatsApp} variant="outline" className="w-full border-primary/20 text-primary hover:bg-primary/10 gap-2 h-9 text-sm">
-              <MessageCircle className="w-4 h-4" />
-              שלחו לסטודיו דרך ווצאפ
-            </Button>
+            {!paySuccess && (
+              <Button onClick={handleWhatsApp} variant="outline" className="w-full border-primary/20 text-primary hover:bg-primary/10 gap-2 h-9 text-sm">
+                <MessageCircle className="w-4 h-4" />
+                שלחו לסטודיו דרך ווצאפ
+              </Button>
+            )}
           </div>
         </aside>
 
