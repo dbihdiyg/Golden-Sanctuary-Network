@@ -1,21 +1,69 @@
 import { useParams, Link } from "wouter";
 import hadarLogo from "@/assets/logo-hadar.png";
-import { ArrowRight, MessageCircle, Palette, CheckCircle2, Share2, Info, Crown, Sun, Moon } from "lucide-react";
+import { ArrowRight, MessageCircle, Palette, CheckCircle2, Share2, Info, Sun, Moon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { templates } from "@/lib/data";
 import { useTheme } from "@/hooks/useTheme";
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { Template } from "@/lib/data";
+
+const API_BASE = import.meta.env.BASE_URL.replace(/\/[^/]*\/?$/, "");
+
+function useTemplateById(id: string | undefined) {
+  const [template, setTemplate] = useState<Template | null | "loading">("loading");
+
+  useEffect(() => {
+    if (!id) { setTemplate(null); return; }
+    setTemplate("loading");
+    fetch(`${API_BASE}/api/hadar/public-templates`)
+      .then(r => r.json())
+      .then((data: any[]) => {
+        if (!Array.isArray(data)) throw new Error("bad response");
+        const found = data.find(t => String(t.id) === id || t.slug === id);
+        if (!found) { setTemplate(null); return; }
+        const galleryImg = found.galleryImageUrl || found.imageUrl;
+        const isGrad = !galleryImg || /gradient|linear|radial/i.test(galleryImg);
+        setTemplate({
+          id: String(found.id),
+          slug: found.slug,
+          title: found.title,
+          subtitle: found.subtitle,
+          category: found.category,
+          style: found.style,
+          price: Math.round((found.price || 0) / 100),
+          image: galleryImg || "linear-gradient(135deg, #0B1833 0%, #1a2d54 100%)",
+          isGradient: isGrad,
+          slots: Array.isArray(found.slots) ? found.slots : [],
+          galleryImageUrl: found.galleryImageUrl,
+          displayImageUrl: found.displayImageUrl,
+          dimensions: found.dimensions,
+        });
+      })
+      .catch(() => setTemplate(null));
+  }, [id]);
+
+  return template;
+}
 
 export default function TemplateDetail() {
   const params = useParams();
   const id = params.id;
-  const template = templates.find(t => t.id === id);
+  const template = useTemplateById(id);
   const { theme, toggle } = useTheme();
+
+  if (template === "loading") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+        <p className="text-muted-foreground">טוען תבנית...</p>
+      </div>
+    );
+  }
 
   if (!template) {
     return (
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
@@ -33,14 +81,14 @@ export default function TemplateDetail() {
   const editableItems = ["שמות", "תאריכים", "מיקום", "טקסט", "צבעים"];
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.35 }}
       className="min-h-screen bg-background text-foreground font-sans transition-colors duration-300"
     >
-      
+
       {/* Header */}
       <header className="border-b border-white/5 bg-background/80 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
@@ -54,7 +102,7 @@ export default function TemplateDetail() {
               {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
           </div>
-          
+
           <Link href="/">
             <img src={hadarLogo} alt="הדר" style={{ height: 42, width: "auto", objectFit: "contain", cursor: "pointer" }} />
           </Link>
@@ -63,7 +111,7 @@ export default function TemplateDetail() {
 
       <main className="container mx-auto px-4 py-8 md:py-12 max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-          
+
           {/* Image/Preview Column */}
           <div className="lg:col-span-7 xl:col-span-8 animate-in fade-in slide-in-from-right-8 duration-700">
             <div className="relative rounded-3xl overflow-hidden bg-secondary border border-primary/20 aspect-[3/4] md:aspect-auto md:h-[800px] flex items-center justify-center group shadow-2xl">
@@ -75,13 +123,13 @@ export default function TemplateDetail() {
                   </div>
                 </div>
               ) : (
-                <img 
-                  src={template.image} 
-                  alt={template.title} 
+                <img
+                  src={template.image}
+                  alt={template.title}
                   className="w-full h-full object-cover md:object-contain"
                 />
               )}
-              
+
               <div className="absolute inset-0 pointer-events-none border border-white/5 rounded-3xl" />
             </div>
           </div>
@@ -128,7 +176,7 @@ export default function TemplateDetail() {
                     <span className="relative z-10">ערכו את ההזמנה עכשיו</span>
                   </Button>
                 </Link>
-                
+
                 <Button size="lg" variant="secondary" className="w-full text-lg h-16 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 border border-[#25D366]/20 mt-2 font-bold transition-colors">
                   <MessageCircle className="w-6 h-6 ml-3" />
                   הזמנה מהירה בוואטסאפ

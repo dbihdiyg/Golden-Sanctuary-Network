@@ -10,7 +10,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { templates } from "@/lib/data";
+
+interface DBTemplate {
+  id: string;
+  title: string;
+  image: string;
+  isGradient: boolean;
+}
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/[^/]*\/?$/, "");
 
@@ -205,7 +211,7 @@ function OrdersTab({ orders }: { orders: Order[] }) {
 }
 
 // ── Drafts tab ────────────────────────────────────────────────────────────────
-function DraftsTab({ drafts, deleting, onDelete }: { drafts: Design[]; deleting: number | null; onDelete: (id: number) => void }) {
+function DraftsTab({ drafts, deleting, onDelete, dbTemplates }: { drafts: Design[]; deleting: number | null; onDelete: (id: number) => void; dbTemplates: DBTemplate[] }) {
   if (drafts.length === 0) {
     return (
       <div className="text-center py-20 bg-secondary/20 rounded-2xl border border-primary/10">
@@ -219,7 +225,7 @@ function DraftsTab({ drafts, deleting, onDelete }: { drafts: Design[]; deleting:
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {drafts.map((design, i) => {
-        const template = templates.find(t => t.id === design.templateId);
+        const template = dbTemplates.find(t => t.id === design.templateId);
         return (
           <motion.div key={design.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
             className="bg-card border border-primary/10 rounded-xl overflow-hidden hover:border-primary/30 transition-colors group">
@@ -360,6 +366,7 @@ export default function MyDesigns() {
   const [, navigate] = useLocation();
   const [designs, setDesigns] = useState<Design[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [dbTemplates, setDbTemplates] = useState<DBTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [tab, setTab] = useState<Tab>("downloads");
@@ -375,12 +382,27 @@ export default function MyDesigns() {
       const t = await getToken();
       setToken(t || "");
       const headers = { Authorization: `Bearer ${t}` };
-      const [designsRes, ordersRes] = await Promise.all([
+      const [designsRes, ordersRes, tmplRes] = await Promise.all([
         fetch(`${API_BASE}/api/hadar/designs`, { headers }),
         fetch(`${API_BASE}/api/hadar/orders`, { headers }),
+        fetch(`${API_BASE}/api/hadar/public-templates`),
       ]);
       if (designsRes.ok) setDesigns(await designsRes.json());
       if (ordersRes.ok) setOrders(await ordersRes.json());
+      if (tmplRes.ok) {
+        const raw: any[] = await tmplRes.json();
+        if (Array.isArray(raw)) {
+          setDbTemplates(raw.map(t => {
+            const img = t.galleryImageUrl || t.imageUrl;
+            return {
+              id: String(t.id),
+              title: t.title,
+              image: img || "linear-gradient(135deg, #0B1833 0%, #1a2d54 100%)",
+              isGradient: !img || /gradient|linear|radial/i.test(img),
+            };
+          }));
+        }
+      }
     } catch (err) {
       console.error("[HADAR] MyDesigns load error:", err);
     } finally {
@@ -482,7 +504,7 @@ export default function MyDesigns() {
           <AnimatePresence mode="wait">
             {tab === "downloads" && <motion.div key="downloads" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><DownloadsTab orders={orders} /></motion.div>}
             {tab === "orders"    && <motion.div key="orders"    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><OrdersTab orders={orders} /></motion.div>}
-            {tab === "drafts"    && <motion.div key="drafts"    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><DraftsTab drafts={drafts} deleting={deleting} onDelete={handleDelete} /></motion.div>}
+            {tab === "drafts"    && <motion.div key="drafts"    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><DraftsTab drafts={drafts} deleting={deleting} onDelete={handleDelete} dbTemplates={dbTemplates} /></motion.div>}
             {tab === "payment"   && <motion.div key="payment"   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>{token && <PaymentTab token={token} />}</motion.div>}
           </AnimatePresence>
         )}
