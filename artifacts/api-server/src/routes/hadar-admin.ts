@@ -36,20 +36,51 @@ router.post("/hadar/admin/upload", adminAuth, upload.single("image"), async (req
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
     if (!bucketId) return res.status(500).json({ error: "Object storage not configured" });
 
-    const ext = req.file.originalname.split(".").pop() || "png";
+    const ext = (req.file.originalname.split(".").pop() || "png").toLowerCase();
     const fileName = `hadar-templates/${randomUUID()}.${ext}`;
     const bucket = objectStorageClient.bucket(bucketId);
     const file = bucket.file(fileName);
 
+    // Upload without public: true — the bucket enforces public access prevention.
+    // Files are served via the /api/hadar/media/* proxy route below.
     await file.save(req.file.buffer, {
       metadata: { contentType: req.file.mimetype },
-      public: true,
     });
 
-    const publicUrl = `https://storage.googleapis.com/${bucketId}/${fileName}`;
-    res.json({ url: publicUrl, fileName });
+    // Return a proxy URL served through our own API (no GCS ACL required)
+    const proxyUrl = `/api/hadar/media/${fileName}`;
+    res.json({ url: proxyUrl, fileName });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Media proxy (serve uploaded template images without public GCS ACL) ─────
+// Use router.use to avoid path-to-regexp v8 wildcard restrictions
+router.use("/hadar/media", async (req: Request, res: Response, next: NextFunction) => {
+  if (req.method !== "GET") return next();
+  try {
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) return res.status(500).send("Storage not configured");
+
+    // req.path is the remainder after /hadar/media, e.g. /hadar-templates/uuid.png
+    const filePath = req.path.replace(/^\//, "");
+    if (!filePath || filePath.includes("..")) return res.status(400).send("Invalid path");
+
+    const bucket = objectStorageClient.bucket(bucketId);
+    const file = bucket.file(filePath);
+    const [exists] = await file.exists();
+    if (!exists) return res.status(404).send("Not found");
+
+    const [metadata] = await file.getMetadata();
+    const contentType = (metadata.contentType as string) || "application/octet-stream";
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+
+    file.createReadStream().pipe(res);
+  } catch (err: any) {
+    res.status(500).send(err.message);
   }
 });
 
