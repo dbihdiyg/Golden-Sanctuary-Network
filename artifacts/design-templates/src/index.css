@@ -212,8 +212,125 @@
     @apply border-border;
   }
 
+  html {
+    direction: rtl;
+    lang: he;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Heebo', 'Rubik', 'Assistant', 'Noto Sans Hebrew', sans-serif;
+    line-height: 1.45;
+    letter-spacing: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    font-family: 'Heebo', 'Noto Sans Hebrew', sans-serif;
+    font-weight: 700;
+  }
+
+  p, li, span {
+    line-height: 1.55;
+  }
+
+  input, textarea, select {
+    direction: inherit;
+    text-align: start;
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  input::placeholder, textarea::placeholder {
+    direction: inherit;
+    text-align: start;
+  }
+
+  input[type="number"],
+  input[type="date"],
+  input[type="time"] {
+    direction: ltr;
+    text-align: left;
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.35);
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer utilities {
+  input[type="search"]::-webkit-search-cancel-button {
+    @apply hidden;
+  }
+  [contenteditable][data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+  }
+
+  .ltr {
+    direction: ltr;
+    unicode-bidi: embed;
+    text-align: left;
+  }
+
+  .number-ltr {
+    direction: ltr;
+    display: inline-block;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .text-balance-he {
+    text-wrap: balance;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  .font-hebrew {
+    font-family: 'Heebo', 'Noto Sans Hebrew', sans-serif;
+  }
+
+  .font-hebrew-serif {
+    font-family: 'Frank Ruhl Libre', 'Noto Serif Hebrew', serif;
+  }
+
+  .leading-hebrew {
+    line-height: 1.55;
+  }
+
+  .leading-hebrew-tight {
+    line-height: 1.3;
+  }
+
+  .tracking-hebrew {
+    letter-spacing: 0;
+  }
+
+  .focus-ring-gold {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1;
+  }
+
+  .state-loading {
+    @apply pointer-events-none opacity-70 cursor-wait;
+  }
+
+  .state-disabled {
+    @apply pointer-events-none opacity-50 cursor-not-allowed;
+  }
+
+  .surface-card {
+    @apply bg-card border border-border/50 rounded-xl;
+  }
+
+  .surface-panel {
+    @apply bg-background/95 backdrop-blur-sm border border-border rounded-2xl shadow-lg;
   }
 }
 
