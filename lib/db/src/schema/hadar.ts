@@ -127,8 +127,13 @@ export const hadarVideoTemplates = pgTable("hadar_video_templates", {
   maxRenderSeconds: integer("max_render_seconds").default(300), // kill ffmpeg after this
   renderPreset: text("render_preset").notNull().default("fast"), // ultrafast|fast|medium|slow
   renderCrf: integer("render_crf").default(22),                  // 0-51, lower=better quality
+  // Render engine: "ffmpeg" | "aefx" (After Effects via nexrender)
+  renderType: text("render_type").notNull().default("ffmpeg"),
   // After Effects / pre-rendered assets support
-  aeCompositionName: text("ae_composition_name"),                // for documentation only
+  aeCompositionName: text("ae_composition_name"),                // AE composition name
+  aeProjectUrl: text("ae_project_url"),                          // uploaded .aep / .zip
+  // [{fieldId,aeLayerName,aeProperty}] — maps user fields to AE text layers
+  aeLayerMappings: jsonb("ae_layer_mappings").notNull().default(sql`'[]'::jsonb`),
   // [{id,label,url,type:'intro'|'outro'|'overlay',durationSecs}]
   preRenderedAssets: jsonb("pre_rendered_assets").notNull().default(sql`'[]'::jsonb`),
   isActive: boolean("is_active").notNull().default(true),
@@ -159,6 +164,8 @@ export const hadarVideoJobs = pgTable("hadar_video_jobs", {
   renderCompletedAt: timestamp("render_completed_at"),
   progressPct: integer("progress_pct").notNull().default(0),       // 0-100
   estimatedCompletionAt: timestamp("estimated_completion_at"),
+  rendererUsed: text("renderer_used"),                            // "ffmpeg" | "aefx"
+  nexrenderJobId: text("nexrender_job_id"),                       // nexrender uid
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

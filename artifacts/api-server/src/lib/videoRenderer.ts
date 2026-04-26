@@ -9,6 +9,8 @@ import { objectStorageClient } from "./objectStorage";
 import { randomUUID } from "node:crypto";
 import { logger } from "./logger";
 import { sendVideoReadyEmail, sendVideoFailedEmail, sendAdminVideoFailedAlert } from "./emailService";
+import { renderWithNexrender, isNexrenderConfigured, type AeLayerMapping } from "./nexrenderService";
+import { getDownloadUrl } from "./signedUrls";
 
 const TMP_DIR = "/tmp/hadar-videos";
 const FONT_PATH = "/home/runner/workspace/artifacts/api-server/src/assets/NotoSansHebrew-Bold.ttf";
@@ -274,6 +276,46 @@ export async function processVideoJob(
     const [template] = await db.select().from(hadarVideoTemplates).where(eq(hadarVideoTemplates.id, job.templateId));
     if (!template) throw new Error(`Template ${job.templateId} not found`);
 
+    // ── Route to render engine ─────────────────────────────────────────────
+    const renderType = (template as any).renderType ?? "ffmpeg";
+    const useAE = renderType === "aefx" && isNexrenderConfigured();
+
+    if (useAE) {
+      // After Effects / nexrender path
+      await db.update(hadarVideoJobs).set({ rendererUsed: "aefx", updatedAt: new Date() })
+        .where(eq(hadarVideoJobs.id, jobId)).catch(() => {});
+      const aeProjectUrl = (template as any).aeProjectUrl;
+      if (!aeProjectUrl) throw new Error("Template has no AE project uploaded. Please upload an .aep or .zip file in the admin panel.");
+      const aeLayerMappings = ((template as any).aeLayerMappings as AeLayerMapping[]) ?? [];
+      const fieldValues = (job.fieldValues as Record<string, string>) ?? {};
+      const outputPath = await renderWithNexrender(jobId, {
+        aeProjectUrl,
+        aeCompositionName: template.aeCompositionName ?? "MAIN_COMP",
+        fieldValues,
+        layerMappings: aeLayerMappings,
+        maxWaitSeconds: template.maxRenderSeconds ?? 600,
+      }, writeProgress);
+      tmpPaths.push(outputPath);
+      await writeProgress(97);
+      const outputUrl = await uploadRenderedVideo(outputPath, jobId);
+      const now = new Date();
+      await db.update(hadarVideoJobs)
+        .set({ status: "ready", outputUrl, progressPct: 100, renderCompletedAt: now, estimatedCompletionAt: null, rendererUsed: "aefx", updatedAt: now })
+        .where(eq(hadarVideoJobs.id, jobId));
+      logger.info(`[VideoRenderer] AE job ${jobId} complete → ${outputUrl}`);
+      if (job.userEmail) {
+        const signedLink = getDownloadUrl(jobId, APP_URL);
+        sendVideoReadyEmail({ to: job.userEmail, name: job.userName ?? "", videoTitle: template.title, jobId, downloadUrl: signedLink })
+          .catch((err: Error) => logger.error({ err }, "[VideoRenderer] Email send failed"));
+        await db.update(hadarVideoJobs).set({ notifiedAt: new Date() }).where(eq(hadarVideoJobs.id, jobId)).catch(() => {});
+      }
+      return; // done — skip FFmpeg path below
+    }
+
+    // ── FFmpeg path ────────────────────────────────────────────────────────
+    await db.update(hadarVideoJobs).set({ rendererUsed: "ffmpeg", updatedAt: new Date() })
+      .where(eq(hadarVideoJobs.id, jobId)).catch(() => {});
+
     if (!template.baseVideoUrl) throw new Error("Template has no base video uploaded yet");
 
     // Download base video
@@ -355,9 +397,9 @@ export async function processVideoJob(
 
     logger.info(`[VideoRenderer] Job ${jobId} complete → ${outputUrl}`);
 
-    // Send email notification
+    // Send email notification with signed download link
     if (job.userEmail) {
-      const downloadUrl = `${APP_URL}${BASE_PATH}/my-videos`;
+      const downloadUrl = getDownloadUrl(jobId, APP_URL);
       sendVideoReadyEmail({
         to: job.userEmail,
         name: job.userName ?? "",

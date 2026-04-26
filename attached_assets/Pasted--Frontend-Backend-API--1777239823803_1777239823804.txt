@@ -1,0 +1,177 @@
+שכבות מערכת
+Frontend (אתר)
+גלריית תבניות
+דפי מוצר
+טפסי מילוי
+אזור אישי
+Backend (API)
+ניהול משתמשים
+ניהול תבניות
+יצירת הזמנות
+ניהול Jobs (רנדרים)
+Render Engine
+FFmpeg (מהיר, זול)
+After Effects + Nexrender (פרימיום)
+Storage
+אחסון קבצים (S3 / Cloudflare R2)
+CDN להפצה
+Payments
+Stripe (Webhook חובה)
+🧩 מודל נתונים
+Users
+id
+email
+createdAt
+VideoTemplates
+id
+title
+slug
+category
+description
+price
+duration
+renderType (ffmpeg / aftereffects)
+previewUrl
+thumbnailUrl
+projectFileUrl (AE / assets)
+createdAt
+TemplateFields
+id
+templateId
+name (internal key)
+label (עברית)
+defaultValue
+required
+maxLength
+order
+FieldMappings (ל-AE)
+id
+templateId
+fieldName
+aeLayerName
+VideoJobs
+id
+userId
+templateId
+data (JSON)
+status
+fileUrl
+errorLog
+createdAt
+📊 סטטוסים (חובה)
+draft
+pending_payment
+paid
+queued
+rendering
+ready
+failed
+👤 זרימת משתמש
+שלב 1: בחירת תבנית
+כניסה ל־/video
+סינון לפי קטגוריה
+צפייה ב־Preview
+שלב 2: מילוי פרטים
+שדות מוגדרים בלבד
+validation (אורך, חובה)
+שלב 3: תשלום
+מעבר ל־Stripe
+אין רנדר לפני Webhook
+שלב 4: רנדר
+Job נוצר
+נכנס לתור
+סטטוס מתעדכן
+שלב 5: מסירה
+קובץ מוכן
+קישור הורדה
+שליחת מייל
+שמירה ב־"הסרטונים שלי"
+⚙️ Render Engine
+FFmpeg (בסיס)
+שימוש: תבניות פשוטות
+overlay טקסט
+מהיר (2–5 דקות)
+After Effects + Nexrender
+שימוש: פרימיום
+החלפת טקסטים לפי JSON
+רנדר כבד יותר
+🧠 Queue System
+
+חובה:
+
+maxConcurrentJobs: 1–2
+FIFO queue
+retry אוטומטי
+timeout detection
+📥 אחסון והורדה
+קבצים נשמרים ב־Storage
+קישורים חתומים (Signed URLs)
+זמן תפוגה (למשל 24–72 שעות)
+💳 תשלומים
+Stripe Flow
+יצירת Order
+מעבר ל־Checkout
+Webhook מאשר
+status → paid
+התחלת רנדר
+חוק:
+לא מתחילים רנדר בלי Webhook מאומת
+📧 מערכת מיילים
+סוגים
+אישור הזמנה
+התחלת רנדר
+סיום רנדר + קישור
+🛠 אדמין (הלב של המערכת)
+ניהול תבניות
+יצירה
+עריכה
+מחיקה
+שדות
+יצירה
+סדר
+הגבלות
+מיפוי AE
+חיבור field → layer
+ניהול Jobs
+צפייה בכל הרנדרים
+סטטוסים
+לוגים
+retry
+🔒 אבטחה
+אימות משתמש
+הרשאות
+קישור הורדה פרטי
+Webhook בלבד לאישור תשלום
+⚡ ביצועים
+CDN
+Lazy loading
+Cache
+מינימום קריאות API
+🚀 סקיילינג עתידי
+הוספת שרתי רנדר
+הפרדת queue
+load balancing
+🎯 UX קריטי
+סטטוס ברור
+זמן משוער
+אין עומס אפשרויות
+חוויית “מילוי → קבל סרטון”
+📌 כללי זהב
+לא לתת למשתמש לערוך וידאו
+לא לבנות עורך מורכב
+להגביל שדות
+לבנות תבניות חזקות מראש
+להשאיר את המערכת פשוטה
+⚡ סיכום
+
+המערכת שלך תהיה:
+
+תבניות וידאו מוכנות
++
+טופס מילוי פשוט
++
+תשלום
++
+רנדר אוטומטי
++
+הורדה

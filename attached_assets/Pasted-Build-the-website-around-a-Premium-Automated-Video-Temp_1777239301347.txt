@@ -1,0 +1,147 @@
+Build the website around a Premium Automated Video Template System.
+
+This will be one of the main products of the website, so it must be built clean, scalable, and controlled from the admin panel.
+
+MAIN GOAL:
+I want to create professional After Effects video templates.
+Users will not edit the video timeline.
+Users will only fill text fields such as:
+- name
+- date
+- event
+- place
+- dedication
+- custom message
+
+After payment, the system automatically renders the final video and sends the user a download link by email.
+
+ADMIN CONTROL:
+I must be able to manage everything from the admin panel:
+
+1. Video Templates
+- Create template
+- Edit template
+- Delete template
+- Set title
+- Set slug
+- Set category
+- Set description
+- Set price
+- Upload thumbnail
+- Upload preview video
+- Upload AE project / template assets
+- Set duration
+- Set render type:
+  - FFmpeg simple overlay
+  - After Effects premium render
+
+2. Editable Fields
+For each template, I must be able to define fields users will fill:
+- field name
+- field label in Hebrew
+- default text
+- required / optional
+- max characters
+- placeholder
+- field order
+
+Example fields:
+- חתן
+- כלה
+- תאריך
+- אולם
+- שעה
+- הקדשה
+
+3. After Effects Layer Mapping
+For AE templates, I need to map each user field to the correct AE text layer.
+
+Example:
+User field: bride_name
+AE layer name: BRIDE_NAME
+
+User field: date
+AE layer name: EVENT_DATE
+
+The system must save this mapping so future renders work automatically.
+
+4. Render Flow
+User flow:
+- user chooses video template
+- fills the fields
+- sees preview if available
+- pays
+- system creates render job
+- after Stripe webhook confirms payment
+- Nexrender / AE automation replaces text layers
+- renders final MP4
+- uploads final file to storage
+- sends email to user with download link
+- saves video in “הסרטונים שלי”
+
+5. Job Status
+Every render job must have clear statuses:
+- draft
+- pending_payment
+- paid
+- queued
+- rendering
+- ready
+- failed
+
+User must see:
+- הסרטון בהכנה
+- זמן משוער
+- הורדה כשהקובץ מוכן
+
+Admin must see:
+- all jobs
+- user details
+- template used
+- payment status
+- render status
+- error logs
+- retry render button
+
+6. Email Delivery
+When render is ready:
+- send user email with download link
+- also save link in user dashboard
+- download link must be private and secure
+
+7. Security
+- render only after verified Stripe webhook
+- do not trust frontend payment status
+- user can download only his own paid videos
+- admin can access all jobs
+- use signed/expiring download URLs
+
+8. Render Engine
+Use:
+- FFmpeg for simple fast templates
+- Nexrender + After Effects for premium templates
+
+Do not replace the current FFmpeg system.
+Add AE premium rendering as a second render type.
+
+9. Storage
+Store:
+- template files
+- preview videos
+- thumbnails
+- final rendered MP4 files
+
+10. Future Scalability
+Build this as a real product system:
+- render queue
+- limited concurrency
+- retry failed jobs
+- logs
+- ability to add more templates later without code changes
+- admin should manage templates and field mapping without developer help
+
+EXPECTED RESULT:
+I can build an After Effects template once, define editable text fields in admin, connect them to AE text layers, set price, publish it, and users can buy personalized videos automatically.
+
+The website should handle:
+template selection → user form → payment → automatic render → email/download → user dashboard.

@@ -11,7 +11,7 @@ import {
   RefreshCw, ArrowRight, ChevronDown, ChevronUp, Loader2,
   AlertCircle, Users, DollarSign, Clock, ToggleLeft, ToggleRight, Upload,
   AlignCenter, AlignRight, AlignLeft, Type, Layers, Move,
-  Maximize2, FileType2, Send, MessageSquare, Film,
+  Maximize2, FileType2, Send, MessageSquare, Film, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1371,15 +1371,44 @@ function TicketsManager({ token }: { token: string }) {
 
 interface VideoFieldDef { id: string; label: string; type: "text" | "textarea"; defaultValue: string; placeholder: string; maxLength: number; required: boolean; }
 interface VideoOverlay { fieldId: string; x: number; y: number; fontSize: number; fontColor: string; shadowColor: string; align: "left"|"center"|"right"; startTime: number; endTime: number; }
+interface AeLayerMapping { fieldId: string; aeLayerName: string; aeProperty?: string; }
 interface AdminVideoTemplate {
   id: number; slug: string; title: string; description: string; category: string; price: number;
   baseVideoUrl: string|null; previewVideoUrl: string|null; previewImageUrl: string|null;
+  aeProjectUrl: string|null;
   fields: VideoFieldDef[]; overlays: VideoOverlay[];
+  renderType: "ffmpeg" | "aefx";
+  aeCompositionName: string|null;
+  aeLayerMappings: AeLayerMapping[];
+  tier: "standard" | "premium";
+  maxRenderSeconds: number|null;
+  renderPreset: string;
+  renderCrf: number|null;
   videoDuration: number|null; videoWidth: number|null; videoHeight: number|null; isActive: boolean;
+}
+
+interface AdminVideoJob {
+  id: number; status: string; userEmail: string|null; userName: string|null;
+  templateId: number; templateTitle: string|null; templateSlug: string|null;
+  stripePaymentIntentId: string|null; priority: string;
+  progressPct: number; rendererUsed: string|null;
+  outputUrl: string|null; errorMessage: string|null;
+  createdAt: string; renderStartedAt: string|null; renderCompletedAt: string|null;
+  queuePosition: number|null; isRendering: boolean;
 }
 
 function emptyField(): VideoFieldDef { return { id: crypto.randomUUID().slice(0,8), label: "", type: "text", defaultValue: "", placeholder: "", maxLength: 50, required: false }; }
 function emptyOverlay(fieldId: string): VideoOverlay { return { fieldId, x: 50, y: 50, fontSize: 60, fontColor: "#FFFFFF", shadowColor: "#000000", align: "center", startTime: 0, endTime: 0 }; }
+
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  draft:           { label: "טיוטה",          color: "bg-gray-100 text-gray-600 border-gray-200" },
+  pending_payment: { label: "ממתין לתשלום",    color: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+  paid:            { label: "שולם",            color: "bg-blue-50 text-blue-700 border-blue-200" },
+  queued:          { label: "בתור",            color: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+  rendering:       { label: "מרנדר",           color: "bg-orange-50 text-orange-700 border-orange-200" },
+  ready:           { label: "מוכן",            color: "bg-green-50 text-green-700 border-green-200" },
+  failed:          { label: "נכשל",            color: "bg-red-50 text-red-700 border-red-200" },
+};
 
 function VideoTemplatesManager({ token }: { token: string }) {
   const api = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -1387,7 +1416,7 @@ function VideoTemplatesManager({ token }: { token: string }) {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<AdminVideoTemplate> | null>(null);
   const [saving, setSaving] = useState(false);
-  const [uploadingVideo, setUploadingVideo] = useState<null | "base" | "preview" | "thumb">(null);
+  const [uploadingVideo, setUploadingVideo] = useState<null | "base" | "preview" | "thumb" | "ae">(null);
   const [msg, setMsg] = useState<string|null>(null);
   const [activeTemplateId, setActiveTemplateId] = useState<number|null>(null);
 
@@ -1433,6 +1462,19 @@ function VideoTemplatesManager({ token }: { token: string }) {
       const res = await fetch(`${api}/api/hadar/admin/video-templates/${id}/upload-video`, { method: "POST", headers: { "x-admin-secret": token }, body: fd });
       if (!res.ok) throw new Error((await res.json()).error);
       setMsg("קובץ הועלה ✓");
+      await load();
+    } catch (e: any) { setMsg(`שגיאת העלאה: ${e.message}`); }
+    finally { setUploadingVideo(null); }
+  }
+
+  async function uploadAeProject(id: number, file: File) {
+    setUploadingVideo("ae");
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch(`${api}/api/hadar/admin/video-templates/${id}/upload-ae-project`, { method: "POST", headers: { "x-admin-secret": token }, body: fd });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setMsg("פרויקט AE הועלה ✓");
       await load();
     } catch (e: any) { setMsg(`שגיאת העלאה: ${e.message}`); }
     finally { setUploadingVideo(null); }
@@ -1493,7 +1535,7 @@ function VideoTemplatesManager({ token }: { token: string }) {
 
       <div className="flex items-center justify-between">
         <h2 className="font-bold text-lg">תבניות וידאו ({templates.length})</h2>
-        <Button size="sm" className="gap-1.5" onClick={() => setEditing({ fields: [], overlays: [], price: 4900, videoDuration: 15, videoWidth: 1920, videoHeight: 1080, isActive: true })}>
+        <Button size="sm" className="gap-1.5" onClick={() => setEditing({ fields: [], overlays: [], price: 4900, videoDuration: 15, videoWidth: 1920, videoHeight: 1080, isActive: true, renderType: "ffmpeg", tier: "standard", maxRenderSeconds: 300, renderPreset: "fast", renderCrf: 22, aeLayerMappings: [] })}>
           <Plus className="w-4 h-4" /> תבנית חדשה
         </Button>
       </div>
@@ -1507,7 +1549,7 @@ function VideoTemplatesManager({ token }: { token: string }) {
 
             <div className="grid sm:grid-cols-2 gap-3">
               {[
-                ["slug","כתובת (slug)",false],["title","כותרת",false],["description","תיאור",false],["category","קטגוריה",false],
+                ["slug","כתובת (slug)"],["title","כותרת"],["description","תיאור"],["category","קטגוריה"],
               ].map(([k,l]) => (
                 <div key={k as string}>
                   <Label className="text-xs text-muted-foreground mb-0.5">{l as string}</Label>
@@ -1530,6 +1572,109 @@ function VideoTemplatesManager({ token }: { token: string }) {
                 <Label className="text-xs text-muted-foreground mb-0.5">גובה (px)</Label>
                 <Input type="number" value={editing.videoHeight ?? 1080} onChange={e => setEditing(p => p ? ({ ...p, videoHeight: Number(e.target.value) }) : p)} className="h-8 text-sm" />
               </div>
+            </div>
+
+            {/* Render Engine */}
+            <div className="border border-primary/10 rounded-xl p-4 space-y-3 bg-muted/10">
+              <Label className="font-semibold text-sm flex items-center gap-1.5">⚙️ מנוע רינדור</Label>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-0.5">סוג רינדור</Label>
+                  <select
+                    value={editing.renderType ?? "ffmpeg"}
+                    onChange={e => setEditing(p => p ? { ...p, renderType: e.target.value as "ffmpeg"|"aefx" } : p)}
+                    className="border rounded-lg h-8 text-xs px-2 w-full bg-background"
+                  >
+                    <option value="ffmpeg">FFmpeg — שכבות טקסט פשוטות</option>
+                    <option value="aefx">After Effects — פרימיום (Nexrender)</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-0.5">רמת שירות (Tier)</Label>
+                  <select
+                    value={editing.tier ?? "standard"}
+                    onChange={e => setEditing(p => p ? { ...p, tier: e.target.value as "standard"|"premium" } : p)}
+                    className="border rounded-lg h-8 text-xs px-2 w-full bg-background"
+                  >
+                    <option value="standard">Standard — תור רגיל</option>
+                    <option value="premium">Premium — תעדוף גבוה</option>
+                  </select>
+                </div>
+                {editing.renderType !== "aefx" && <>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-0.5">FFmpeg Preset</Label>
+                    <select value={editing.renderPreset ?? "fast"} onChange={e => setEditing(p => p ? { ...p, renderPreset: e.target.value } : p)} className="border rounded-lg h-8 text-xs px-2 w-full bg-background">
+                      {["ultrafast","superfast","veryfast","faster","fast","medium","slow"].map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-0.5">CRF (איכות, 0-51)</Label>
+                    <Input type="number" min={0} max={51} value={editing.renderCrf ?? 22} onChange={e => setEditing(p => p ? { ...p, renderCrf: Number(e.target.value) } : p)} className="h-8 text-xs" />
+                  </div>
+                </>}
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-0.5">זמן רינדור מקסימלי (שניות)</Label>
+                  <Input type="number" value={editing.maxRenderSeconds ?? 300} onChange={e => setEditing(p => p ? { ...p, maxRenderSeconds: Number(e.target.value) } : p)} className="h-8 text-xs" />
+                </div>
+              </div>
+
+              {/* AE-specific settings */}
+              {editing.renderType === "aefx" && (
+                <div className="border border-primary/10 rounded-lg p-3 space-y-3 bg-primary/3">
+                  <p className="text-xs font-semibold text-primary">הגדרות After Effects</p>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-0.5">שם Composition (ב-AE)</Label>
+                    <Input dir="ltr" placeholder="MAIN_COMP" value={editing.aeCompositionName ?? ""} onChange={e => setEditing(p => p ? { ...p, aeCompositionName: e.target.value } : p)} className="h-8 text-xs font-mono" />
+                  </div>
+
+                  {/* AE Layer Mapping */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-xs font-semibold">מיפוי שדות → שכבות AE</Label>
+                      <Button size="sm" variant="outline" className="h-6 text-xs gap-1" onClick={() => {
+                        setEditing(p => p ? { ...p, aeLayerMappings: [...(p.aeLayerMappings ?? []), { fieldId: "", aeLayerName: "", aeProperty: "Source Text" }] } : p);
+                      }}><Plus className="w-3 h-3" />הוסף</Button>
+                    </div>
+                    {(editing.aeLayerMappings ?? []).length === 0 && (
+                      <p className="text-xs text-muted-foreground">הוסיפו מיפוי עבור כל שדה טקסט</p>
+                    )}
+                    <div className="space-y-1.5">
+                      {(editing.aeLayerMappings ?? []).map((m, i) => (
+                        <div key={i} className="flex items-center gap-1.5 flex-wrap">
+                          <select
+                            value={m.fieldId}
+                            onChange={e => {
+                              const maps = [...(editing.aeLayerMappings ?? [])];
+                              maps[i] = { ...maps[i], fieldId: e.target.value };
+                              setEditing(p => p ? { ...p, aeLayerMappings: maps } : p);
+                            }}
+                            className="border rounded h-7 text-xs px-1.5 flex-1 bg-background"
+                          >
+                            <option value="">— שדה —</option>
+                            {(editing.fields ?? []).map(f => <option key={f.id} value={f.id}>{f.label || f.id}</option>)}
+                          </select>
+                          <span className="text-xs text-muted-foreground">→</span>
+                          <Input
+                            dir="ltr"
+                            placeholder="AE_LAYER_NAME"
+                            value={m.aeLayerName}
+                            onChange={e => {
+                              const maps = [...(editing.aeLayerMappings ?? [])];
+                              maps[i] = { ...maps[i], aeLayerName: e.target.value };
+                              setEditing(p => p ? { ...p, aeLayerMappings: maps } : p);
+                            }}
+                            className="h-7 text-xs font-mono flex-1"
+                          />
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400" onClick={() => {
+                            const maps = (editing.aeLayerMappings ?? []).filter((_,j) => j !== i);
+                            setEditing(p => p ? { ...p, aeLayerMappings: maps } : p);
+                          }}><X className="w-3 h-3" /></Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Fields */}
@@ -1625,7 +1770,14 @@ function VideoTemplatesManager({ token }: { token: string }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm truncate">{t.title}</p>
-                <p className="text-xs text-muted-foreground">/{t.slug} · ₪{(t.price/100).toFixed(0)} · {t.fields.length} שדות</p>
+                <p className="text-xs text-muted-foreground">/{t.slug} · ₪{(t.price/100).toFixed(0)} · {t.fields.length} שדות
+                <span className={`mr-1 px-1.5 py-0.5 rounded text-[10px] font-mono border ${t.renderType === "aefx" ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-gray-50 text-gray-500 border-gray-200"}`}>
+                  {t.renderType === "aefx" ? "AE" : "FFmpeg"}
+                </span>
+                <span className={`mr-0.5 px-1.5 py-0.5 rounded text-[10px] border ${t.tier === "premium" ? "bg-[#D6A84F]/10 text-[#D6A84F] border-[#D6A84F]/30" : "bg-muted text-muted-foreground border-border"}`}>
+                  {t.tier === "premium" ? "פרימיום" : "סטנדרט"}
+                </span>
+              </p>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={e => { e.stopPropagation(); toggleActive(t); }} className={`text-xs px-2 py-0.5 rounded-full border ${t.isActive ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-100 text-gray-500 border-gray-200"}`}>
@@ -1652,17 +1804,167 @@ function VideoTemplatesManager({ token }: { token: string }) {
                       <input type="file" accept={accept} className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadVideo(t.id, type, f); e.target.value = ""; }} />
                     </label>
                   ))}
+                  {t.renderType === "aefx" && (
+                    <label className={`cursor-pointer flex items-center gap-1.5 text-xs border rounded-lg px-3 py-2 transition-colors ${uploadingVideo === "ae" ? "opacity-50" : "hover:bg-primary/5 border-primary/30 text-primary"}`}>
+                      {uploadingVideo === "ae" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      פרויקט AE (.aep / .zip)
+                      <input type="file" accept=".aep,.zip" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadAeProject(t.id, f); e.target.value = ""; }} />
+                    </label>
+                  )}
                 </div>
                 <div className="text-xs text-muted-foreground space-y-0.5">
                   {t.baseVideoUrl && <p>✓ וידאו בסיס: <span className="text-foreground font-mono">{t.baseVideoUrl.slice(0, 50)}…</span></p>}
                   {t.previewVideoUrl && <p>✓ תצוגה מקדימה: <span className="text-foreground font-mono">{t.previewVideoUrl.slice(0, 50)}…</span></p>}
                   {t.previewImageUrl && <p>✓ תמונה: <span className="text-foreground font-mono">{t.previewImageUrl.slice(0, 50)}…</span></p>}
+                  {t.aeProjectUrl && <p>✓ פרויקט AE: <span className="text-foreground font-mono">{t.aeProjectUrl.slice(0, 50)}…</span></p>}
                 </div>
               </div>
             )}
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ─── Video Jobs Manager ───────────────────────────────────────────────────────
+
+function VideoJobsManager({ token }: { token: string }) {
+  const api = import.meta.env.VITE_API_BASE_URL ?? "";
+  const headers = { "x-admin-secret": token };
+  const [jobs, setJobs] = useState<AdminVideoJob[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [retrying, setRetrying] = useState<number | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const url = `${api}/api/hadar/admin/video-jobs${statusFilter ? `?status=${statusFilter}` : ""}`;
+      const res = await fetch(url, { headers });
+      const data = await res.json();
+      setJobs(data);
+    } finally { setLoading(false); }
+  }
+
+  useEffect(() => { load(); }, [statusFilter]);
+  useEffect(() => {
+    const active = jobs.some(j => j.status === "queued" || j.status === "rendering" || j.status === "paid");
+    if (!active) return;
+    const iv = setInterval(load, 8000);
+    return () => clearInterval(iv);
+  }, [jobs]);
+
+  async function retryJob(id: number) {
+    setRetrying(id);
+    try {
+      const res = await fetch(`${api}/api/hadar/admin/video-jobs/${id}/retry`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" } });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setMsg(`עבודה #${id} נשלחה מחדש לתור ✓`);
+      await load();
+    } catch (e: any) { setMsg(`שגיאה: ${e.message}`); }
+    finally { setRetrying(null); }
+  }
+
+  function fmtTime(s: string | null) {
+    if (!s) return "—";
+    const d = new Date(s);
+    return d.toLocaleDateString("he-IL") + " " + d.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  return (
+    <div className="space-y-4" dir="rtl">
+      {msg && <p className={`text-sm p-2 rounded-lg ${msg.startsWith("שגיא") ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"}`}>{msg}</p>}
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <h2 className="font-bold text-lg">עבודות וידאו ({jobs.length})</h2>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="border rounded-lg h-8 text-xs px-2 bg-background">
+          <option value="">כל הסטטוסים</option>
+          {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+        <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={load}>
+          <Loader2 className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> רענן
+        </Button>
+      </div>
+
+      {loading && jobs.length === 0 && <div className="flex justify-center py-10"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>}
+      {!loading && jobs.length === 0 && <p className="text-muted-foreground text-center py-12 text-sm">אין עבודות {statusFilter ? STATUS_LABELS[statusFilter]?.label : ""} עדיין</p>}
+
+      <div className="space-y-2">
+        {jobs.map(job => {
+          const st = STATUS_LABELS[job.status] ?? { label: job.status, color: "bg-gray-100 text-gray-600 border-gray-200" };
+          const isExpanded = expandedId === job.id;
+          return (
+            <div key={job.id} className="bg-card border border-primary/10 rounded-xl overflow-hidden">
+              <div className="p-3 flex items-start gap-3 flex-wrap cursor-pointer" onClick={() => setExpandedId(p => p === job.id ? null : job.id)}>
+                <div className="flex-1 min-w-0 space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-muted-foreground font-mono">#{job.id}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${st.color}`}>{st.label}</span>
+                    {job.rendererUsed && <span className="text-[10px] px-1.5 py-0.5 rounded border bg-muted text-muted-foreground font-mono">{job.rendererUsed}</span>}
+                    {job.isRendering && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 animate-pulse">מרנדר {job.progressPct}%</span>}
+                    {job.queuePosition !== null && <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">תור #{job.queuePosition}</span>}
+                  </div>
+                  <p className="text-sm font-medium truncate">{job.templateTitle ?? `תבנית #${job.templateId}`}</p>
+                  <p className="text-xs text-muted-foreground">{job.userEmail ?? "—"} {job.userName ? `(${job.userName})` : ""}</p>
+                  <p className="text-[10px] text-muted-foreground">{fmtTime(job.createdAt)}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {job.status === "failed" && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1 border-red-200 text-red-600 hover:bg-red-50" disabled={retrying === job.id} onClick={e => { e.stopPropagation(); retryJob(job.id); }}>
+                      {retrying === job.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                      נסה שוב
+                    </Button>
+                  )}
+                  {job.outputUrl && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1" asChild onClick={e => e.stopPropagation()}>
+                      <a href={`${api}${job.outputUrl}`} target="_blank" rel="noreferrer"><Download className="w-3 h-3" />הורד</a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Expanded error / details */}
+              {isExpanded && (
+                <div className="border-t border-primary/10 p-3 space-y-2 bg-muted/10 text-xs">
+                  {job.stripePaymentIntentId && <p className="text-muted-foreground font-mono">Stripe: {job.stripePaymentIntentId}</p>}
+                  {job.renderStartedAt && <p className="text-muted-foreground">התחיל: {fmtTime(job.renderStartedAt)} | הושלם: {fmtTime(job.renderCompletedAt)}</p>}
+                  {job.errorMessage && (
+                    <div className="bg-red-50 border border-red-200 rounded p-2">
+                      <p className="text-red-700 font-semibold mb-0.5">שגיאה:</p>
+                      <pre className="text-[10px] text-red-600 whitespace-pre-wrap break-all leading-relaxed">{job.errorMessage}</pre>
+                    </div>
+                  )}
+                  {!job.errorMessage && !job.renderStartedAt && <p className="text-muted-foreground">אין מידע נוסף</p>}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Video Section (sub-tabs: templates / jobs) ───────────────────────────────
+
+function VideoSection({ token }: { token: string }) {
+  const [sub, setSub] = useState<"templates" | "jobs">("templates");
+  return (
+    <div className="space-y-4">
+      <div className="flex border-b border-primary/10 gap-0" dir="rtl">
+        {([["templates","תבניות"], ["jobs","עבודות"]] as const).map(([k, l]) => (
+          <button
+            key={k}
+            onClick={() => setSub(k)}
+            className={`px-5 py-2 text-sm font-medium border-b-2 transition-colors ${sub === k ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >{l}</button>
+        ))}
+      </div>
+      {sub === "templates" && <VideoTemplatesManager token={token} />}
+      {sub === "jobs"      && <VideoJobsManager      token={token} />}
     </div>
   );
 }
@@ -1983,9 +2285,9 @@ export default function Admin() {
           {tab === "tickets"  && token && <motion.div key="tickets" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><TicketsManager token={token} /></motion.div>}
           {tab === "elements" && token && <ElementsManager token={token} />}
           {tab === "fonts"    && token && <FontsManager    token={token} />}
-          {tab === "videos"   && token && (
+          {tab === "videos" && token && (
             <motion.div key="videos" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <VideoTemplatesManager token={token} />
+              <VideoSection token={token} />
             </motion.div>
           )}
 

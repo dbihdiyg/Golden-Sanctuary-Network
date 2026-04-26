@@ -9,7 +9,16 @@ This workspace is a pnpm monorepo using TypeScript, housing two main application
     - **AI Image Generation** (new): custom "AI" tab in Polotno's SidePanel. User enters Hebrew prompts → `POST /api/hadar/generate-image` → `gpt-image-1` via Replit AI Integrations proxy → base64 PNG → auto-added as new Polotno layer. Supports 3 sizes, 8 suggested prompts, regenerate button. Image data stored in Polotno JSON.
     - AI-powered invitation text generation, comprehensive admin template editor, user portal for designs/orders/support tickets.
     - Clerk auth + Stripe ₪49 payment → download flow preserved.
-    - **Premium Video Template Generator** (new): Admin creates video templates (base MP4 + text overlay field definitions with x/y/timing/font config) → user fills a form → pays via Stripe → FFmpeg (`drawtext` filter with NotoSansHebrew-Bold font, `text_shaping=1` for RTL) renders a custom MP4 in the background → user downloads. DB tables: `hadar_video_templates`, `hadar_video_jobs`. API routes in `hadar-video.ts`. Frontend pages: `/video` (gallery), `/video/:slug` (detail + real-time CSS preview overlay), `/my-videos` (polling dashboard with auto-refresh for in-progress jobs). Admin "וידאו" tab in admin panel for full template CRUD and video file upload.
+    - **Premium Automated Video Template System**: Full production system:
+      - **Dual render engines**: FFmpeg (text overlays) + After Effects via Nexrender (`renderType: "ffmpeg"|"aefx"` per template). Configure `NEXRENDER_API_URL` to connect to external nexrender server.
+      - **Admin template manager**: CRUD + render type selector, AE composition name, AE project upload (.aep/.zip), AE layer mapping table (user field → AE layer name), tier (standard/premium), FFmpeg preset/CRF, max render seconds.
+      - **Priority render queue**: `renderQueue.ts` — concurrency via `RENDER_CONCURRENCY`, premium jobs get priority, rolling ETA per tier.
+      - **Signed download URLs**: HMAC-SHA256 signed tokens with 48h expiry (`signedUrls.ts`). `GET /api/hadar/dl/:token` for email links. `DOWNLOAD_LINK_SECRET` env var for signing.
+      - **Email notifications**: `emailService.ts` — video-ready email with signed download link, video-failed email, admin failure alert.
+      - **Admin video jobs tab**: Separate "עבודות" sub-tab in admin panel. Shows all jobs with user info, template, status badge (Hebrew), renderer used, progress, error log expansion, retry button for failed jobs. Auto-polls every 8s when active jobs present.
+      - **Job status flow**: draft → pending_payment → paid → queued → rendering → ready/failed.
+      - **My Videos dashboard**: Real-time progress bar, queue position, ETA countdown, premium badge, ready toast notification. Polls every 4s.
+      - DB tables: `hadar_video_templates` (renderType, aeLayerMappings, aeProjectUrl, tier, maxRenderSeconds, renderPreset, renderCrf, aeCompositionName), `hadar_video_jobs` (priority, progressPct, rendererUsed, nexrenderJobId, estimatedCompletionAt).
 
 Both applications are integrated with a shared authentication system (Clerk) and utilize a PostgreSQL database.
 
