@@ -714,6 +714,7 @@ export default function Editor() {
   const [showPayment, setShowPayment] = useState(false);
   const [payLoading, setPayLoading] = useState(false);
   const [paySuccess, setPaySuccess] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [designId, setDesignId] = useState<number | null>(designIdParam ? Number(designIdParam) : null);
   const [designName, setDesignName] = useState("עיצוב שלי");
@@ -805,15 +806,30 @@ export default function Editor() {
 
   // ── Payment return ────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (paymentStatus === "success") {
+    if (paymentStatus === "cancelled") {
+      console.log("[HADAR] payment cancelled by user");
+      setPayError("התשלום בוטל — הטיוטה שמורה, ניתן לנסות שוב בכל עת");
+      setShowPayment(false);
+    } else if (paymentStatus === "success") {
       const sessionId = searchParams.get("session_id");
       if (sessionId && isSignedIn) {
         const verify = async () => {
           try {
+            console.log("[HADAR] verifying payment session:", sessionId);
             const token = await getToken();
             const res = await fetch(`${API_BASE}/api/hadar/checkout/verify?session_id=${sessionId}`, { headers: { Authorization: `Bearer ${token}` } });
-            if (res.ok) { const data = await res.json(); if (data.status === "paid") setPaySuccess(true); }
-          } catch {}
+            if (res.ok) {
+              const data = await res.json();
+              console.log("[HADAR] payment verify result:", data.status);
+              if (data.status === "paid") {
+                setPaySuccess(true);
+                setPayError(null);
+                setShowPayment(false);
+              }
+            }
+          } catch (err) {
+            console.error("[HADAR] payment verify error:", err);
+          }
         };
         verify();
       }
@@ -1019,14 +1035,25 @@ export default function Editor() {
       const savedId = await handleAutoSave();
       if (!savedId) { setPayLoading(false); return; }
       const token = await getToken();
+      const fv = getFieldValuesWithElements();
+      console.log("[HADAR] checkout started: designId=", savedId, "templateId=", (template as Template).id);
       const res = await fetch(`${API_BASE}/api/hadar/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ designId: savedId, templateTitle: (template as Template).title }),
+        body: JSON.stringify({
+          designId: savedId,
+          templateId: (template as Template).id,
+          designName,
+          fieldValues: fv,
+        }),
       });
       const data = await res.json();
-      console.log("[HADAR] checkout:", data.url ? "redirect" : "error");
-      if (data.url) { window.location.href = data.url; return; }
+      if (data.url) {
+        console.log("[HADAR] redirecting to Stripe checkout");
+        window.location.href = data.url;
+        return;
+      }
+      console.error("[HADAR] checkout error:", data.error);
     } catch (err) { console.error("[HADAR] checkout error:", err); }
     setPayLoading(false);
   };
@@ -1034,8 +1061,26 @@ export default function Editor() {
   const handleDownload = async () => {
     if (!previewRef.current) return;
     setDownloading(true);
-    console.log("[HADAR] starting download");
     try {
+      // 1. Verify payment on server before generating file
+      if (designId) {
+        console.log("[HADAR] verifying download authorization for design=", designId);
+        const token = await getToken();
+        const authRes = await fetch(`${API_BASE}/api/hadar/designs/${designId}/download-auth`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!authRes.ok) {
+          const err = await authRes.json().catch(() => ({}));
+          console.error("[HADAR] download not authorized:", err);
+          alert("ההורדה לא מורשית — יש לבצע תשלום תחילה");
+          setDownloading(false);
+          return;
+        }
+        console.log("[HADAR] download authorized by server");
+      }
+
+      // 2. Generate PNG client-side
+      console.log("[HADAR] generating PNG export");
       const html2canvas = (await import("html2canvas")).default;
       const canvas = await html2canvas(previewRef.current, {
         scale: 3, useCORS: true, allowTaint: true,
@@ -1045,7 +1090,7 @@ export default function Editor() {
       link.download = `hadar-${designName.replace(/\s+/g, "-")}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
-      console.log("[HADAR] download done");
+      console.log("[HADAR] download complete: design=", designId);
     } catch (err) { console.error("[HADAR] download failed:", err); }
     finally { setDownloading(false); }
   };
@@ -1102,6 +1147,21 @@ export default function Editor() {
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 flex flex-col bg-background" dir="rtl">
+      {/* ── PAYMENT ERROR BANNER ── */}
+      {payError && (
+        <div className="shrink-0 bg-red-500/10 border-b border-red-500/20 text-red-600 dark:text-red-400 text-xs py-2 px-4 flex items-center justify-center gap-2 z-20">
+          <span>⚠</span>
+          <span>{payError}</span>
+          <button onClick={() => setPayError(null)} className="underline hover:no-underline">סגור</button>
+        </div>
+      )}
+      {/* ── SUCCESS BANNER ── */}
+      {paySuccess && (
+        <div className="shrink-0 bg-green-500/10 border-b border-green-500/20 text-green-700 dark:text-green-400 text-xs py-2 px-4 flex items-center justify-center gap-2 z-20">
+          <span>✓</span>
+          <span>התשלום הושלם בהצלחה — הורידו את הקובץ הסופי</span>
+        </div>
+      )}
       {/* ── HEADER ── */}
       <header className="h-12 border-b border-primary/10 bg-card flex items-center justify-between px-3 shrink-0 z-10">
         <div className="flex items-center gap-2">
