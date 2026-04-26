@@ -1,3 +1,4 @@
+import hadarLogo from "@/assets/logo-hadar.png";
 import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { Search, Crown, CheckCircle2, Clock, LayoutGrid, Image as ImageIcon, Video, Calendar, Palette, PenTool, Send, Menu, X, Sun, Moon, User } from "lucide-react";
@@ -364,10 +365,7 @@ export default function Home() {
 
           {/* Center: logo */}
           <Link href="/">
-            <div style={{ fontFamily: "serif", fontSize: 22, fontWeight: 700, color: "#fff", letterSpacing: 4, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <Crown style={{ width: 14, height: 14, color: "#D6A84F", marginBottom: 2 }} strokeWidth={2.5} />
-              הדר
-            </div>
+            <img src={hadarLogo} alt="הדר" style={{ height: 46, width: "auto", cursor: "pointer", objectFit: "contain" }} />
           </Link>
 
           {/* Right: auth + controls */}
@@ -784,9 +782,8 @@ export default function Home() {
       {/* Footer */}
       <footer id="contact" className="border-t border-white/5 bg-secondary py-16">
         <div className="container mx-auto px-4 text-center">
-           <div className="flex flex-col items-center justify-center text-primary mb-8">
-              <Crown className="w-6 h-6 mb-1" />
-              <span className="font-serif font-bold text-3xl text-foreground">הדר</span>
+           <div className="flex flex-col items-center justify-center mb-8">
+              <img src={hadarLogo} alt="הדר" style={{ height: 80, width: "auto", objectFit: "contain" }} />
             </div>
           <p className="text-muted-foreground mb-8">עיצוב ווידאו לאירועים — במהירות של תבנית, ברמה של סטודיו.</p>
           <p className="text-sm text-muted-foreground/60">© {new Date().getFullYear()} הדר. כל הזכויות שמורות.</p>

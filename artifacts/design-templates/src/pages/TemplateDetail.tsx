@@ -1,4 +1,5 @@
 import { useParams, Link } from "wouter";
+import hadarLogo from "@/assets/logo-hadar.png";
 import { ArrowRight, Download, MessageCircle, Palette, CheckCircle2, Share2, Info, Crown, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -55,10 +56,7 @@ export default function TemplateDetail() {
           </div>
           
           <Link href="/">
-            <div className="flex flex-col items-center justify-center text-primary cursor-pointer relative">
-              <Crown className="w-5 h-5 absolute -top-4 text-primary" strokeWidth={2.5} />
-              <span className="font-serif font-bold text-3xl text-foreground tracking-wide">הדר</span>
-            </div>
+            <img src={hadarLogo} alt="הדר" style={{ height: 42, width: "auto", objectFit: "contain", cursor: "pointer" }} />
           </Link>
         </div>
       </header>

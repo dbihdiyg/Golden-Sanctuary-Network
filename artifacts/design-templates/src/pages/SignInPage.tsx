@@ -1,4 +1,5 @@
 import { SignIn } from "@clerk/react";
+import hadarLogo from "@/assets/logo-hadar.png";
 import { Crown, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 
@@ -33,9 +34,8 @@ export default function SignInPage() {
       <div className="relative z-10 w-full max-w-md flex flex-col items-center">
         {/* Custom branded header */}
         <Link href="/" className="group mb-8 flex flex-col items-center gap-2">
-          <div className="relative mb-1">
-            <Crown className="w-7 h-7 text-primary absolute -top-6 left-1/2 -translate-x-1/2 drop-shadow-[0_0_8px_rgba(214,168,79,0.6)]" />
-            <span className="font-serif font-bold text-5xl text-foreground drop-shadow-[0_0_20px_rgba(214,168,79,0.3)]">הדר</span>
+          <div className="mb-1">
+            <img src={hadarLogo} alt="הדר" style={{ height: 80, width: "auto", objectFit: "contain" }} />
           </div>
           <div className="w-16 h-px bg-primary/40 mt-1" />
           <p className="text-sm text-primary/70 tracking-widest font-light mt-1">סטודיו לעיצוב הזמנות</p>

@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useAuth, useUser, SignInButton } from "@clerk/react";
+import hadarLogo from "@/assets/logo-hadar.png";
 import { ArrowRight, Crown, MessageCircle, Download, RotateCcw, CheckCircle2, ZoomIn, ZoomOut, Sun, Moon, Lock, Loader2, User, CreditCard, LogIn, Type, ChevronDown, ChevronUp, ImagePlus, X as XIcon, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -284,9 +285,8 @@ function InvitationPreview({ template, values, zoom, fontOverride, logoUrl }: {
           <div className="w-24 h-px bg-[#D6A84F]/50 mt-2" />
         </div>
       )}
-      <div className="absolute bottom-2.5 left-0 right-0 flex items-center justify-center gap-1 opacity-30 pointer-events-none">
-        <Crown className="w-2.5 h-2.5 text-[#D6A84F]" />
-        <span className="text-[9px] font-serif text-[#D6A84F] tracking-widest">הדר</span>
+      <div className="absolute bottom-2.5 left-0 right-0 flex items-center justify-center pointer-events-none" style={{ opacity: 0.28 }}>
+        <img src={hadarLogo} alt="הדר" style={{ height: 18, width: "auto", objectFit: "contain" }} />
       </div>
     </div>
   );
@@ -601,9 +601,8 @@ export default function Editor() {
             </div>
           </div>
 
-          <Link href="/" className="relative shrink-0">
-            <Crown className="w-3.5 h-3.5 text-primary absolute -top-3 left-1/2 -translate-x-1/2" />
-            <span className="font-serif font-bold text-xl text-foreground">הדר</span>
+          <Link href="/" className="shrink-0">
+            <img src={hadarLogo} alt="הדר" style={{ height: 36, width: "auto", objectFit: "contain" }} />
           </Link>
 
           <div className="flex items-center gap-2 shrink-0">

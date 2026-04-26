@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import hadarLogo from "@/assets/logo-hadar.png";
 import { CheckCircle2, Crown, ArrowRight, Sun, Moon, Sparkles, Loader2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { motion } from "framer-motion";
@@ -94,10 +95,7 @@ export default function Order() {
             </button>
           </div>
           <Link href="/">
-            <div className="flex flex-col items-center justify-center text-primary cursor-pointer relative">
-              <Crown className="w-5 h-5 absolute -top-4 text-primary" strokeWidth={2.5} />
-              <span className="font-serif font-bold text-2xl text-foreground">הדר</span>
-            </div>
+            <img src={hadarLogo} alt="הדר" style={{ height: 40, width: "auto", objectFit: "contain", cursor: "pointer" }} />
           </Link>
         </div>
       </header>

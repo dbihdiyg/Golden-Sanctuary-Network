@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import hadarLogo from "@/assets/logo-hadar.png";
 import { Crown, Sun, Moon, ArrowRight, MessageSquare, Palette, FileImage, Clock, RefreshCw, Zap } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { useLang } from "@/contexts/LangContext";
@@ -66,10 +67,7 @@ export default function Help() {
           </div>
           
           <Link href="/">
-            <div className="flex flex-col items-center justify-center text-primary cursor-pointer relative">
-              <Crown className="w-5 h-5 absolute -top-4 text-primary" strokeWidth={2.5} />
-              <span className="font-serif font-bold text-3xl text-foreground tracking-wide">הדר</span>
-            </div>
+            <img src={hadarLogo} alt="הדר" style={{ height: 42, width: "auto", objectFit: "contain", cursor: "pointer" }} />
           </Link>
         </div>
       </header>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/react";
 import { Link, useLocation } from "wouter";
+import hadarLogo from "@/assets/logo-hadar.png";
 import { Crown, Plus, Trash2, Edit3, Clock, CheckCircle, CreditCard, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -86,9 +87,8 @@ export default function MyDesigns() {
             <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
             <span className="font-medium hidden sm:inline">חזרה לגלריה</span>
           </Link>
-          <Link href="/" className="relative flex flex-col items-center">
-            <Crown className="w-4 h-4 text-primary absolute -top-4" />
-            <span className="font-serif font-bold text-2xl text-foreground">הדר</span>
+          <Link href="/">
+            <img src={hadarLogo} alt="הדר" style={{ height: 38, width: "auto", objectFit: "contain", cursor: "pointer" }} />
           </Link>
           <div />
         </div>

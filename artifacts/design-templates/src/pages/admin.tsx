@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
+import hadarLogo from "@/assets/logo-hadar.png";
 import { Crown, Lock, Plus, Trash2, Edit2, Eye, Package, ShoppingBag, BarChart3, LogOut, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,9 +60,8 @@ export default function Admin() {
           className="bg-card border border-primary/20 rounded-2xl p-8 w-full max-w-sm shadow-2xl"
         >
           <div className="text-center mb-8">
-            <div className="relative inline-block mb-4">
-              <Crown className="w-6 h-6 text-primary absolute -top-4 left-1/2 -translate-x-1/2" />
-              <span className="font-serif font-bold text-3xl text-foreground">הדר</span>
+            <div className="flex justify-center mb-4">
+              <img src={hadarLogo} alt="הדר" style={{ height: 64, width: "auto", objectFit: "contain" }} />
             </div>
             <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm">
               <Lock className="w-4 h-4" />
@@ -104,10 +104,7 @@ export default function Admin() {
       <header className="border-b border-primary/10 bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <Crown className="w-4 h-4 text-primary absolute -top-3 left-1/2 -translate-x-1/2" />
-              <span className="font-serif font-bold text-xl text-foreground">הדר</span>
-            </div>
+            <img src={hadarLogo} alt="הדר" style={{ height: 32, width: "auto", objectFit: "contain" }} />
             <span className="text-muted-foreground text-sm border-r border-primary/20 pr-3">ממשק ניהול</span>
           </div>
           <div className="flex items-center gap-3">
