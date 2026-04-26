@@ -136,7 +136,7 @@ export default function Home() {
         style={{
           position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
           transition: "background 0.35s, backdrop-filter 0.35s, box-shadow 0.35s, border-color 0.35s",
-          background: scrolled ? "rgba(12,12,12,0.96)" : "transparent",
+          background: scrolled ? "rgba(9,20,44,0.97)" : "transparent",
           backdropFilter: scrolled ? "blur(14px)" : "none",
           borderBottom: scrolled ? "1px solid rgba(214,168,79,0.1)" : "1px solid transparent",
           boxShadow: scrolled ? "0 4px 30px rgba(0,0,0,0.4)" : "none",
@@ -144,19 +144,25 @@ export default function Home() {
       >
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 36px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {/* Left: nav links (hidden on mobile) */}
-          <nav className="hidden md:flex" style={{ gap: 28, direction: "ltr" }}>
-            <a href="#gallery" style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, letterSpacing: 2, textDecoration: "none", fontFamily: "monospace", transition: "color 0.2s" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "rgba(214,168,79,0.8)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}
-            >GALLERY</a>
-            <a href="#services" style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, letterSpacing: 2, textDecoration: "none", fontFamily: "monospace", transition: "color 0.2s" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "rgba(214,168,79,0.8)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}
-            >STUDIO</a>
-            <Link href="/help"><span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, letterSpacing: 2, fontFamily: "monospace", cursor: "pointer", transition: "color 0.2s" }}
-              onMouseEnter={(e: any) => (e.currentTarget.style.color = "rgba(214,168,79,0.8)")}
-              onMouseLeave={(e: any) => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}
-            >GUIDES</span></Link>
+          <nav className="hidden md:flex" style={{ gap: 28, direction: "rtl" }}>
+            {[
+              { href: "#gallery", label: "גלריה", isLink: false },
+              { href: "#services", label: "שירותים", isLink: false },
+              { href: "/help", label: "מדריכים", isLink: true },
+              { href: "#contact", label: "צור קשר", isLink: false },
+            ].map(item => item.isLink ? (
+              <Link key={item.label} href={item.href}>
+                <span style={{ color: "rgba(248,241,227,0.45)", fontSize: 13, textDecoration: "none", cursor: "pointer", transition: "color 0.2s", fontFamily: "inherit" }}
+                  onMouseEnter={(e: any) => (e.currentTarget.style.color = "#D6A84F")}
+                  onMouseLeave={(e: any) => (e.currentTarget.style.color = "rgba(248,241,227,0.45)")}
+                >{item.label}</span>
+              </Link>
+            ) : (
+              <a key={item.label} href={item.href} style={{ color: "rgba(248,241,227,0.45)", fontSize: 13, textDecoration: "none", transition: "color 0.2s", fontFamily: "inherit" }}
+                onMouseEnter={e => (e.currentTarget.style.color = "#D6A84F")}
+                onMouseLeave={e => (e.currentTarget.style.color = "rgba(248,241,227,0.45)")}
+              >{item.label}</a>
+            ))}
           </nav>
 
           {/* Center: logo */}
@@ -186,7 +192,7 @@ export default function Home() {
 
         {/* Mobile menu */}
         {isMenuOpen && (
-          <div style={{ background: "#0c0c0c", borderBottom: "1px solid rgba(214,168,79,0.1)", padding: "16px 36px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ background: "rgba(9,20,44,0.98)", borderBottom: "1px solid rgba(214,168,79,0.1)", padding: "16px 36px", display: "flex", flexDirection: "column", gap: 16 }}>
             <Link href="/"><span style={{ color: "#D6A84F", fontSize: 13, display: "block", cursor: "pointer" }} onClick={() => setIsMenuOpen(false)}>{t("nav_home", lang)}</span></Link>
             <a href="#gallery" style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, display: "block" }} onClick={() => setIsMenuOpen(false)}>{t("nav_gallery", lang)}</a>
             <a href="#services" style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, display: "block" }} onClick={() => setIsMenuOpen(false)}>{t("nav_services", lang)}</a>
