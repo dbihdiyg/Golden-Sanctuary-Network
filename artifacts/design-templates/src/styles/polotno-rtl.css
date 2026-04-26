@@ -1,0 +1,65 @@
+/* RTL & Hadar brand overrides for Polotno SDK */
+
+/* ── Blueprint core resets ── */
+.bp5-portal { direction: ltr; }
+
+/* ── Side panel Hebrew labels ── */
+.polotno-side-panel,
+.polotno-side-tabs {
+  font-family: Heebo, Arial, sans-serif;
+}
+
+/* ── Toolbar ── */
+.polotno-toolbar-wrapper {
+  background: var(--card, #0f1e3d) !important;
+  border-bottom: 1px solid rgba(214,168,79,0.2) !important;
+}
+
+/* ── Side panel background ── */
+.bp5-panel-stack-view,
+.polotno-side-panel-content {
+  background: var(--card, #0f1e3d) !important;
+  color: var(--foreground, #F8F1E3) !important;
+}
+
+/* ── Workspace canvas background ── */
+.polotno-workspace-container canvas {
+  cursor: default;
+}
+
+/* ── Blueprint button colours → gold accent ── */
+.bp5-button.bp5-intent-primary {
+  background-color: #D6A84F !important;
+  color: #0B1833 !important;
+}
+.bp5-button.bp5-intent-primary:hover {
+  background-color: #c4983f !important;
+}
+
+/* ── Input fields ── */
+.bp5-input {
+  direction: rtl;
+  font-family: Heebo, sans-serif;
+}
+
+/* ── Color swatch labels ── */
+.polotno-color-picker { direction: ltr; }
+
+/* ── Font picker dropdown ── */
+.polotno-font-family-select .bp5-popover-content {
+  direction: ltr;
+}
+
+/* ── Layer panel ── */
+.polotno-layers-panel {
+  direction: rtl;
+}
+
+/* ── Text alignment buttons ── */
+.polotno-text-align-button[data-direction="right"] { order: -1; }
+
+/* ── Prevent Blueprint overlay from blocking RTL header ── */
+.bp5-overlay-backdrop { z-index: 30; }
+
+/* ── Konva stage wrapper → full height ── */
+.konvajs-content { outline: none; }

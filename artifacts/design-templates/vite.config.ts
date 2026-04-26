@@ -61,6 +61,9 @@ const suppressClerkNetworkErrors = () => ({
 });
 
 export default defineConfig({
+  define: {
+    "import.meta.env.VITE_POLOTNO_KEY": JSON.stringify(process.env.POLOTNO_LICENSE_KEY ?? ""),
+  },
   base: basePath,
   plugins: [
     suppressClerkNetworkErrors(),
@@ -85,6 +88,10 @@ export default defineConfig({
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
       "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
+      // Pin react & react-dom to the local React 18 install so Polotno SDK
+      // (which requires React 18) and our app code share one instance.
+      "react": path.resolve(import.meta.dirname, "node_modules/react"),
+      "react-dom": path.resolve(import.meta.dirname, "node_modules/react-dom"),
     },
     dedupe: ["react", "react-dom"],
   },
