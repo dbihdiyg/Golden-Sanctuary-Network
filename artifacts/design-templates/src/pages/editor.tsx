@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useId } from "react";
 import { useParams, Link, useLocation, useSearch } from "wouter";
-import { useAuth, useUser, SignInButton } from "@clerk/react";
+import { useAuth, useUser, useClerk } from "@clerk/react";
 import hadarLogo from "@/assets/logo-hadar.png";
 import { ArrowRight, Crown, MessageCircle, Download, RotateCcw, CheckCircle2, ZoomIn, ZoomOut, Sun, Moon, Lock, Loader2, User, CreditCard, LogIn, Type, ChevronDown, ChevronUp, ImagePlus, X as XIcon, Upload, Layers, AlignLeft, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -564,6 +564,8 @@ function InvitationPreview({
 }
 
 function AuthWall({ templateId }: { templateId: string }) {
+  const { redirectToSignIn } = useClerk();
+  const redirectUrl = `${basePath}/editor/${templateId}`;
   return (
     <div className="absolute inset-0 z-20 rounded-xl overflow-hidden">
       {/* Decorative blurred invitation mockup */}
@@ -600,12 +602,13 @@ function AuthWall({ templateId }: { templateId: string }) {
           <div className="w-12 h-0.5 bg-primary/40 mx-auto mb-4" />
           <h3 className="font-serif text-2xl font-bold mb-2 text-foreground drop-shadow-lg">נדרשת כניסה לחשבון</h3>
           <p className="text-sm text-primary/60 mb-6 leading-relaxed">כנסו כדי לשמור את העיצוב<br />ולהמשיך לשלב התשלום</p>
-          <SignInButton mode="redirect" forceRedirectUrl={`${basePath}/editor/${templateId}`}>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold gap-2 px-7 py-5 text-base shadow-lg shadow-primary/20">
-              <LogIn className="w-4 h-4" />
-              כניסה / הרשמה
-            </Button>
-          </SignInButton>
+          <Button
+            onClick={() => redirectToSignIn({ redirectUrl })}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold gap-2 px-7 py-5 text-base shadow-lg shadow-primary/20"
+          >
+            <LogIn className="w-4 h-4" />
+            כניסה / הרשמה
+          </Button>
         </div>
       </div>
     </div>
@@ -681,6 +684,7 @@ export default function Editor() {
   const { theme, toggle } = useTheme();
   const { isSignedIn, isLoaded, getToken } = useAuth();
   const { user } = useUser();
+  const { redirectToSignIn } = useClerk();
   const [, navigate] = useLocation();
   const search = useSearch();
   const searchParams = new URLSearchParams(search);
@@ -1190,12 +1194,13 @@ export default function Editor() {
                 קבלת העיצוב הסופי — ₪49
               </Button>
             ) : (
-              <SignInButton mode="redirect" forceRedirectUrl={`${basePath}/editor/${template.id}`}>
-                <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-11 font-bold">
-                  <LogIn className="w-4 h-4" />
-                  כניסה לשמירה ותשלום
-                </Button>
-              </SignInButton>
+              <Button
+                onClick={() => redirectToSignIn({ redirectUrl: `${basePath}/editor/${template.id}` })}
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-11 font-bold"
+              >
+                <LogIn className="w-4 h-4" />
+                כניסה לשמירה ותשלום
+              </Button>
             )}
             {!paySuccess && (
               <Button onClick={handleWhatsApp} variant="outline" className="w-full border-primary/20 text-primary hover:bg-primary/10 gap-2 h-9 text-sm">
