@@ -173,65 +173,236 @@ function resolveFont(slotFamily: string | undefined, fontOverride: string): stri
   return `'${slotFamily}', serif`;
 }
 
+function buildTextShadows(ss: SlotStyle | undefined, baseColor: string): string {
+  const parts: string[] = [];
+
+  // Basic shadow
+  if (ss?.shadow || ss?.shadowX != null || ss?.shadowY != null || ss?.shadowColor) {
+    const x = ss?.shadowX ?? 2;
+    const y = ss?.shadowY ?? 2;
+    const blur = ss?.shadowBlur ?? 6;
+    const col = ss?.shadowColor || "rgba(0,0,0,0.7)";
+    parts.push(`${x}px ${y}px ${blur}px ${col}`);
+  }
+
+  // Glow effect
+  if (ss?.glow || ss?.glowColor || ss?.glowRadius) {
+    const gc = ss?.glowColor || baseColor;
+    const gr = ss?.glowRadius ?? 12;
+    const intensity = ss?.glowIntensity ?? 2;
+    for (let i = 0; i < intensity; i++) {
+      parts.push(`0 0 ${gr * (i + 1)}px ${gc}`);
+    }
+    // soft inner glow core
+    if (gc.startsWith("#") && gc.length <= 7) parts.push(`0 0 ${Math.ceil(gr * 0.4)}px ${gc}cc`);
+  }
+
+  // 3D Extrude
+  if (ss?.extrudeEnabled) {
+    const depth = ss.extrudeDepth ?? 5;
+    const angle = (ss.extrudeAngle ?? 225) * Math.PI / 180;
+    const col = ss.extrudeColor || "rgba(0,0,0,0.6)";
+    const dx = Math.cos(angle);
+    const dy = Math.sin(angle);
+    for (let i = 1; i <= depth; i++) {
+      parts.push(`${(dx * i).toFixed(1)}px ${(dy * i).toFixed(1)}px 0 ${col}`);
+    }
+  }
+
+  // Long shadow
+  if (ss?.longShadowEnabled) {
+    const len = ss.longShadowLength ?? 40;
+    const angle = (ss.longShadowAngle ?? 135) * Math.PI / 180;
+    const col = ss.longShadowColor || "rgba(0,0,0,0.15)";
+    const dx = Math.cos(angle);
+    const dy = Math.sin(angle);
+    for (let i = 1; i <= len; i++) {
+      parts.push(`${(dx * i).toFixed(1)}px ${(dy * i).toFixed(1)}px 0 ${col}`);
+    }
+  }
+
+  return parts.join(", ");
+}
+
+function buildTextureGradient(type: SlotStyle["textureType"]): string | undefined {
+  switch (type) {
+    case "gold-foil":
+      return "linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%)";
+    case "silver":
+      return "linear-gradient(135deg, #8e9eab 0%, #eef2f3 30%, #9da9b0 60%, #eef2f3 80%, #8e9eab 100%)";
+    case "fire":
+      return "linear-gradient(0deg, #ff4500 0%, #ff8c00 30%, #ffd700 60%, #fff44f 100%)";
+    case "neon":
+      return "linear-gradient(135deg, #a855f7 0%, #ec4899 35%, #3b82f6 70%, #a855f7 100%)";
+    case "rainbow":
+      return "linear-gradient(90deg, #ff0000, #ff7700, #ffff00, #00ff00, #0000ff, #8b00ff)";
+    default:
+      return undefined;
+  }
+}
+
 function buildSlotCSS(
   slot: TextSlot,
   fontOverride: string,
   ss?: SlotStyle
 ): React.CSSProperties {
-  // Font size: explicit px wins over enum
   const baseSz = slot.fontSizePx ?? previewFontSizePx[slot.fontSize || "sm"];
-  const color = ss?.color || resolveColor(slot.color);
-  const shadows: string[] = [];
-  if (ss?.shadow || slot.textShadow) shadows.push("2px 2px 6px rgba(0,0,0,0.7)");
-  if (ss?.glow) shadows.push(`0 0 10px ${color}, 0 0 20px ${color}80`);
+  const baseColor = ss?.color || resolveColor(slot.color);
   const fontFamily = ss?.fontFamily
     ? `'${ss.fontFamily}', serif`
     : resolveFont(slot.fontFamily, fontOverride);
-  return {
+  const lh = ss?.lineHeight ?? slot.lineHeight ?? 1.35;
+  const ls = ss?.letterSpacing != null
+    ? `${ss.letterSpacing}px`
+    : slot.letterSpacing != null ? `${slot.letterSpacing}px` : undefined;
+
+  const textShadow = buildTextShadows(ss, baseColor);
+
+  // Gradient or texture overrides color
+  const texGrad = (ss?.textureType && ss.textureType !== "none")
+    ? buildTextureGradient(ss.textureType)
+    : undefined;
+  const useGradient = !!ss?.gradientEnabled || !!texGrad;
+  const gradientBg = texGrad
+    ? texGrad
+    : ss?.gradientEnabled
+      ? `linear-gradient(${ss.gradientAngle ?? 90}deg, ${ss.gradientFrom || "#D6A84F"}, ${ss.gradientTo || "#F8F1E3"})`
+      : undefined;
+
+  const stroke = (ss?.strokeWidth ?? 0) > 0
+    ? `${ss!.strokeWidth}px ${ss?.strokeColor || baseColor}`
+    : ss?.outline ? `1px ${baseColor}` : undefined;
+
+  const base: React.CSSProperties = {
     fontSize: ss?.fontSize ?? baseSz,
     fontFamily,
     fontWeight: (ss?.bold ?? slot.bold) ? 700 : 400,
     fontStyle: (ss?.italic ?? slot.italic) ? "italic" : "normal",
     textDecoration: ss?.underline ? "underline" : undefined,
-    color,
-    lineHeight: slot.lineHeight ?? 1.35,
-    letterSpacing: slot.letterSpacing != null
-      ? `${slot.letterSpacing}px`
-      : ss?.letterSpacing ? `${ss.letterSpacing * 0.05}px` : undefined,
-    textShadow: shadows.length ? shadows.join(", ") : undefined,
-    WebkitTextStroke: ss?.outline ? `1px ${color}` : undefined,
+    lineHeight: lh,
+    letterSpacing: ls,
+    WebkitTextStroke: stroke,
+    textShadow: textShadow || undefined,
   };
+
+  if (useGradient && gradientBg) {
+    return {
+      ...base,
+      backgroundImage: gradientBg,
+      WebkitBackgroundClip: "text",
+      WebkitTextFillColor: "transparent",
+      backgroundClip: "text",
+      color: "transparent",
+    };
+  }
+
+  return { ...base, color: baseColor };
 }
 
-function SvgArcText({ text, arcDeg, cssStyle }: {
-  text: string; arcDeg: number; cssStyle: React.CSSProperties;
+function buildSlotWrapperCSS(ss?: SlotStyle, slotOpacity?: number): React.CSSProperties {
+  if (!ss && slotOpacity == null) return {};
+  const transforms: string[] = [];
+  if (ss?.rotation) transforms.push(`rotate(${ss.rotation}deg)`);
+  if (ss?.skewX) transforms.push(`skewX(${ss.skewX}deg)`);
+  if (ss?.skewY) transforms.push(`skewY(${ss.skewY}deg)`);
+
+  const style: React.CSSProperties = {};
+  if (transforms.length) style.transform = transforms.join(" ");
+  const op = ss?.opacity ?? slotOpacity;
+  if (op != null && op !== 1) style.opacity = op;
+  if (ss?.blendMode && ss.blendMode !== "normal") style.mixBlendMode = ss.blendMode as React.CSSProperties["mixBlendMode"];
+
+  if (ss?.glassEnabled) {
+    style.background = ss.glassColor || "rgba(255,255,255,0.08)";
+    style.backdropFilter = `blur(${ss.glassBlur ?? 8}px)`;
+    style.WebkitBackdropFilter = `blur(${ss.glassBlur ?? 8}px)`;
+    style.borderRadius = `${ss.glassBorderRadius ?? 8}px`;
+    style.padding = "4px 14px";
+  }
+
+  return style;
+}
+
+function SvgWarpText({ text, warpType, arcDeg, cssStyle }: {
+  text: string;
+  warpType: "arc-up" | "arc-down" | "wave" | "circle";
+  arcDeg: number;
+  cssStyle: React.CSSProperties;
 }) {
   const uid = useId().replace(/:/g, "");
-  const W = 280, H = 100;
-  const absAngle = Math.abs(arcDeg) * Math.PI / 180;
-  const r = absAngle < 0.05 ? 99999 : (W / 2) / Math.sin(absAngle / 2);
-  const sagitta = r - Math.sqrt(Math.max(0, r * r - (W / 2) * (W / 2)));
-  const isUp = arcDeg > 0;
-  const sy = isUp ? sagitta : H - sagitta;
-  const sweep = isUp ? 1 : 0;
-  const pathD = `M 0 ${sy} A ${r} ${r} 0 0 ${sweep} ${W} ${sy}`;
+  const W = 300;
   const fontSize = typeof cssStyle.fontSize === "number" ? cssStyle.fontSize : 14;
-  const svgH = sagitta + fontSize * 1.4 + 4;
+  const fill = (cssStyle.color && cssStyle.color !== "transparent")
+    ? cssStyle.color as string
+    : cssStyle.backgroundImage
+      ? `url(#grad-${uid})`
+      : "#F8F1E3";
+
+  const gradFrom = cssStyle.backgroundImage
+    ? (cssStyle.backgroundImage as string).match(/#[0-9a-fA-F]{3,6}/g)?.[0] || "#D6A84F"
+    : undefined;
+  const gradTo = cssStyle.backgroundImage
+    ? (cssStyle.backgroundImage as string).match(/#[0-9a-fA-F]{3,6}/g)?.[1] || "#F8F1E3"
+    : undefined;
+  const isGradient = !!cssStyle.backgroundImage;
+
+  let pathD = "";
+  let svgW = W, svgH = 80;
+
+  if (warpType === "arc-up" || warpType === "arc-down") {
+    const H = 100;
+    const absAngle = Math.abs(arcDeg) * Math.PI / 180;
+    const r = absAngle < 0.05 ? 99999 : (W / 2) / Math.sin(absAngle / 2);
+    const sagitta = r - Math.sqrt(Math.max(0, r * r - (W / 2) * (W / 2)));
+    const isUp = warpType === "arc-up";
+    const sy = isUp ? sagitta : H - sagitta;
+    const sweep = isUp ? 1 : 0;
+    pathD = `M 0 ${sy} A ${r} ${r} 0 0 ${sweep} ${W} ${sy}`;
+    svgH = Math.max(H, sagitta + fontSize * 1.4 + 4);
+  } else if (warpType === "wave") {
+    const amplitude = Math.max(5, Math.abs(arcDeg) * 0.5);
+    const cy = svgH / 2;
+    const pts: string[] = [];
+    for (let i = 0; i <= 40; i++) {
+      const x = (i / 40) * W;
+      const y = cy + amplitude * Math.sin((i / 40) * Math.PI * 2 * (arcDeg > 0 ? 1 : -1));
+      pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    pathD = `M ${pts.join(" L ")}`;
+    svgH = cy + amplitude + fontSize * 1.2;
+    svgH = Math.max(60, svgH);
+  } else if (warpType === "circle") {
+    const r = Math.max(40, 100 - Math.abs(arcDeg) * 0.3);
+    svgW = r * 2 + 20;
+    svgH = r * 2 + 20;
+    const cx = svgW / 2, cy = svgH / 2;
+    pathD = `M ${cx},${cy - r} A ${r},${r} 0 1 1 ${cx - 0.001},${cy - r}`;
+  }
 
   return (
     <svg
-      width={W} height={Math.max(H, svgH)}
-      viewBox={`0 0 ${W} ${Math.max(H, svgH)}`}
-      style={{ display: "block", overflow: "visible", direction: "rtl" }}
+      width={svgW} height={svgH}
+      viewBox={`0 0 ${svgW} ${svgH}`}
+      style={{ display: "block", overflow: "visible", direction: "rtl", maxWidth: "100%" }}
     >
-      <defs><path id={uid} d={pathD} /></defs>
+      <defs>
+        <path id={uid} d={pathD} />
+        {isGradient && gradFrom && gradTo && (
+          <linearGradient id={`grad-${uid}`} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor={gradFrom} />
+            <stop offset="100%" stopColor={gradTo} />
+          </linearGradient>
+        )}
+      </defs>
       <text
-        fill={cssStyle.color as string}
+        fill={fill}
         fontSize={fontSize}
         fontFamily={cssStyle.fontFamily as string}
         fontWeight={cssStyle.fontWeight as number}
         fontStyle={cssStyle.fontStyle as string}
-        style={{ textShadow: cssStyle.textShadow, letterSpacing: cssStyle.letterSpacing as string }}
+        stroke={typeof cssStyle.WebkitTextStroke === "string" ? cssStyle.WebkitTextStroke.split(" ").slice(1).join(" ") : undefined}
+        strokeWidth={typeof cssStyle.WebkitTextStroke === "string" ? parseFloat(cssStyle.WebkitTextStroke) || undefined : undefined}
+        paintOrder="stroke"
       >
         <textPath href={`#${uid}`} startOffset="50%" textAnchor="middle">
           {text}
@@ -246,22 +417,24 @@ function StackedLine({ slot, value, fontOverride, slotStyle }: {
 }) {
   if (!value.trim()) return null;
   const css = buildSlotCSS(slot, fontOverride, slotStyle);
+  const wrapCSS = buildSlotWrapperCSS(slotStyle, slot.opacity);
+  const warpType = slotStyle?.warpType;
   const arcDeg = slotStyle?.arcDegrees ?? 0;
   const plainText = value.replace(/<[^>]+>/g, "");
 
-  if (arcDeg !== 0) {
+  if (warpType && warpType !== "none") {
     return (
-      <div className="text-center my-0.5 w-full">
-        <SvgArcText text={plainText} arcDeg={arcDeg} cssStyle={css} />
+      <div className="text-center my-0.5 w-full flex justify-center" style={wrapCSS}>
+        <SvgWarpText text={plainText} warpType={warpType} arcDeg={arcDeg} cssStyle={css} />
       </div>
     );
   }
   const isHtml = value.includes("<");
   return isHtml ? (
-    <div className="text-center leading-snug my-0.5" style={css}
+    <div className="text-center leading-snug my-0.5" style={{ ...wrapCSS, ...css }}
       dangerouslySetInnerHTML={{ __html: value }} />
   ) : (
-    <div className="text-center leading-snug my-0.5 whitespace-pre-line" style={css}>
+    <div className="text-center leading-snug my-0.5 whitespace-pre-line" style={{ ...wrapCSS, ...css }}>
       {value}
     </div>
   );
@@ -272,20 +445,25 @@ function AbsoluteSlot({ slot, value, fontOverride, slotStyle }: {
 }) {
   if (!value.trim() || slot.x == null || slot.y == null) return null;
   const css = buildSlotCSS(slot, fontOverride, slotStyle);
+  const wrapCSS = buildSlotWrapperCSS(slotStyle, slot.opacity);
   const w = slot.width ?? 80;
+  const warpType = slotStyle?.warpType;
   const arcDeg = slotStyle?.arcDegrees ?? 0;
   const plainText = value.replace(/<[^>]+>/g, "");
 
   return (
     <div style={{
       position: "absolute", left: `${slot.x}%`, top: `${slot.y}%`, width: `${w}%`,
-      transform: "translateX(-50%)", textAlign: slot.align ?? "center",
+      textAlign: slot.align ?? "center",
       whiteSpace: "pre-line", direction: "rtl", pointerEvents: "none",
-      opacity: slot.opacity ?? 1,
       zIndex: slot.zIndex ?? undefined,
+      ...wrapCSS,
+      transform: `translateX(-50%)${wrapCSS.transform ? ` ${wrapCSS.transform}` : ""}`,
     }}>
-      {arcDeg !== 0 ? (
-        <SvgArcText text={plainText} arcDeg={arcDeg} cssStyle={css} />
+      {(warpType && warpType !== "none") ? (
+        <div className="flex justify-center">
+          <SvgWarpText text={plainText} warpType={warpType} arcDeg={arcDeg} cssStyle={css} />
+        </div>
       ) : (
         <span style={css}>{value}</span>
       )}

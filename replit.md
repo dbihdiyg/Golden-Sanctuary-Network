@@ -146,12 +146,30 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 ### Admin Template Editor (Rich Design Tools)
 - `/admin` — password-protected admin panel (ADMIN_PASSWORD env var → ADMIN_SECRET token)
 - Full visual slot editor with live text preview on canvas
-- **Typography**: full Hebrew font picker (16 fonts via HEBREW_FONTS), exact px font size slider (6–120px), bold/italic/text-shadow toggles
-- **Color**: hex color picker + presets (gold, cream, white, navy), opacity slider (0–100%)
-- **Spacing**: letter-spacing slider (-3–20px), line-height slider (0.8–3.0)
+- **Typography**: full Hebrew font picker (16 fonts via HEBREW_FONTS + custom DB fonts), exact px font size slider (8–120px), bold/italic/underline toggles
+- **Color**: hex color picker + 12 presets (gold, cream, white, navy, etc.)
+- **Spacing**: letter-spacing slider (-10–30px), line-height slider (0.6–4.0)
 - **Layout**: x/y/width/z-index number inputs, align buttons (RTL-aware)
-- **Behavior**: multiline toggle, `fixed` toggle (locks slot for customers — shows 🔒, customer sees but cannot edit)
+- **Behavior**: multiline toggle, `fixed` toggle (locks slot for customers)
 - Google Fonts loaded dynamically when font family changes in admin
+
+### Customer Text Effects (SlotStylePanel) — Advanced
+`SlotStyle` interface in `src/components/SlotStylePanel.tsx`. Applied in `buildSlotCSS` / `buildSlotWrapperCSS` in editor.tsx.
+
+**Sections (collapsible UI):**
+1. **גופן ואותיות** — fontFamily, fontSize, color, bold/italic/underline
+2. **ריווח ומיקום** — letterSpacing, lineHeight, opacity, rotation (±180°), skewX/Y (±45°)
+3. **צל ועומק** — shadow (X/Y/blur/color), 3D Extrude (depth+angle+color), Long Shadow (length+angle+color)
+4. **זוהר ואור** — glow (glowColor, glowRadius, glowIntensity 1–4 layers)
+5. **גרדיאנט ומרקם** — gradient (from/to/angle) + 5 built-in textures: gold-foil, silver, fire, neon, rainbow
+6. **קו ומסגרת** — stroke (color+width), Glass background (blur+color+borderRadius), Blend mode (multiply/screen/overlay/soft-light)
+7. **עיקום טקסט** — warpType: none/arc-up/arc-down/wave/circle, arcDegrees (-80–80)
+
+**Rendering:**
+- Gradient/texture uses CSS `-webkit-background-clip: text` with `WebkitTextFillColor: transparent`
+- All warps use `SvgWarpText` SVG component — arc uses circular arc path, wave uses sinusoidal polyline, circle uses full circular textPath
+- Shadow/glow/3D extrude/long-shadow all rendered via `text-shadow` chain built by `buildTextShadows()`
+- Wrapper-level effects (rotation, skew, opacity, blend mode, glass) applied by `buildSlotWrapperCSS()`
 
 ### TextSlot / AdminSlot Architecture
 - `TextSlot` (in `src/lib/data.ts`): shared interface used by editor renderer
