@@ -601,6 +601,7 @@ export default function Home() {
               { href: "#gallery", label: "גלריה", isLink: false },
               { href: "#services", label: "שירותים", isLink: false },
               { href: "/help", label: "מדריכים", isLink: true },
+              { href: "/support", label: "תמיכה", isLink: true },
               { href: "#contact", label: "צור קשר", isLink: false },
             ].map(item => item.isLink ? (
               <Link key={item.label} href={item.href}>
@@ -647,6 +648,7 @@ export default function Home() {
             <a href="#services" style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, display: "block" }} onClick={() => setIsMenuOpen(false)}>{t("nav_services", lang)}</a>
             <Link href="/order"><span style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, display: "block", cursor: "pointer" }} onClick={() => setIsMenuOpen(false)}>{t("nav_order", lang)}</span></Link>
             <Link href="/help"><span style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, display: "block", cursor: "pointer" }} onClick={() => setIsMenuOpen(false)}>{t("nav_help", lang)}</span></Link>
+            <Link href="/support"><span style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, display: "block", cursor: "pointer" }} onClick={() => setIsMenuOpen(false)}>תמיכה</span></Link>
             <a href="#contact" style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, display: "block" }} onClick={() => setIsMenuOpen(false)}>{t("nav_contact", lang)}</a>
             <div style={{ paddingTop: 8 }}><AuthNavButton /></div>
           </div>

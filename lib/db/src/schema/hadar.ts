@@ -66,8 +66,49 @@ export const hadarFonts = pgTable("hadar_fonts", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// ── Support Tickets ────────────────────────────────────────────────────────────
+export const hadarTickets = pgTable("hadar_tickets", {
+  id: serial("id").primaryKey(),
+  clerkUserId: text("clerk_user_id").notNull(),
+  userEmail: text("user_email").notNull().default(""),
+  subject: text("subject").notNull(),
+  status: text("status").notNull().default("open"), // open | in_progress | closed
+  unreadAdmin: integer("unread_admin").notNull().default(0),   // messages unseen by admin
+  unreadUser: integer("unread_user").notNull().default(0),     // messages unseen by user
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const hadarTicketMessages = pgTable("hadar_ticket_messages", {
+  id: serial("id").primaryKey(),
+  ticketId: integer("ticket_id").notNull().references(() => hadarTickets.id),
+  senderType: text("sender_type").notNull().default("user"), // user | admin
+  senderLabel: text("sender_label").notNull().default(""),
+  message: text("message").notNull(),
+  attachmentUrl: text("attachment_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ── Saved Payment Methods ──────────────────────────────────────────────────────
+export const hadarPaymentMethods = pgTable("hadar_payment_methods", {
+  id: serial("id").primaryKey(),
+  clerkUserId: text("clerk_user_id").notNull(),
+  stripeCustomerId: text("stripe_customer_id").notNull(),
+  stripePaymentMethodId: text("stripe_payment_method_id").notNull(),
+  brand: text("brand").notNull().default(""),
+  last4: text("last4").notNull().default(""),
+  expMonth: integer("exp_month"),
+  expYear: integer("exp_year"),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ── Types ──────────────────────────────────────────────────────────────────────
 export type HadarElement = typeof hadarElements.$inferSelect;
 export type HadarFont = typeof hadarFonts.$inferSelect;
+export type HadarTicket = typeof hadarTickets.$inferSelect;
+export type HadarTicketMessage = typeof hadarTicketMessages.$inferSelect;
+export type HadarPaymentMethod = typeof hadarPaymentMethods.$inferSelect;
 
 export const insertHadarDesignSchema = createInsertSchema(hadarDesigns).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertHadarDesign = z.infer<typeof insertHadarDesignSchema>;

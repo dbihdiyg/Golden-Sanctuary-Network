@@ -189,6 +189,33 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - Backward compatible: old `fontSize` enum + named colors still work
 - Slots stored as JSON in `hadar_templates.slots` column
 
+### Support / Tickets System
+- `/design-templates/support` — authenticated user can open, view, and reply to support tickets (chat-style WhatsApp-like UI)
+- Ticket list shows status badges (פתוחה/בטיפול/סגורה), unread indicators, relative timestamps
+- New ticket form: subject + message; quick-subject chips for common issues
+- Chat view: 8-second polling for admin replies, Ctrl+Enter to send
+- Admin: "פניות" tab in `/admin` — lists all tickets with unread badge, search, status filter
+  - Chat pane with full message history, quick-reply templates, and status buttons (פתוחה/בטיפול/סגורה)
+- API routes: `GET/POST /api/hadar/tickets`, `GET/POST /api/hadar/tickets/:id/messages` (user)
+- API routes: `GET/GET/POST/PATCH /api/hadar/admin/tickets/:id` (admin, x-admin-secret)
+
+### User Account Area (האזור האישי)
+- `/design-templates/my-designs` rebuilt with 4 tabs:
+  1. **ההורדות שלי** — paid orders only with secure download/edit button
+  2. **ההזמנות שלי** — all orders (pending/paid/failed) with status badges and action buttons
+  3. **הטיוטות שלי** — draft designs grid with edit/delete/pay actions
+  4. **פרטי תשלום** — shows saved Stripe payment methods (brand, last4, exp); delete card support
+- Header includes "תמיכה" shortcut link to support page
+- Saved payment methods via Stripe SetupIntent flow
+- API routes: `POST /api/hadar/setup-intent`, `GET/POST/DELETE /api/hadar/payment-methods`
+
+### Navigation
+- "תמיכה" added to home page header nav (desktop + mobile menu)
+- `/support` and `/my-designs` both auth-guarded via AuthGuard component in App.tsx
+
 ### Database Tables (הדר)
 - `hadar_designs` — id, clerk_user_id, template_id, design_name, field_values (jsonb), status (draft/paid/submitted), stripe_session_id, created_at, updated_at
 - `hadar_orders` — id, clerk_user_id, design_id, template_id, stripe_session_id, stripe_payment_intent, amount, currency, status (pending/paid/failed), created_at
+- `hadar_tickets` — id, clerk_user_id, user_email, subject, status (open/in_progress/closed), unread_admin, unread_user, created_at, updated_at
+- `hadar_ticket_messages` — id, ticket_id, sender_type (user/admin), sender_label, message, attachment_url, created_at
+- `hadar_payment_methods` — id, clerk_user_id, stripe_customer_id, stripe_payment_method_id, brand, last4, exp_month, exp_year, is_default, created_at

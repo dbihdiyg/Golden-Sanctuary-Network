@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { ClerkProvider, useAuth } from "@clerk/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -20,6 +20,7 @@ const Help = lazy(() => import("@/pages/help"));
 const Admin = lazy(() => import("@/pages/admin"));
 const Editor = lazy(() => import("@/pages/editor"));
 const MyDesigns = lazy(() => import("@/pages/MyDesigns"));
+const Support = lazy(() => import("@/pages/Support"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,9 +39,8 @@ function PageLoader() {
   );
 }
 
-function MyDesignsRoute() {
+function AuthGuard({ children }: { children: ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth();
-
   if (!isLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -48,12 +48,16 @@ function MyDesignsRoute() {
       </div>
     );
   }
+  if (!isSignedIn) return <Redirect to="/sign-in" />;
+  return <>{children}</>;
+}
 
-  if (!isSignedIn) {
-    return <Redirect to="/sign-in" />;
-  }
+function MyDesignsRoute() {
+  return <AuthGuard><MyDesigns /></AuthGuard>;
+}
 
-  return <MyDesigns />;
+function SupportRoute() {
+  return <AuthGuard><Support /></AuthGuard>;
 }
 
 function AppRoutes() {
@@ -65,6 +69,7 @@ function AppRoutes() {
           <Route path="/sign-in/*?" component={SignInPage} />
           <Route path="/sign-up/*?" component={SignUpPage} />
           <Route path="/my-designs" component={MyDesignsRoute} />
+          <Route path="/support" component={SupportRoute} />
           <Route path="/template/:id" component={TemplateDetail} />
           <Route path="/order" component={Order} />
           <Route path="/help" component={Help} />

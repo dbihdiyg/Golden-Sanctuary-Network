@@ -10,7 +10,7 @@ import {
   RefreshCw, ArrowRight, ChevronDown, ChevronUp, Loader2,
   AlertCircle, Users, DollarSign, Clock, ToggleLeft, ToggleRight, Upload,
   AlignCenter, AlignRight, AlignLeft, Type, Layers, Move,
-  Maximize2, FileType2,
+  Maximize2, FileType2, Send, MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -944,8 +944,282 @@ function FontsManager({ token }: { token: string }) {
   );
 }
 
+// ─── Tickets Manager ──────────────────────────────────────────────────────────
+interface AdminTicket {
+  id: number;
+  clerkUserId: string;
+  userEmail: string;
+  subject: string;
+  status: string;
+  unreadAdmin: number;
+  unreadUser: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface AdminTicketMessage {
+  id: number;
+  ticketId: number;
+  senderType: "user" | "admin";
+  senderLabel: string;
+  message: string;
+  attachmentUrl: string | null;
+  createdAt: string;
+}
+
+const TICKET_STATUS_LABELS: Record<string, string> = {
+  open: "פתוחה",
+  in_progress: "בטיפול",
+  closed: "סגורה",
+};
+
+const QUICK_REPLIES = [
+  "תודה על פנייתך! הצוות שלנו יבחן את הבעיה ויחזור אליך בהקדם.",
+  "הבעיה תוקנה! אנא נסו שוב וספרו לנו אם הכל תקין.",
+  "על מנת לסייע לך, נשמח אם תוכלו לשלוח צילום מסך של הבעיה.",
+  "הקובץ שלכם מוכן להורדה — אנא היכנסו לעיצוב ולחצו על כפתור ההורדה.",
+];
+
+function TicketsManager({ token }: { token: string }) {
+  const [tickets, setTickets] = useState<AdminTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTicket, setActiveTicket] = useState<AdminTicket | null>(null);
+  const [messages, setMessages] = useState<AdminTicketMessage[]>([]);
+  const [msgLoading, setMsgLoading] = useState(false);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const loadTickets = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/hadar/admin/tickets`, {
+        headers: { "x-admin-secret": token },
+      });
+      if (res.ok) setTickets(await res.json());
+    } catch {}
+    setLoading(false);
+  };
+
+  const loadTicket = async (ticket: AdminTicket) => {
+    setActiveTicket(ticket);
+    setMsgLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/hadar/admin/tickets/${ticket.id}`, {
+        headers: { "x-admin-secret": token },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActiveTicket(data.ticket);
+        setMessages(data.messages || []);
+        setTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, unreadAdmin: 0 } : t));
+      }
+    } catch {}
+    setMsgLoading(false);
+  };
+
+  const sendReply = async () => {
+    if (!reply.trim() || !activeTicket) return;
+    setSending(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/hadar/admin/tickets/${activeTicket.id}/messages`, {
+        method: "POST",
+        headers: { "x-admin-secret": token, "Content-Type": "application/json" },
+        body: JSON.stringify({ message: reply.trim() }),
+      });
+      if (res.ok) {
+        const msg = await res.json();
+        setMessages(prev => [...prev, msg]);
+        setReply("");
+        setTickets(prev => prev.map(t => t.id === activeTicket.id ? { ...t, status: "in_progress", updatedAt: new Date().toISOString() } : t));
+      }
+    } catch {}
+    setSending(false);
+  };
+
+  const updateStatus = async (id: number, status: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/hadar/admin/tickets/${id}`, {
+        method: "PATCH",
+        headers: { "x-admin-secret": token, "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setTickets(prev => prev.map(t => t.id === id ? updated : t));
+        if (activeTicket?.id === id) setActiveTicket(updated);
+      }
+    } catch {}
+  };
+
+  useEffect(() => { loadTickets(); }, []);
+
+  const filtered = tickets.filter(t => {
+    const matchSearch = !search || t.subject.includes(search) || t.userEmail.includes(search);
+    const matchStatus = statusFilter === "all" || t.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  const totalUnread = tickets.reduce((n, t) => n + (t.unreadAdmin || 0), 0);
+
+  return (
+    <div className="grid md:grid-cols-[320px_1fr] gap-4 h-[620px]">
+      {/* ── Ticket list ── */}
+      <div className="bg-card border border-primary/10 rounded-xl flex flex-col overflow-hidden">
+        <div className="p-3 border-b border-primary/10 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-sm">פניות ({filtered.length})</span>
+            {totalUnread > 0 && (
+              <span className="bg-primary text-primary-foreground text-[10px] font-bold rounded-full px-2 py-0.5">{totalUnread} חדש</span>
+            )}
+            <button onClick={loadTickets} className="text-muted-foreground hover:text-foreground p-1">
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="חיפוש פניות..."
+            className="w-full border border-primary/10 rounded-lg px-2.5 py-1.5 text-xs bg-background focus:outline-none"
+          />
+          <div className="flex gap-1">
+            {["all", "open", "in_progress", "closed"].map(s => (
+              <button key={s} onClick={() => setStatusFilter(s)}
+                className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${statusFilter === s ? "bg-primary text-primary-foreground border-primary" : "text-muted-foreground border-primary/15 hover:border-primary/30"}`}>
+                {s === "all" ? "הכל" : TICKET_STATUS_LABELS[s]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto divide-y divide-primary/5">
+          {loading ? (
+            <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>
+          ) : filtered.length === 0 ? (
+            <p className="text-center text-xs text-muted-foreground py-12">אין פניות</p>
+          ) : (
+            filtered.map(ticket => (
+              <button key={ticket.id} onClick={() => loadTicket(ticket)}
+                className={`w-full text-right px-3 py-2.5 hover:bg-primary/5 transition-colors ${activeTicket?.id === ticket.id ? "bg-primary/10" : ""}`}>
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                      <span className="font-medium text-xs truncate">{ticket.subject}</span>
+                      {ticket.unreadAdmin > 0 && (
+                        <span className="bg-primary text-primary-foreground text-[9px] font-bold rounded-full px-1.5 py-0.5">{ticket.unreadAdmin}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <span className="truncate">{ticket.userEmail || ticket.clerkUserId.slice(0, 10)}</span>
+                      <span className={`px-1.5 py-px rounded-full border ${
+                        ticket.status === "open" ? "bg-blue-50 text-blue-600 border-blue-200" :
+                        ticket.status === "in_progress" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                        "bg-green-50 text-green-700 border-green-200"
+                      }`}>{TICKET_STATUS_LABELS[ticket.status] || ticket.status}</span>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                      {new Date(ticket.updatedAt).toLocaleDateString("he-IL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* ── Chat pane ── */}
+      {activeTicket ? (
+        <div className="bg-card border border-primary/10 rounded-xl flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="p-3 border-b border-primary/10 flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm truncate">{activeTicket.subject}</p>
+              <p className="text-xs text-muted-foreground">{activeTicket.userEmail} · #{activeTicket.id}</p>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {["open", "in_progress", "closed"].map(s => (
+                <button key={s} onClick={() => updateStatus(activeTicket.id, s)}
+                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                    activeTicket.status === s
+                      ? s === "closed" ? "bg-green-500/20 text-green-700 border-green-400/40"
+                        : s === "in_progress" ? "bg-amber-500/20 text-amber-700 border-amber-400/40"
+                        : "bg-blue-500/20 text-blue-700 border-blue-400/40"
+                      : "text-muted-foreground border-primary/15 hover:border-primary/30"
+                  }`}>
+                  {TICKET_STATUS_LABELS[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+            {msgLoading ? (
+              <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>
+            ) : messages.map(msg => {
+              const isUser = msg.senderType === "user";
+              return (
+                <div key={msg.id} className={`flex ${isUser ? "justify-start" : "justify-end"}`}>
+                  <div className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-sm ${
+                    isUser ? "bg-secondary/60 rounded-tr-sm" : "bg-primary text-primary-foreground rounded-tl-sm"
+                  }`}>
+                    {!isUser && <p className="text-[10px] font-semibold opacity-70 mb-0.5">{msg.senderLabel}</p>}
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.message}</p>
+                    <p className="text-[9px] mt-1 opacity-50">
+                      {new Date(msg.createdAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Quick replies */}
+          <div className="px-3 py-1.5 border-t border-primary/5 flex gap-1.5 overflow-x-auto">
+            {QUICK_REPLIES.map((qr, i) => (
+              <button key={i} onClick={() => setReply(qr)}
+                className="text-[10px] whitespace-nowrap px-2 py-0.5 border border-primary/15 rounded-full text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors shrink-0">
+                {qr.slice(0, 28)}…
+              </button>
+            ))}
+          </div>
+
+          {/* Reply box */}
+          {activeTicket.status !== "closed" ? (
+            <div className="border-t border-primary/10 flex gap-2 p-3">
+              <textarea
+                value={reply}
+                onChange={e => setReply(e.target.value)}
+                rows={2}
+                placeholder="כתבו תגובה..."
+                className="flex-1 border border-primary/15 rounded-xl px-3 py-2 text-sm bg-background resize-none focus:outline-none"
+              />
+              <Button size="sm" onClick={sendReply} disabled={sending || !reply.trim()}
+                className="self-end gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 h-9">
+                {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                שלח
+              </Button>
+            </div>
+          ) : (
+            <div className="border-t border-primary/10 p-3 text-center text-xs text-muted-foreground">פנייה זו סגורה</div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-card border border-primary/10 rounded-xl flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <MessageSquare className="w-10 h-10 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">בחרו פנייה מהרשימה לצפייה ומענה</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Admin Panel ─────────────────────────────────────────────────────────
-type Tab = "orders" | "templates" | "elements" | "fonts" | "stats";
+type Tab = "orders" | "templates" | "elements" | "fonts" | "stats" | "tickets";
 
 export default function Admin() {
   const [pw, setPw] = useState("");
@@ -1110,7 +1384,7 @@ export default function Admin() {
         )}
 
         <div className="flex gap-0 mb-6 border-b border-primary/10 overflow-x-auto">
-          {([["orders","הזמנות"],["templates","תבניות"],["elements","אלמנטים"],["fonts","פונטים"],["stats","סטטיסטיקות"]] as [Tab,string][]).map(([t, l]) => (
+          {([["orders","הזמנות"],["tickets","פניות"],["templates","תבניות"],["elements","אלמנטים"],["fonts","פונטים"],["stats","סטטיסטיקות"]] as [Tab,string][]).map(([t, l]) => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap ${tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               {l}
@@ -1257,6 +1531,7 @@ export default function Admin() {
             </motion.div>
           )}
 
+          {tab === "tickets"  && token && <motion.div key="tickets" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><TicketsManager token={token} /></motion.div>}
           {tab === "elements" && token && <ElementsManager token={token} />}
           {tab === "fonts"    && token && <FontsManager    token={token} />}
 
