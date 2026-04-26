@@ -9,6 +9,10 @@ import {
   Plus, Copy, Trash2, ChevronUp as Up, ChevronDown as Down,
   ArrowUp, ArrowDown, Unlock, Move, Settings2, Eye, EyeOff,
   AlignCenter, AlignLeft, AlignRight, MoreVertical, Save, Pencil,
+  AlignCenterHorizontal, AlignCenterVertical,
+  AlignEndHorizontal, AlignEndVertical,
+  AlignStartHorizontal, AlignStartVertical,
+  Crosshair,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -274,7 +278,9 @@ function InteractiveCanvas({
     startCX: number; startCY: number;
     startX: number; startY: number;
   } | null>(null);
-  const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
+
+  interface GuideLine { axis: "x" | "y"; pos: number; isCenter?: boolean; isElement?: boolean; }
+  const [guides, setGuides] = useState<GuideLine[]>([]);
 
   const dims = (template.dimensions as { width: number; height: number } | undefined) ?? { width: 600, height: 800 };
   const aspectRatio = `${dims.width}/${dims.height}`;
@@ -309,13 +315,41 @@ function InteractiveCanvas({
     let newX = Math.max(0, Math.min(100, dragRef.current.startX + dxPct));
     let newY = Math.max(0, Math.min(100, dragRef.current.startY + dyPct));
 
-    const newGuides: { x?: number; y?: number } = {};
-    for (const g of GUIDE_POSITIONS) {
-      if (Math.abs(newX - g) < SNAP_THRESHOLD) { newX = g; newGuides.x = g; break; }
+    // Build guide positions: fixed + other elements' positions
+    const dragId = dragRef.current.id;
+    const otherSlotXs = Object.entries(slotPositions)
+      .filter(([id]) => id !== dragId)
+      .map(([, pos]) => pos.x);
+    const otherSlotYs = Object.entries(slotPositions)
+      .filter(([id]) => id !== dragId)
+      .map(([, pos]) => pos.y);
+
+    const allXGuides = [...GUIDE_POSITIONS, ...otherSlotXs];
+    const allYGuides = [...GUIDE_POSITIONS, ...otherSlotYs];
+
+    const newGuides: GuideLine[] = [];
+
+    let snappedX = false;
+    for (const g of allXGuides) {
+      if (Math.abs(newX - g) < SNAP_THRESHOLD) {
+        newX = g;
+        newGuides.push({ axis: "x", pos: g, isCenter: g === 50, isElement: !GUIDE_POSITIONS.includes(g) });
+        snappedX = true;
+        break;
+      }
     }
-    for (const g of GUIDE_POSITIONS) {
-      if (Math.abs(newY - g) < SNAP_THRESHOLD) { newY = g; newGuides.y = g; break; }
+    if (!snappedX) {
+      // Also try snapping logo/element left-edge to fixed guides
     }
+
+    for (const g of allYGuides) {
+      if (Math.abs(newY - g) < SNAP_THRESHOLD) {
+        newY = g;
+        newGuides.push({ axis: "y", pos: g, isCenter: g === 50, isElement: !GUIDE_POSITIONS.includes(g) });
+        break;
+      }
+    }
+
     setGuides(newGuides);
 
     if (dragRef.current.type === "slot") {
@@ -325,7 +359,7 @@ function InteractiveCanvas({
     }
   };
 
-  const handlePointerUp = () => { dragRef.current = null; setGuides({}); };
+  const handlePointerUp = () => { dragRef.current = null; setGuides([]); };
 
   return (
     <div
@@ -378,6 +412,7 @@ function InteractiveCanvas({
         return (
           <div
             key={slot.id}
+            data-slot-id={slot.id}
             style={{
               position: "absolute",
               left: `${pos.x}%`,
@@ -481,12 +516,24 @@ function InteractiveCanvas({
       )}
 
       {/* Smart guides */}
-      {guides.x !== undefined && (
-        <div style={{ position: "absolute", left: `${guides.x}%`, top: 0, height: "100%", width: 1, background: "#D6A84F", opacity: 0.8, pointerEvents: "none", zIndex: 200 }} />
-      )}
-      {guides.y !== undefined && (
-        <div style={{ position: "absolute", top: `${guides.y}%`, left: 0, width: "100%", height: 1, background: "#D6A84F", opacity: 0.8, pointerEvents: "none", zIndex: 200 }} />
-      )}
+      {guides.map((g, i) => {
+        const isCenter = g.isCenter;
+        const isEl = g.isElement;
+        const color = isEl ? "#60A5FA" : (isCenter ? "#D6A84F" : "#D6A84F");
+        const opacity = isCenter ? 1 : (isEl ? 0.9 : 0.65);
+        const thickness = isCenter ? 1.5 : 1;
+        const dashStyle = isEl ? "4px, 3px" : undefined;
+        if (g.axis === "x") return (
+          <div key={i} style={{ position: "absolute", left: `${g.pos}%`, top: 0, height: "100%", width: thickness, background: color, opacity, pointerEvents: "none", zIndex: 200, backgroundImage: dashStyle ? `repeating-linear-gradient(180deg,${color} 0,${color} 4px,transparent 4px,transparent 7px)` : undefined, backgroundColor: dashStyle ? "transparent" : color }}>
+            {isCenter && <span style={{ position: "absolute", top: 4, left: 3, fontSize: 7, fontWeight: 700, color, whiteSpace: "nowrap", textShadow: "0 0 3px #0B1833" }}>מרכז</span>}
+          </div>
+        );
+        return (
+          <div key={i} style={{ position: "absolute", top: `${g.pos}%`, left: 0, width: "100%", height: thickness, background: color, opacity, pointerEvents: "none", zIndex: 200, backgroundImage: dashStyle ? `repeating-linear-gradient(90deg,${color} 0,${color} 4px,transparent 4px,transparent 7px)` : undefined, backgroundColor: dashStyle ? "transparent" : color }}>
+            {isCenter && <span style={{ position: "absolute", right: 4, top: 2, fontSize: 7, fontWeight: 700, color, whiteSpace: "nowrap", textShadow: "0 0 3px #0B1833" }}>מרכז</span>}
+          </div>
+        );
+      })}
 
       {/* Watermark */}
       <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center pointer-events-none" style={{ opacity: 0.25, zIndex: 30 }}>
@@ -853,6 +900,69 @@ export default function Editor() {
       const z = Math.max(1, ((prev[slotId]?.zIndex as number) ?? 10) - 1);
       return { ...prev, [slotId]: { ...(prev[slotId] || {}), zIndex: z } };
     });
+    setSaved(false);
+  };
+
+  // ── Canvas Alignment ──────────────────────────────────────────────────────────
+  type AlignType = "left" | "center-h" | "right" | "top" | "center-v" | "bottom" | "center-both";
+
+  const measureSlotHeightPct = (slotId: string): number => {
+    const canvas = previewRef.current;
+    if (!canvas) return 0;
+    const el = canvas.querySelector(`[data-slot-id="${slotId}"]`) as HTMLElement | null;
+    if (!el) return 0;
+    const canvasRect = canvas.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    // zoom cancels out in ratio
+    return (elRect.height / canvasRect.height) * 100;
+  };
+
+  const alignActiveSlot = (type: AlignType) => {
+    if (!activeSlotId) return;
+    const pos = slotPositions[activeSlotId] ?? { x: 50, y: 50, width: 80 };
+    // Text slots: center anchor at x% (translateX -50%), top-edge at y%
+    let newX = pos.x;
+    let newY = pos.y;
+    switch (type) {
+      case "left":      newX = pos.width / 2;           break;
+      case "center-h":  newX = 50;                       break;
+      case "right":     newX = 100 - pos.width / 2;     break;
+      case "top":       newY = 0;                         break;
+      case "center-v": {
+        const hPct = measureSlotHeightPct(activeSlotId);
+        newY = hPct > 0 ? 50 - hPct / 2 : 50;
+        break;
+      }
+      case "bottom": {
+        const hPct = measureSlotHeightPct(activeSlotId);
+        newY = hPct > 0 ? 100 - hPct : 92;
+        break;
+      }
+      case "center-both": {
+        newX = 50;
+        const hPct = measureSlotHeightPct(activeSlotId);
+        newY = hPct > 0 ? 50 - hPct / 2 : 50;
+        break;
+      }
+    }
+    setSlotPositions(prev => ({ ...prev, [activeSlotId]: { ...pos, x: +newX.toFixed(2), y: +newY.toFixed(2) } }));
+    setSaved(false);
+  };
+
+  const alignLogo = (type: AlignType) => {
+    // Logo: left-edge at x%, top-edge at y%
+    let newX = logoPos.x;
+    let newY = logoPos.y;
+    switch (type) {
+      case "left":      newX = 0;                              break;
+      case "center-h":  newX = (100 - logoPos.width) / 2;     break;
+      case "right":     newX = 100 - logoPos.width;            break;
+      case "top":       newY = 0;                              break;
+      case "center-v":  newY = 40;                             break; // approximate mid
+      case "bottom":    newY = 85;                             break; // approximate
+      case "center-both": newX = (100 - logoPos.width) / 2; newY = 40; break;
+    }
+    setLogoPos(prev => ({ ...prev, x: +newX.toFixed(2), y: +newY.toFixed(2) }));
     setSaved(false);
   };
 
@@ -1256,6 +1366,42 @@ export default function Editor() {
                 {/* Logo */}
                 <LogoUploader logoUrl={logoUrl} onChange={url => { setLogoUrl(url); setSaved(false); }} />
 
+                {/* Logo alignment buttons — shown only when logo is uploaded */}
+                {logoUrl && (
+                  <div className="px-4 pb-3 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[9px] text-muted-foreground uppercase font-medium tracking-wide">מיקום לוגו</label>
+                      <button
+                        title="מרכז לוגו בקנבס"
+                        onClick={() => alignLogo("center-both")}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-colors text-[10px] font-bold"
+                      >
+                        <Crosshair className="w-3 h-3" />
+                        מרכז
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-6 gap-1">
+                      {([
+                        { type: "left" as AlignType,      icon: <AlignStartHorizontal className="w-3.5 h-3.5" />, title: "ישר לוגו לשמאל" },
+                        { type: "center-h" as AlignType,  icon: <AlignCenterHorizontal className="w-3.5 h-3.5" />, title: "מרכז אופקי" },
+                        { type: "right" as AlignType,     icon: <AlignEndHorizontal className="w-3.5 h-3.5" />,   title: "ישר לוגו לימין" },
+                        { type: "top" as AlignType,       icon: <AlignStartVertical className="w-3.5 h-3.5" />,   title: "ישר לוגו לחלק עליון" },
+                        { type: "center-v" as AlignType,  icon: <AlignCenterVertical className="w-3.5 h-3.5" />,  title: "מרכז אנכי" },
+                        { type: "bottom" as AlignType,    icon: <AlignEndVertical className="w-3.5 h-3.5" />,     title: "ישר לוגו לחלק תחתון" },
+                      ] as { type: AlignType; icon: React.ReactNode; title: string }[]).map(({ type, icon, title }) => (
+                        <button
+                          key={type}
+                          title={title}
+                          onClick={() => alignLogo(type)}
+                          className="flex items-center justify-center p-1.5 rounded-lg border border-primary/15 text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/8 transition-all"
+                        >
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Active slot editor */}
                 {activeSlot ? (
                   <div className="p-4 space-y-3">
@@ -1309,9 +1455,44 @@ export default function Editor() {
                       ))}
                     </div>
 
-                    {/* Alignment quick buttons */}
+                    {/* ── Canvas alignment toolbar ── */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[9px] text-muted-foreground uppercase font-medium tracking-wide">יישור לקנבס</label>
+                        <button
+                          title="מרכז בקנבס — אופקי ואנכי"
+                          onClick={() => alignActiveSlot("center-both")}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-colors text-[10px] font-bold"
+                        >
+                          <Crosshair className="w-3 h-3" />
+                          מרכז בקנבס
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-6 gap-1">
+                        {([
+                          { type: "left" as AlignType,      icon: <AlignStartHorizontal className="w-3.5 h-3.5" />, title: "ישר לשמאל הקנבס" },
+                          { type: "center-h" as AlignType,  icon: <AlignCenterHorizontal className="w-3.5 h-3.5" />, title: "מרכז אופקי" },
+                          { type: "right" as AlignType,     icon: <AlignEndHorizontal className="w-3.5 h-3.5" />,   title: "ישר לימין הקנבס" },
+                          { type: "top" as AlignType,       icon: <AlignStartVertical className="w-3.5 h-3.5" />,   title: "ישר לחלק העליון" },
+                          { type: "center-v" as AlignType,  icon: <AlignCenterVertical className="w-3.5 h-3.5" />,  title: "מרכז אנכי" },
+                          { type: "bottom" as AlignType,    icon: <AlignEndVertical className="w-3.5 h-3.5" />,     title: "ישר לחלק התחתון" },
+                        ] as { type: AlignType; icon: React.ReactNode; title: string }[]).map(({ type, icon, title }) => (
+                          <button
+                            key={type}
+                            title={title}
+                            onClick={() => alignActiveSlot(type)}
+                            className="flex items-center justify-center p-1.5 rounded-lg border border-primary/15 text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/8 transition-all"
+                          >
+                            {icon}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="h-px bg-primary/10" />
+                    </div>
+
+                    {/* Text alignment quick buttons */}
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px] text-muted-foreground ml-1">יישור:</span>
+                      <span className="text-[9px] text-muted-foreground ml-1">כיוון טקסט:</span>
                       {[
                         { v: "right" as const, icon: <AlignRight className="w-3 h-3" />, label: "ימין" },
                         { v: "center" as const, icon: <AlignCenter className="w-3 h-3" />, label: "מרכז" },
