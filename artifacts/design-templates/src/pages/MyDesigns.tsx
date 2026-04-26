@@ -233,7 +233,7 @@ function DraftsTab({ drafts, deleting, onDelete, dbTemplates }: { drafts: Design
               {template?.isGradient ? (
                 <div className="absolute inset-0" style={{ background: template.image }} />
               ) : template?.image ? (
-                <img src={template.image} alt={template.title} className="absolute inset-0 w-full h-full object-cover" />
+                <img src={template.image} alt={template.title} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-br from-[#0B1833] to-[#1a2d5a]" />
               )}

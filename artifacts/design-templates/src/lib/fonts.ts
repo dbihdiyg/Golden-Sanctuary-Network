@@ -122,10 +122,6 @@ export function useCustomFonts() {
 export function useCombinedFonts(): FontEntry[] {
   const customFonts = useCustomFonts();
 
-  useEffect(() => {
-    LOCAL_BA_FONTS.forEach(f => { if (f.file) loadLocalFont(f.family, f.file); });
-  }, []);
-
   const custom: FontEntry[] = customFonts.map(f => ({
     name: f.displayName,
     family: f.name,

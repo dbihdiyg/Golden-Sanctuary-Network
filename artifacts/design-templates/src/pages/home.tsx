@@ -1,5 +1,5 @@
 import hadarLogo from "@/assets/logo-hadar.png";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "wouter";
 import { Search, Crown, CheckCircle2, Clock, LayoutGrid, Image as ImageIcon, Video, Calendar, Palette, PenTool, Send, Menu, X, Sun, Moon, User, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -13,12 +13,23 @@ import { t } from "@/lib/i18n";
 import { motion, AnimatePresence, useInView, useAnimation } from "framer-motion";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/[^/]*\/?$/, "");
+const GALLERY_CACHE_KEY = "hadar_gallery_v2";
+const PAGE_SIZE = 12;
+
+function getCachedGallery() {
+  try {
+    const raw = localStorage.getItem(GALLERY_CACHE_KEY);
+    if (raw) return JSON.parse(raw) as { templates: Template[]; categories: string[]; styles: string[] };
+  } catch {}
+  return null;
+}
 
 function useGalleryTemplates() {
-  const [templates, setTemplates] = useState<Template[]>(staticTemplates);
-  const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState<string[]>(staticCategories);
-  const [styles, setStyles] = useState<string[]>(staticStyles);
+  const cached = useMemo(() => getCachedGallery(), []);
+  const [templates, setTemplates] = useState<Template[]>(cached?.templates ?? staticTemplates);
+  const [loading, setLoading] = useState(!cached);
+  const [categories, setCategories] = useState<string[]>(cached?.categories ?? staticCategories);
+  const [styles, setStyles] = useState<string[]>(cached?.styles ?? staticStyles);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/hadar/public-templates`)
@@ -42,9 +53,12 @@ function useGalleryTemplates() {
               dimensions: t.dimensions,
             };
           });
+          const cats = [...new Set(mapped.map(t => t.category).filter(Boolean))];
+          const sts = [...new Set(mapped.map(t => t.style).filter(Boolean))];
           setTemplates(mapped);
-          setCategories([...new Set(mapped.map(t => t.category).filter(Boolean))]);
-          setStyles([...new Set(mapped.map(t => t.style).filter(Boolean))]);
+          setCategories(cats);
+          setStyles(sts);
+          try { localStorage.setItem(GALLERY_CACHE_KEY, JSON.stringify({ templates: mapped, categories: cats, styles: sts })); } catch {}
         }
       })
       .catch(() => {})
@@ -516,6 +530,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState<string>("הכל");
   const [activeStyle, setActiveStyle] = useState<string>("הכל");
   const [searchQuery, setSearchQuery] = useState("");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { theme, toggle } = useTheme();
   const { lang, toggleLang } = useLang();
@@ -530,20 +545,26 @@ export default function Home() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
+    let rafId: number;
     const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => { setScrolled(window.scrollY > 50); });
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", handleScroll); cancelAnimationFrame(rafId); };
   }, []);
 
   useEffect(() => {
+    let rafId: number;
     const handleMouseMove = (e: MouseEvent) => {
-      setMouseX((e.clientX / window.innerWidth) * 2 - 1);
-      setMouseY((e.clientY / window.innerHeight) * 2 - 1);
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        setMouseX((e.clientX / window.innerWidth) * 2 - 1);
+        setMouseY((e.clientY / window.innerHeight) * 2 - 1);
+      });
     };
-    document.addEventListener("mousemove", handleMouseMove);
-    return () => document.removeEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mousemove", handleMouseMove, { passive: true });
+    return () => { document.removeEventListener("mousemove", handleMouseMove); cancelAnimationFrame(rafId); };
   }, []);
 
   const [count, setCount] = useState(0);
@@ -565,12 +586,17 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [clockIntersecting]);
 
-  const filteredTemplates = templates.filter(t => {
+  const filteredTemplates = useMemo(() => templates.filter(t => {
     const matchesCategory = activeCategory === "הכל" || t.category === activeCategory;
     const matchesStyle = activeStyle === "הכל" || t.style === activeStyle;
     const matchesSearch = t.title.includes(searchQuery) || t.subtitle.includes(searchQuery);
     return matchesCategory && matchesStyle && matchesSearch;
-  });
+  }), [templates, activeCategory, activeStyle, searchQuery]);
+
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [activeCategory, activeStyle, searchQuery]);
+
+  const pagedTemplates = filteredTemplates.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredTemplates.length;
 
   const sloganWords = "עיצוב ווידאו לאירועים — במהירות של תבנית, ברמה של סטודיו".split(" ");
 
@@ -974,18 +1000,10 @@ export default function Home() {
               <span>טוען תבניות...</span>
             </div>
           ) : (
-          <motion.div 
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-50px" }}
-            variants={{
-              visible: { transition: { staggerChildren: 0.07 } },
-              hidden: {}
-            }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
-          >
-            {filteredTemplates.length > 0 ? (
-              filteredTemplates.map((template, index) => (
+          <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {pagedTemplates.length > 0 ? (
+              pagedTemplates.map((template, index) => (
                 <TemplateCard key={template.id} template={template} index={index} />
               ))
             ) : (
@@ -996,7 +1014,19 @@ export default function Home() {
                 </Button>
               </div>
             )}
-          </motion.div>
+          </div>
+          {hasMore && (
+            <div className="flex justify-center mt-10">
+              <Button
+                variant="outline"
+                className="border-primary/40 text-primary hover:bg-primary/10 px-10 py-3 text-base"
+                onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+              >
+                טען עוד תבניות ({filteredTemplates.length - visibleCount} נותרו)
+              </Button>
+            </div>
+          )}
+          </>
           )}
         </div>
       </section>

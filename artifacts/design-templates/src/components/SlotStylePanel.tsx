@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Bold, Italic, Underline, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { FontEntry } from "@/lib/fonts";
 import { SvgWarpText } from "./SvgWarpText";
@@ -283,16 +283,27 @@ function SliderRow({ label, min, max, step, value, defaultValue = 0, onChange, u
   value?: number; defaultValue?: number; onChange: (v: number) => void;
   unit?: string; compact?: boolean;
 }) {
-  const v = value ?? defaultValue;
+  const external = value ?? defaultValue;
+  const [local, setLocal] = useState(external);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => { setLocal(external); }, [external]);
+
+  const handleChange = useCallback((newVal: number) => {
+    setLocal(newVal);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => onChange(newVal), 40);
+  }, [onChange]);
+
   return (
     <div className={`flex items-center gap-2 ${compact ? "" : ""}`}>
       <span className="text-[10px] text-muted-foreground shrink-0 w-16 text-right">{label}:</span>
-      <input type="range" min={min} max={max} step={step} value={v}
-        onChange={e => onChange(Number(e.target.value))}
+      <input type="range" min={min} max={max} step={step} value={local}
+        onChange={e => handleChange(Number(e.target.value))}
         className="flex-1 h-1 accent-primary" />
-      <span className="text-[10px] text-muted-foreground w-10 text-left shrink-0">{v}{unit}</span>
-      {v !== defaultValue && (
-        <button onClick={() => onChange(defaultValue)}
+      <span className="text-[10px] text-muted-foreground w-10 text-left shrink-0">{local}{unit}</span>
+      {local !== defaultValue && (
+        <button onClick={() => { setLocal(defaultValue); onChange(defaultValue); }}
           className="text-[10px] text-primary/60 hover:text-primary shrink-0" title="אפס">
           <RotateCcw className="w-3 h-3" />
         </button>

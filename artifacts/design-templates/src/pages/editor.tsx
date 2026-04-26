@@ -699,7 +699,6 @@ export default function Editor() {
 
   useEffect(() => {
     if (!id) { setTemplate(null); return; }
-    console.log("[HADAR] fetching template", id);
     setTemplate("loading");
     fetch(`${API_BASE}/api/hadar/public-templates`)
       .then(r => r.json())
@@ -717,7 +716,6 @@ export default function Editor() {
           galleryImageUrl: found.galleryImageUrl, displayImageUrl: found.displayImageUrl,
           dimensions: found.dimensions,
         };
-        console.log("[HADAR] template loaded:", mapped.id, "slots:", mapped.slots?.length);
         setTemplate(mapped);
       })
       .catch(err => { console.error("[HADAR] template load failed:", err); setTemplate(null); setTemplateLoadError(true); });
@@ -880,7 +878,6 @@ export default function Editor() {
   // ── Payment return ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (paymentStatus === "cancelled") {
-      console.log("[HADAR] payment cancelled by user");
       setPayError("התשלום בוטל — הטיוטה שמורה, ניתן לנסות שוב בכל עת");
       setShowPayment(false);
     } else if (paymentStatus === "success") {
@@ -888,12 +885,10 @@ export default function Editor() {
       if (sessionId && isSignedIn) {
         const verify = async () => {
           try {
-            console.log("[HADAR] verifying payment session:", sessionId);
             const token = await getToken();
             const res = await fetch(`${API_BASE}/api/hadar/checkout/verify?session_id=${sessionId}`, { headers: { Authorization: `Bearer ${token}` } });
             if (res.ok) {
               const data = await res.json();
-              console.log("[HADAR] payment verify result:", data.status);
               if (data.status === "paid") {
                 setPaySuccess(true);
                 setPayError(null);
@@ -1299,7 +1294,6 @@ export default function Editor() {
       if (!savedId) { setPayLoading(false); return; }
       const token = await getToken();
       const fv = getFieldValuesWithElements();
-      console.log("[HADAR] checkout started: designId=", savedId, "templateId=", (template as Template).id);
       const res = await fetch(`${API_BASE}/api/hadar/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -1312,7 +1306,6 @@ export default function Editor() {
       });
       const data = await res.json();
       if (data.url) {
-        console.log("[HADAR] redirecting to Stripe checkout");
         window.location.href = data.url;
         return;
       }
@@ -1327,7 +1320,6 @@ export default function Editor() {
     try {
       // 1. Verify payment on server before generating file
       if (designId) {
-        console.log("[HADAR] verifying download authorization for design=", designId);
         const token = await getToken();
         const authRes = await fetch(`${API_BASE}/api/hadar/designs/${designId}/download-auth`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -1339,11 +1331,9 @@ export default function Editor() {
           setDownloading(false);
           return;
         }
-        console.log("[HADAR] download authorized by server");
       }
 
       // 2. Generate PNG client-side
-      console.log("[HADAR] generating PNG export");
       const html2canvas = (await import("html2canvas")).default;
       const canvas = await html2canvas(previewRef.current, {
         scale: 3, useCORS: true, allowTaint: true,
@@ -1353,7 +1343,6 @@ export default function Editor() {
       link.download = `hadar-${designName.replace(/\s+/g, "-")}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
-      console.log("[HADAR] download complete: design=", designId);
     } catch (err) { console.error("[HADAR] download failed:", err); }
     finally { setDownloading(false); }
   };

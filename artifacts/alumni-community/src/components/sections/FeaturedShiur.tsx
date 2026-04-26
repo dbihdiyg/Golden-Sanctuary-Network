@@ -92,7 +92,7 @@ export default function FeaturedShiur() {
               className="h-52 w-52 rounded-[2rem] overflow-hidden border-2 shadow-[0_0_60px_rgba(245,192,55,0.25),0_30px_80px_rgba(0,0,0,0.6)]"
               style={{ borderColor: "rgba(245,192,55,0.5)" }}
             >
-              <img src="/rabbi-shiur-thumb.jpg" alt="הרב" className="h-full w-full object-cover object-top" />
+              <img src="/rabbi-shiur-thumb.jpg" alt="הרב" loading="lazy" decoding="async" className="h-full w-full object-cover object-top" />
             </div>
             {/* Pulsing ring when playing */}
             {playing && (

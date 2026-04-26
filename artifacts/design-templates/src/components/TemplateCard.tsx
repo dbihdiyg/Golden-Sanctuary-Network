@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ interface TemplateCardProps {
   index: number;
 }
 
-export function TemplateCard({ template, index }: TemplateCardProps) {
+export const TemplateCard = memo(function TemplateCard({ template, index }: TemplateCardProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = () => {
@@ -30,7 +30,7 @@ export function TemplateCard({ template, index }: TemplateCardProps) {
       initial={{ opacity: 0, y: 40, scale: 0.97 }}
       whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.5, delay: index * 0.07, ease: [0.21, 0.47, 0.32, 0.98] }}
+      transition={{ duration: 0.5, delay: Math.min(index, 6) * 0.06, ease: [0.21, 0.47, 0.32, 0.98] }}
       className={`group flex flex-col rounded-2xl overflow-hidden bg-secondary backdrop-blur-sm border border-primary/20 shadow-md hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-2 hover:border-primary/60`}
     >
       <div className="relative aspect-[3/4] overflow-hidden w-full bg-background/50">
@@ -48,6 +48,8 @@ export function TemplateCard({ template, index }: TemplateCardProps) {
           <img 
             src={template.image} 
             alt={template.title} 
+            loading="lazy"
+            decoding="async"
             className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
           />
         )}
@@ -109,4 +111,4 @@ export function TemplateCard({ template, index }: TemplateCardProps) {
       </div>
     </motion.div>
   );
-}
+});
