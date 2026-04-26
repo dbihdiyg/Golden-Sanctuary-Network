@@ -1,37 +1,57 @@
 import { useParams, Link } from "wouter";
-import { ArrowRight, Download, MessageCircle, Palette, CheckCircle2, Share2, Info, Crown } from "lucide-react";
+import { ArrowRight, Download, MessageCircle, Palette, CheckCircle2, Share2, Info, Crown, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { templates } from "@/lib/data";
+import { useTheme } from "@/hooks/useTheme";
+import { motion } from "framer-motion";
 
 export default function TemplateDetail() {
   const params = useParams();
   const id = params.id;
   const template = templates.find(t => t.id === id);
+  const { theme, toggle } = useTheme();
 
   if (!template) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.35 }}
+        className="min-h-screen bg-background flex flex-col items-center justify-center p-4 transition-colors duration-300"
+      >
         <h1 className="font-serif text-3xl mb-4 text-foreground">התבנית לא נמצאה</h1>
         <Link href="/">
           <Button variant="outline" className="border-primary text-primary hover:bg-primary/10">חזור לעמוד הראשי</Button>
         </Link>
-      </div>
+      </motion.div>
     );
   }
 
   const editableItems = ["שמות", "תאריכים", "מיקום", "טקסט", "צבעים"];
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.35 }}
+      className="min-h-screen bg-background text-foreground font-sans transition-colors duration-300"
+    >
       
       {/* Header */}
       <header className="border-b border-white/5 bg-background/80 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group">
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            <span className="font-medium">חזרה לגלריה</span>
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group">
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <span className="font-medium hidden sm:inline">חזרה לגלריה</span>
+            </Link>
+            <button onClick={toggle} className="rounded-full p-2 border border-primary/30 text-primary hover:bg-primary/10 transition-colors">
+              {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+          </div>
           
           <Link href="/">
             <div className="flex flex-col items-center justify-center text-primary cursor-pointer relative">
@@ -130,6 +150,6 @@ export default function TemplateDetail() {
 
         </div>
       </main>
-    </div>
+    </motion.div>
   );
 }

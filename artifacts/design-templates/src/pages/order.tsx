@@ -6,10 +6,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Crown, ArrowRight } from "lucide-react";
+import { CheckCircle2, Crown, ArrowRight, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
+import { motion } from "framer-motion";
 
 export default function Order() {
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const { theme, toggle } = useTheme();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,7 +21,13 @@ export default function Order() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.35 }}
+        className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 transition-colors duration-300"
+      >
         <div className="bg-secondary/50 backdrop-blur-md p-10 rounded-2xl border border-primary/20 text-center max-w-md w-full animate-in fade-in zoom-in-95 duration-500">
           <CheckCircle2 className="w-16 h-16 text-primary mx-auto mb-6" />
           <h2 className="font-serif text-3xl font-bold mb-4 text-foreground">קיבלנו!</h2>
@@ -29,18 +38,29 @@ export default function Order() {
             </Button>
           </Link>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.35 }}
+      className="min-h-screen bg-background text-foreground font-sans transition-colors duration-300"
+    >
       <header className="border-b border-white/5 bg-background/80 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group">
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            <span className="font-medium">חזרה לגלריה</span>
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group">
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <span className="font-medium hidden sm:inline">חזרה לגלריה</span>
+            </Link>
+            <button onClick={toggle} className="rounded-full p-2 border border-primary/30 text-primary hover:bg-primary/10 transition-colors">
+              {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+          </div>
           <Link href="/">
             <div className="flex flex-col items-center justify-center text-primary cursor-pointer relative">
               <Crown className="w-5 h-5 absolute -top-4 text-primary" strokeWidth={2.5} />
@@ -119,6 +139,6 @@ export default function Order() {
 
         </form>
       </main>
-    </div>
+    </motion.div>
   );
 }

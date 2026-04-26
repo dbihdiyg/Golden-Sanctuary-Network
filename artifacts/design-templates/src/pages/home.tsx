@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { Search, Crown, CheckCircle2, Clock, LayoutGrid, Image as ImageIcon, Video, Calendar, Palette, PenTool, Send, Menu, X } from "lucide-react";
+import { Search, Crown, CheckCircle2, Clock, LayoutGrid, Image as ImageIcon, Video, Calendar, Palette, PenTool, Send, Menu, X, Sun, Moon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TemplateCard } from "@/components/TemplateCard";
 import { templates, categories, styles } from "@/lib/data";
+import { useTheme } from "@/hooks/useTheme";
+import { motion, AnimatePresence, useInView, useAnimation } from "framer-motion";
 
 function useIntersectionObserver(options = {}) {
   const [isIntersecting, setIsIntersecting] = useState(false);
@@ -34,9 +36,41 @@ export default function Home() {
   const [activeStyle, setActiveStyle] = useState<string>("הכל");
   const [searchQuery, setSearchQuery] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { theme, toggle } = useTheme();
 
   const [clockRef, clockIntersecting] = useIntersectionObserver({ threshold: 0.5 });
   const [stepsRef, stepsIntersecting] = useIntersectionObserver({ threshold: 0.2 });
+
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (clockIntersecting) {
+      let start = 0;
+      const end = 24;
+      const duration = 1500;
+      const increment = end / (duration / 16);
+      
+      const timer = setInterval(() => {
+        start += increment;
+        if (start >= end) {
+          setCount(end);
+          clearInterval(timer);
+        } else {
+          setCount(Math.floor(start));
+        }
+      }, 16);
+      return () => clearInterval(timer);
+    }
+  }, [clockIntersecting]);
 
   const filteredTemplates = templates.filter(t => {
     const matchesCategory = activeCategory === "הכל" || t.category === activeCategory;
@@ -48,10 +82,21 @@ export default function Home() {
   const sloganWords = "עיצוב ווידאו לאירועים — במהירות של תבנית, ברמה של סטודיו".split(" ");
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/30 selection:text-primary-foreground">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.35 }}
+      className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/30 selection:text-primary-foreground transition-colors duration-300"
+    >
       
       {/* Header/Nav */}
-      <header className="border-b border-white/5 bg-background/90 backdrop-blur-md sticky top-0 z-50">
+      <motion.header 
+        initial={{ y: -80 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
+        className={`border-b border-white/5 sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'bg-background/95 backdrop-blur-xl shadow-[0_4px_20px_-10px_rgba(214,168,79,0.3)] border-b-primary/20' : 'bg-background/90 backdrop-blur-md'}`}
+      >
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Link href="/">
@@ -70,10 +115,15 @@ export default function Home() {
             <a href="#contact" className="text-muted-foreground hover:text-foreground transition-colors">צור קשר</a>
           </nav>
 
-          <div className="md:hidden">
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-foreground p-2">
-              {isMenuOpen ? <X /> : <Menu />}
+          <div className="flex items-center gap-2">
+            <button onClick={toggle} className="rounded-full p-2 border border-primary/30 text-primary hover:bg-primary/10 transition-colors">
+              {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
+            <div className="md:hidden">
+              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-foreground p-2">
+                {isMenuOpen ? <X /> : <Menu />}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -87,7 +137,7 @@ export default function Home() {
             <a href="#contact" className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>צור קשר</a>
           </div>
         )}
-      </header>
+      </motion.header>
 
       {/* Hero Section */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden py-20">
@@ -103,31 +153,42 @@ export default function Home() {
             סטודיו לעיצוב דיגיטלי
           </div>
           
-          <h1 className="font-serif text-7xl md:text-9xl font-bold tracking-tight mb-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 text-primary">
+          <motion.h1 
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            className="font-serif text-7xl md:text-9xl font-bold tracking-tight mb-6 text-primary"
+            style={{ animation: 'goldGlow 4s infinite alternate ease-in-out' }}
+          >
             הדר
-          </h1>
+          </motion.h1>
           
           <div className="flex flex-wrap justify-center gap-x-2 gap-y-1 text-xl md:text-3xl text-foreground max-w-3xl mx-auto mb-12 font-light">
             {sloganWords.map((word, i) => (
-              <span 
-                key={i} 
-                className="animate-word"
-                style={{ animationDelay: `${i * 150 + 500}ms` }}
+              <motion.span 
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: i * 0.08 + 0.5, ease: "easeOut" }}
               >
                 {word}
-              </span>
+              </motion.span>
             ))}
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-[2000ms] fill-mode-both">
-            <Button size="lg" className="w-full sm:w-auto text-lg px-10 h-14 bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_40px_-10px_rgba(214,168,79,0.5)] font-bold transition-all hover:scale-105" onClick={() => document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth' })}>
-              צפו בדוגמאות
-            </Button>
-            <Link href="/order">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-10 h-14 border-primary text-primary hover:bg-primary/10 transition-all hover:scale-105">
-                הזמינו עכשיו
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto text-lg px-10 h-14 bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_40px_-10px_rgba(214,168,79,0.5)] font-bold transition-all btn-shimmer" onClick={() => document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth' })}>
+                צפו בדוגמאות
               </Button>
-            </Link>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
+              <Link href="/order">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-10 h-14 border-primary text-primary hover:bg-primary/10 transition-all">
+                  הזמינו עכשיו
+                </Button>
+              </Link>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -139,17 +200,30 @@ export default function Home() {
             
             <div 
               ref={clockRef}
-              className={`relative w-48 h-48 md:w-64 md:h-64 flex items-center justify-center rounded-full border-2 border-primary/30 bg-background/50 backdrop-blur-sm transition-all duration-1000 ${clockIntersecting ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
+              className={`relative w-48 h-48 md:w-64 md:h-64 flex items-center justify-center rounded-full bg-background/50 backdrop-blur-sm transition-all duration-1000 ${clockIntersecting ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
             >
               {/* Rotating SVG Ring */}
-              <svg className="absolute inset-0 w-full h-full text-primary" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4" className="origin-center animate-[spin_20s_linear_infinite]" />
-              </svg>
+              <motion.svg 
+                className="absolute inset-0 w-full h-full text-primary" 
+                viewBox="0 0 100 100"
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
+              >
+                <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="10 10" />
+                <motion.line 
+                  x1="50" y1="50" x2="50" y2="15" 
+                  stroke="currentColor" strokeWidth="3" strokeLinecap="round"
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+                  style={{ originX: "50px", originY: "50px" }}
+                />
+                <circle cx="50" cy="50" r="4" fill="currentColor" />
+              </motion.svg>
               
-              <div className="text-center">
-                <span className="block text-primary/80 font-medium mb-1">סקיצה ראשונה תוך</span>
-                <div className="font-serif text-6xl md:text-8xl font-bold text-primary tabular-nums leading-none">24</div>
-                <span className="block text-primary/80 font-medium mt-1">שעות</span>
+              <div className="text-center z-10 relative">
+                <span className="block text-primary/80 font-medium mb-1 text-sm md:text-base">סקיצה ראשונה תוך</span>
+                <div className="font-serif text-6xl md:text-8xl font-bold text-primary tabular-nums leading-none bg-background/60 rounded-full px-2 py-1 backdrop-blur-sm shadow-[0_0_15px_rgba(214,168,79,0.2)]">{count}</div>
+                <span className="block text-primary/80 font-medium mt-1 text-sm md:text-base">שעות</span>
               </div>
             </div>
 
@@ -182,7 +256,14 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto auto-rows-[250px]">
             
             {/* הזמנות לחתונה (Large, takes 2 cols on md) */}
-            <div className="md:col-span-2 group relative overflow-hidden rounded-3xl bg-secondary border border-white/5 p-8 flex flex-col justify-end hover:border-primary/50 transition-colors">
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }} 
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.1 }}
+              whileHover={{ scale: 1.02, boxShadow: "0 20px 40px rgba(214,168,79,0.15)" }}
+              className="md:col-span-2 group relative overflow-hidden rounded-3xl bg-secondary border border-white/5 p-8 flex flex-col justify-end hover:border-primary/50 transition-colors"
+            >
               <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent z-10" />
               <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity bg-[url('https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80')] bg-cover bg-center" />
               <div className="relative z-20">
@@ -193,10 +274,17 @@ export default function Home() {
                 <p className="text-muted-foreground mb-4 max-w-sm">עיצובים יוקרתיים שמשדרים הוד והדר, מותאמים אישית לטעם שלכם.</p>
                 <Link href="/order"><span className="text-primary font-bold flex items-center gap-2 group-hover:gap-3 transition-all cursor-pointer">גלה עוד &larr;</span></Link>
               </div>
-            </div>
+            </motion.div>
 
             {/* הזמנות לקידוש */}
-            <div className="group relative overflow-hidden rounded-3xl bg-secondary border border-white/5 p-8 flex flex-col justify-end hover:border-primary/50 transition-colors">
+            <motion.div 
+              initial={{ opacity: 0, x: 30 }} 
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.2 }}
+              whileHover={{ scale: 1.02, boxShadow: "0 20px 40px rgba(214,168,79,0.15)" }}
+              className="group relative overflow-hidden rounded-3xl bg-secondary border border-white/5 p-8 flex flex-col justify-end hover:border-primary/50 transition-colors"
+            >
                <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-background/10 z-10" />
                <div className="relative z-20">
                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-4 text-primary">
@@ -206,10 +294,17 @@ export default function Home() {
                  <p className="text-sm text-muted-foreground mb-4">הזמנות קלאסיות ומרשימות.</p>
                  <Link href="/order"><span className="text-primary font-bold flex items-center gap-2 group-hover:gap-3 transition-all cursor-pointer">גלה עוד &larr;</span></Link>
                </div>
-            </div>
+            </motion.div>
 
             {/* מודעות לאירועים */}
-            <div className="group relative overflow-hidden rounded-3xl bg-secondary border border-white/5 p-8 flex flex-col justify-end hover:border-primary/50 transition-colors">
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }} 
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.3 }}
+              whileHover={{ scale: 1.02, boxShadow: "0 20px 40px rgba(214,168,79,0.15)" }}
+              className="group relative overflow-hidden rounded-3xl bg-secondary border border-white/5 p-8 flex flex-col justify-end hover:border-primary/50 transition-colors"
+            >
                <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-background/10 z-10" />
                <div className="relative z-20">
                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-4 text-primary">
@@ -219,10 +314,17 @@ export default function Home() {
                  <p className="text-sm text-muted-foreground mb-4">מודעות בולטות ומכובדות לישיבות וארגונים.</p>
                  <Link href="/order"><span className="text-primary font-bold flex items-center gap-2 group-hover:gap-3 transition-all cursor-pointer">גלה עוד &larr;</span></Link>
                </div>
-            </div>
+            </motion.div>
 
             {/* קליפי וידאו (Large, takes 2 cols on md) */}
-            <div className="md:col-span-2 group relative overflow-hidden rounded-3xl bg-secondary border border-white/5 p-8 flex flex-col justify-end hover:border-primary/50 transition-colors">
+            <motion.div 
+              initial={{ opacity: 0, x: 30 }} 
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.4 }}
+              whileHover={{ scale: 1.02, boxShadow: "0 20px 40px rgba(214,168,79,0.15)" }}
+              className="md:col-span-2 group relative overflow-hidden rounded-3xl bg-secondary border border-white/5 p-8 flex flex-col justify-end hover:border-primary/50 transition-colors"
+            >
               <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent z-10" />
               <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity bg-[url('https://images.unsplash.com/photo-1516280440502-861053422037?auto=format&fit=crop&q=80')] bg-cover bg-center" />
               <div className="relative z-20">
@@ -233,10 +335,17 @@ export default function Home() {
                 <p className="text-muted-foreground mb-4 max-w-sm">מצגות מרגשות וקליפים קצרים להקרנה באירועים ושמחות.</p>
                 <Link href="/order"><span className="text-primary font-bold flex items-center gap-2 group-hover:gap-3 transition-all cursor-pointer">גלה עוד &larr;</span></Link>
               </div>
-            </div>
+            </motion.div>
 
              {/* עיצובים לחגים ושבת */}
-             <div className="group relative overflow-hidden rounded-3xl bg-secondary border border-white/5 p-8 flex flex-col justify-end hover:border-primary/50 transition-colors hidden md:flex">
+             <motion.div 
+               initial={{ opacity: 0, x: -30 }} 
+               whileInView={{ opacity: 1, x: 0 }}
+               viewport={{ once: true, margin: "-50px" }}
+               transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.5 }}
+               whileHover={{ scale: 1.02, boxShadow: "0 20px 40px rgba(214,168,79,0.15)" }}
+               className="group relative overflow-hidden rounded-3xl bg-secondary border border-white/5 p-8 flex flex-col justify-end hover:border-primary/50 transition-colors hidden md:flex"
+             >
                <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-background/10 z-10" />
                <div className="relative z-20">
                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-4 text-primary">
@@ -246,7 +355,7 @@ export default function Home() {
                  <p className="text-sm text-muted-foreground mb-4">עיצובים ייעודיים למועדי ישראל.</p>
                  <Link href="/order"><span className="text-primary font-bold flex items-center gap-2 group-hover:gap-3 transition-all cursor-pointer">גלה עוד &larr;</span></Link>
                </div>
-            </div>
+            </motion.div>
 
           </div>
         </div>
@@ -263,12 +372,24 @@ export default function Home() {
           <div className="relative flex flex-col md:flex-row justify-between gap-12 md:gap-4">
             {/* Connecting Line Desktop */}
             <div className="hidden md:block absolute top-12 left-[15%] right-[15%] h-0.5 bg-secondary overflow-hidden">
-              <div className={`h-full bg-primary transition-all duration-1500 ease-out ${stepsIntersecting ? 'w-full' : 'w-0'}`} />
+              <motion.div 
+                className="h-full bg-primary origin-left"
+                initial={{ scaleX: 0 }}
+                whileInView={{ scaleX: 1 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+              />
             </div>
 
              {/* Connecting Line Mobile */}
              <div className="md:hidden absolute top-0 bottom-0 right-12 w-0.5 bg-secondary overflow-hidden">
-              <div className={`w-full bg-primary transition-all duration-1500 ease-out ${stepsIntersecting ? 'h-full' : 'h-0'}`} />
+              <motion.div 
+                className="w-full bg-primary origin-top"
+                initial={{ scaleY: 0 }}
+                whileInView={{ scaleY: 1 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+              />
             </div>
 
             {[
@@ -276,20 +397,33 @@ export default function Home() {
               { num: 2, title: "מלאו פרטים", desc: "הגישו בריף קצר עם כל הטקסטים והבקשות שלכם.", icon: <Send /> },
               { num: 3, title: "קבלו תוך 24 שעות", desc: "סקיצה ראשונה אצלכם לאישור, בסטנדרט הגבוה ביותר.", icon: <Clock /> }
             ].map((step, i) => (
-              <div key={i} className={`relative z-10 flex flex-row md:flex-col items-center md:text-center gap-6 md:w-1/3 transition-all duration-700 ${stepsIntersecting ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`} style={{ transitionDelay: `${i * 300}ms` }}>
+              <motion.div 
+                key={i} 
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.7, delay: i * 0.3 }}
+                className="relative z-10 flex flex-row md:flex-col items-center md:text-center gap-6 md:w-1/3"
+              >
                 <div className="w-24 h-24 rounded-full bg-secondary border-4 border-background flex items-center justify-center relative flex-shrink-0 shadow-lg shadow-black/50">
                   <div className="text-primary w-10 h-10">
                     {step.icon}
                   </div>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center shadow-md">
+                  <motion.div 
+                    initial={{ scale: 0 }}
+                    whileInView={{ scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ type: "spring", stiffness: 200, damping: 15, delay: i * 0.3 + 0.3 }}
+                    className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center shadow-md"
+                  >
                     {step.num}
-                  </div>
+                  </motion.div>
                 </div>
                 <div>
                   <h3 className="font-serif text-2xl font-bold mb-2">{step.title}</h3>
                   <p className="text-muted-foreground text-lg">{step.desc}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -362,7 +496,16 @@ export default function Home() {
           </div>
 
           {/* Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={{
+              visible: { transition: { staggerChildren: 0.07 } },
+              hidden: {}
+            }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
+          >
             {filteredTemplates.length > 0 ? (
               filteredTemplates.map((template, index) => (
                 <TemplateCard key={template.id} template={template} index={index} />
@@ -375,7 +518,7 @@ export default function Home() {
                 </Button>
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -416,9 +559,11 @@ export default function Home() {
             ספרו לנו על האירוע שלכם, ונתחיל לעבוד על סקיצה יוקרתית.
           </p>
           <Link href="/order">
-            <Button size="lg" className="bg-background text-foreground hover:bg-background/90 text-xl px-12 h-16 rounded-full shadow-2xl transition-transform hover:scale-105 font-bold">
-              שלחו בריף אישי
-            </Button>
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="inline-block">
+              <Button size="lg" className="bg-background text-foreground hover:bg-background/90 text-xl px-12 h-16 rounded-full shadow-2xl transition-transform font-bold">
+                שלחו בריף אישי
+              </Button>
+            </motion.div>
           </Link>
         </div>
       </section>
@@ -434,6 +579,6 @@ export default function Home() {
           <p className="text-sm text-muted-foreground/60">© {new Date().getFullYear()} הדר. כל הזכויות שמורות.</p>
         </div>
       </footer>
-    </div>
+    </motion.div>
   );
 }

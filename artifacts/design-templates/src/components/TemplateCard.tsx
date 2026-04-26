@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Download, Palette } from "lucide-react";
 import { Template } from "../lib/data";
-import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 
 interface TemplateCardProps {
   template: Template;
@@ -11,32 +11,13 @@ interface TemplateCardProps {
 }
 
 export function TemplateCard({ template, index }: TemplateCardProps) {
-  const [isVisible, setIsVisible] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (cardRef.current) {
-      observer.observe(cardRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
   return (
-    <div 
-      ref={cardRef}
-      className={`group flex flex-col rounded-2xl overflow-hidden bg-secondary backdrop-blur-sm border border-primary/20 shadow-md hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-2 hover:border-primary/60 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-      style={{ transitionDelay: `${index * 50}ms` }}
+    <motion.div 
+      initial={{ opacity: 0, y: 40, scale: 0.97 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.5, delay: index * 0.07, ease: [0.21, 0.47, 0.32, 0.98] }}
+      className={`group flex flex-col rounded-2xl overflow-hidden bg-secondary backdrop-blur-sm border border-primary/20 shadow-md hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-2 hover:border-primary/60`}
     >
       <div className="relative aspect-[3/4] overflow-hidden w-full bg-background/50">
         {template.isGradient ? (
@@ -91,6 +72,6 @@ export function TemplateCard({ template, index }: TemplateCardProps) {
           </Button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
