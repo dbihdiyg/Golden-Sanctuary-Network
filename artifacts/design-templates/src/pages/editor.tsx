@@ -883,41 +883,70 @@ export default function Editor() {
 
   // ── Payment return ────────────────────────────────────────────────────────────
   useEffect(() => {
+    if (!isLoaded) return; // Wait for Clerk to fully initialize before acting
     if (paymentStatus === "cancelled") {
+      console.log("[HADAR DEBUG] payment cancelled by user");
       setPayError("התשלום בוטל — הטיוטה שמורה, ניתן לנסות שוב בכל עת");
       setShowPayment(false);
     } else if (paymentStatus === "success") {
       const sessionId = searchParams.get("session_id");
-      if (sessionId && isSignedIn) {
-        const verify = async () => {
-          setVerifying(true);
-          try {
-            const token = await getToken();
-            const res = await fetch(`${API_BASE}/api/hadar/checkout/verify?session_id=${sessionId}`, { headers: { Authorization: `Bearer ${token}` } });
-            if (res.ok) {
-              const data = await res.json();
-              if (data.status === "paid") {
-                setPaySuccess(true);
-                setPayError(null);
-                setShowPayment(false);
-              } else {
-                setPayError("התשלום לא אושר עדיין — נסו לרענן את הדף, או פנו לתמיכה");
-              }
-            } else {
-              const errData = await res.json().catch(() => ({}));
-              setPayError(`שגיאה באימות תשלום: ${errData.error || res.status}`);
-            }
-          } catch (err) {
-            console.error("[HADAR] payment verify error:", err);
-            setPayError("שגיאת רשת — נסו לרענן את הדף");
-          } finally {
-            setVerifying(false);
-          }
-        };
-        verify();
+      console.log("[HADAR DEBUG] returned from Stripe. session_id=", sessionId, "isSignedIn=", isSignedIn);
+      if (!sessionId) {
+        setPayError("שגיאה: session_id חסר מה-URL — פנו לתמיכה");
+        return;
       }
+      if (!isSignedIn) {
+        setPayError("נדרשת כניסה לחשבון לאימות תשלום — אנא התחברו ונסו שנית");
+        return;
+      }
+      const verify = async () => {
+        setVerifying(true);
+        console.log("[HADAR DEBUG] verifying payment with server...");
+        try {
+          const token = await getToken();
+          const res = await fetch(`${API_BASE}/api/hadar/checkout/verify?session_id=${sessionId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await res.json().catch(() => ({}));
+          console.log("[HADAR DEBUG] verify response:", res.status, data);
+          if (res.ok && data.status === "paid") {
+            console.log("[HADAR DEBUG] payment verified ✓ — download unlocked");
+            setPaySuccess(true);
+            setPayError(null);
+            setShowPayment(false);
+          } else if (res.ok && data.status === "unpaid") {
+            console.warn("[HADAR DEBUG] Stripe session not paid yet, will retry in 3s");
+            // Stripe sometimes needs a moment — retry once after 3 s
+            setTimeout(async () => {
+              try {
+                const res2 = await fetch(`${API_BASE}/api/hadar/checkout/verify?session_id=${sessionId}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                const data2 = await res2.json().catch(() => ({}));
+                console.log("[HADAR DEBUG] verify retry response:", res2.status, data2);
+                if (res2.ok && data2.status === "paid") {
+                  setPaySuccess(true);
+                  setPayError(null);
+                } else {
+                  setPayError("התשלום לא אושר — אם חויבתם פנו לתמיכה");
+                }
+              } catch { setPayError("שגיאת רשת באימות תשלום — נסו לרענן את הדף"); }
+              finally { setVerifying(false); }
+            }, 3000);
+            return; // keep verifying=true until timeout resolves
+          } else {
+            setPayError(`שגיאה באימות תשלום: ${data.error || res.status}`);
+          }
+        } catch (err) {
+          console.error("[HADAR DEBUG] payment verify error:", err);
+          setPayError("שגיאת רשת — נסו לרענן את הדף");
+        } finally {
+          setVerifying(false);
+        }
+      };
+      verify();
     }
-  }, [paymentStatus, isSignedIn]);
+  }, [paymentStatus, isSignedIn, isLoaded]);
 
   // ── Keyboard: arrow keys to nudge selected slot ───────────────────────────────
   useEffect(() => {
@@ -1294,11 +1323,15 @@ export default function Editor() {
 
   const handleSave = () => handleAutoSave();
 
-  const handleDownloadClick = async () => {
+  const handleDirectCheckout = async () => {
     if (paySuccess) { handleDownload(); return; }
-    if (!isSignedIn) return;
-    const savedId = await handleAutoSave();
-    if (savedId) setShowPayment(true);
+    if (!isSignedIn) {
+      if (template && template !== "loading") {
+        redirectToSignIn({ redirectUrl: `${basePath}/editor/${(template as Template).id}` });
+      }
+      return;
+    }
+    handlePay();
   };
 
   const handlePay = async () => {
@@ -1306,14 +1339,18 @@ export default function Editor() {
     setPayLoading(true);
     setPayError(null);
     try {
+      console.log("[HADAR DEBUG] step 1: saving design...");
       const savedId = await handleAutoSave();
       if (!savedId) {
         setPayError("שגיאה בשמירת העיצוב — נסו שנית");
         setPayLoading(false);
         return;
       }
+      console.log("[HADAR DEBUG] step 2: design saved, id=", savedId);
+
       const token = await getToken();
       const fv = getFieldValuesWithElements();
+      console.log("[HADAR DEBUG] step 3: creating order & checkout session...");
       const res = await fetch(`${API_BASE}/api/hadar/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -1326,14 +1363,20 @@ export default function Editor() {
       });
       const data = await res.json();
       if (data.url) {
-        window.location.href = data.url;
+        console.log("[HADAR DEBUG] step 4: order created ✓ — redirecting to Stripe checkout");
+        // Escape Replit iframe if needed, then redirect to Stripe
+        try {
+          (window.top || window).location.href = data.url;
+        } catch {
+          window.location.href = data.url;
+        }
         return;
       }
       const errMsg = data.error || "שגיאה לא ידועה";
-      console.error("[HADAR] checkout error:", errMsg);
+      console.error("[HADAR DEBUG] checkout error:", errMsg);
       setPayError(`שגיאה בפתיחת דף התשלום: ${errMsg}`);
     } catch (err: any) {
-      console.error("[HADAR] checkout error:", err);
+      console.error("[HADAR DEBUG] checkout error:", err);
       setPayError("שגיאת רשת — בדקו את החיבור ונסו שנית");
     }
     setPayLoading(false);
@@ -1349,13 +1392,14 @@ export default function Editor() {
     try {
       // 1. Verify payment on server before generating file
       if (designId) {
+        console.log("[HADAR DEBUG] step 5: verifying download authorization for design=", designId);
         const token = await getToken();
         const authRes = await fetch(`${API_BASE}/api/hadar/designs/${designId}/download-auth`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!authRes.ok) {
           const errData = await authRes.json().catch(() => ({}));
-          console.error("[HADAR] download not authorized:", errData);
+          console.error("[HADAR DEBUG] download not authorized:", errData);
           if (authRes.status === 403) {
             setPayError("ההורדה דורשת תשלום — יש לבצע תשלום תחילה");
           } else {
@@ -1364,6 +1408,7 @@ export default function Editor() {
           setDownloading(false);
           return;
         }
+        console.log("[HADAR DEBUG] step 6: download authorized ✓ — generating PNG...");
       }
 
       // 2. Generate PNG client-side (with WebGL/Three.js canvas fix)
@@ -1404,8 +1449,9 @@ export default function Editor() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      console.log("[HADAR DEBUG] step 7: file generated & download triggered ✓");
     } catch (err: any) {
-      console.error("[HADAR] download failed:", err);
+      console.error("[HADAR DEBUG] download failed:", err);
       setPayError(`שגיאה ביצירת הקובץ: ${err?.message || "נסו שנית"}`);
     } finally {
       setDownloading(false);
@@ -2079,6 +2125,30 @@ export default function Editor() {
 
           {/* Bottom action bar */}
           <div className="border-t border-primary/10 bg-card p-3 space-y-2 shrink-0">
+
+            {/* ── Debug status panel (visible when payment is in progress) ── */}
+            {(paymentStatus === "success" || paymentStatus === "cancelled" || verifying || paySuccess) && (
+              <div className="rounded-xl border border-primary/15 bg-secondary/30 px-3 py-2 space-y-1.5 text-[11px]" dir="rtl">
+                <p className="font-bold text-foreground text-xs mb-1">סטטוס זרימת תשלום:</p>
+                <div className={`flex items-center gap-2 ${designId ? "text-green-600" : "text-muted-foreground"}`}>
+                  <span>{designId ? "✅" : "⬜"}</span>
+                  <span>הזמנה נוצרה {designId ? `(#${designId})` : ""}</span>
+                </div>
+                <div className={`flex items-center gap-2 ${paymentStatus === "success" ? "text-green-600" : paymentStatus === "cancelled" ? "text-red-500" : "text-muted-foreground"}`}>
+                  <span>{paymentStatus === "success" ? "✅" : paymentStatus === "cancelled" ? "❌" : "⬜"}</span>
+                  <span>{paymentStatus === "success" ? "חזרה מ-Stripe בהצלחה" : paymentStatus === "cancelled" ? "תשלום בוטל" : "ממתין לתשלום"}</span>
+                </div>
+                <div className={`flex items-center gap-2 ${verifying ? "text-amber-500" : paySuccess ? "text-green-600" : "text-muted-foreground"}`}>
+                  {verifying ? <Loader2 className="w-3 h-3 animate-spin" /> : <span>{paySuccess ? "✅" : "⬜"}</span>}
+                  <span>{verifying ? "מאמת תשלום..." : paySuccess ? "תשלום אומת ✓" : "ממתין לאימות"}</span>
+                </div>
+                <div className={`flex items-center gap-2 ${paySuccess ? "text-green-600" : "text-muted-foreground"}`}>
+                  <span>{paySuccess ? "✅" : "⬜"}</span>
+                  <span>{paySuccess ? "הורדה פתוחה!" : "הורדה נעולה"}</span>
+                </div>
+              </div>
+            )}
+
             {verifying ? (
               <Button disabled className="w-full gap-2 h-10">
                 <Loader2 className="w-4 h-4 animate-spin" />מאמת תשלום...
@@ -2086,7 +2156,7 @@ export default function Editor() {
             ) : paySuccess ? (
               <>
                 <Button onClick={handleDownload} disabled={downloading}
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-10 font-bold shadow-lg">
+                  className="w-full bg-green-600 hover:bg-green-700 text-white gap-2 h-10 font-bold shadow-lg">
                   {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                   {downloading ? "מכין קובץ..." : "הורדת PNG איכות גבוהה"}
                 </Button>
@@ -2096,20 +2166,18 @@ export default function Editor() {
               </>
             ) : (
               <>
-                {isSignedIn ? (
-                  <Button onClick={handleDownloadClick} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-10 font-bold shadow-lg">
-                    <CreditCard className="w-4 h-4" />המשך לתשלום — ₪49
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => redirectToSignIn({ redirectUrl: `${basePath}/editor/${tmpl.id}` })}
-                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-10 font-bold shadow-lg"
-                  >
-                    <CreditCard className="w-4 h-4" />המשך לתשלום — ₪49
-                  </Button>
-                )}
+                <Button
+                  onClick={handleDirectCheckout}
+                  disabled={payLoading}
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-10 font-bold shadow-lg"
+                >
+                  {payLoading
+                    ? <><Loader2 className="w-4 h-4 animate-spin" />מעביר לתשלום...</>
+                    : <><CreditCard className="w-4 h-4" />המשך לתשלום — ₪49</>
+                  }
+                </Button>
                 <p className="text-[10px] text-muted-foreground text-center">
-                  {isSignedIn ? "תשלום מאובטח דרך Stripe" : "נדרשת כניסה לחשבון לביצוע תשלום"}
+                  {isSignedIn ? "תשלום מאובטח דרך Stripe • לחיצה אחת בלבד" : "נדרשת כניסה לחשבון לביצוע תשלום"}
                 </p>
                 <Button onClick={handleWhatsApp} variant="outline" className="w-full border-primary/20 text-primary hover:bg-primary/10 gap-2 h-8 text-xs">
                   <MessageCircle className="w-3.5 h-3.5" />שלחו לסטודיו דרך ווצאפ
@@ -2120,15 +2188,6 @@ export default function Editor() {
         </aside>
       </div>
 
-      {/* Payment modal */}
-      {showPayment && (
-        <PaymentWall
-          onPay={handlePay}
-          onClose={() => setShowPayment(false)}
-          loading={payLoading}
-          designName={designName}
-        />
-      )}
     </div>
   );
 }

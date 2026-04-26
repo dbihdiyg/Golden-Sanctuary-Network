@@ -81,9 +81,23 @@ router.post("/hadar/checkout", requireAuth(), async (req: any, res) => {
       console.log(`[HADAR] created new design: ${savedDesign?.id}`);
     }
 
-    const origin = req.headers.origin || `${req.protocol}://${req.headers.host}`;
+    // Derive origin robustly: prefer X-Forwarded headers (Replit proxy), then Origin, then Referer, then host
+    const forwardedProto = (req.headers["x-forwarded-proto"] as string || "").split(",")[0].trim();
+    const forwardedHost = (req.headers["x-forwarded-host"] as string || "").split(",")[0].trim();
+    let origin: string;
+    if (forwardedProto && forwardedHost) {
+      origin = `${forwardedProto}://${forwardedHost}`;
+    } else if (req.headers.origin) {
+      origin = req.headers.origin as string;
+    } else if (req.headers.referer) {
+      try { origin = new URL(req.headers.referer as string).origin; } catch { origin = `${req.protocol}://${req.headers.host}`; }
+    } else {
+      origin = `${req.protocol}://${req.headers.host}`;
+    }
+    console.log(`[HADAR DEBUG] checkout origin resolved: ${origin}`);
     const successUrl = `${origin}/design-templates/editor/${templateId}?design=${savedDesign.id}&payment=success&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${origin}/design-templates/editor/${templateId}?design=${savedDesign.id}&payment=cancelled`;
+    console.log(`[HADAR DEBUG] successUrl: ${successUrl}`);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
