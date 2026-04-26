@@ -173,6 +173,20 @@ router.delete("/hadar/admin/templates/:id", adminAuth, async (req, res) => {
   }
 });
 
+// ─── Public: list all active templates ───────────────────────────────────────
+router.get("/hadar/public-templates", async (_req, res) => {
+  try {
+    const templates = await db
+      .select()
+      .from(hadarTemplates)
+      .where(eq(hadarTemplates.isActive, true))
+      .orderBy(hadarTemplates.id);
+    res.json(templates);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Public: get template by slug (for user editor) ──────────────────────────
 router.get("/hadar/templates/:slug", async (req, res) => {
   try {
@@ -182,6 +196,59 @@ router.get("/hadar/templates/:slug", async (req, res) => {
       .where(eq(hadarTemplates.slug, req.params.slug));
     if (!template) return res.status(404).json({ error: "Not found" });
     res.json(template);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Admin: seed default templates ────────────────────────────────────────────
+const DEFAULT_SEEDS = [
+  { slug: "kiddush-classic",  title: "שבת שבתון",         subtitle: "הזמנה לקידוש",        category: "הזמנות לקידוש",   style: "זהב",        price: 2900,  imageUrl: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)" },
+  { slug: "wedding-luxury",   title: "יום שמחתנו",         subtitle: "הזמנה לחתונה",        category: "הזמנות לחתונה",   style: "יוקרתי",    price: 7900,  imageUrl: null },
+  { slug: "bar-mitzvah",      title: "כי הגיע הזמן",       subtitle: "מודעה לבר מצווה",     category: "מודעות לאירועים", style: "קלאסי",     price: 4900,  imageUrl: null },
+  { slug: "torah-class",      title: "עמוד ישיבה",          subtitle: "מודעה לשיעור תורה",  category: "מודעות לישיבות",  style: "מינימליסטי", price: 1900,  imageUrl: null },
+  { slug: "parasha",          title: "פרשת השבוע",         subtitle: "עיצוב לשבת",          category: "מודעות לאירועים", style: "מודרני",    price: 2500,  imageUrl: "linear-gradient(135deg, #331520 0%, #1a0b10 100%)" },
+  { slug: "charity",          title: "יד עוזרת",            subtitle: "פוסטר גיוס תרומות",  category: "מודעות לאירועים", style: "חסידי",     price: 3900,  imageUrl: null },
+  { slug: "housewarming",     title: "בית חדש שמחה חדשה", subtitle: "הזמנה לחנוכת הבית",  category: "הזמנות לקידוש",   style: "זהב",        price: 3500,  imageUrl: "linear-gradient(135deg, #172554 0%, #082f49 100%)" },
+  { slug: "yeshiva-event",    title: "ערב עיון",            subtitle: "מודעה לאירוע ישיבה", category: "מודעות לישיבות",  style: "קלאסי",     price: 2900,  imageUrl: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)" },
+  { slug: "wedding-video",    title: "ברוכים הבאים",       subtitle: "קליפ וידאו לחתונה",   category: "תבניות וידאו",    style: "יוקרתי",    price: 12000, imageUrl: null },
+  { slug: "passover",         title: "ליל הסדר",           subtitle: "עיצוב לחג הפסח",      category: "עיצובים לחגים",   style: "מינימליסטי", price: 4500,  imageUrl: "linear-gradient(135deg, #2e1065 0%, #4c1d95 100%)" },
+  { slug: "brit-milah",       title: "שמחת הברית",         subtitle: "הזמנה לברית מילה",   category: "הזמנות לקידוש",   style: "זהב",        price: 5500,  imageUrl: "linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%)" },
+  { slug: "kol-kore",         title: "קול קורא",            subtitle: "פוסטר לאסיפה חשובה", category: "מודעות לישיבות",  style: "חסידי",     price: 2200,  imageUrl: "linear-gradient(135deg, #022c22 0%, #450a0a 100%)" },
+];
+
+router.post("/hadar/admin/seed", adminAuth, async (_req, res) => {
+  try {
+    const existing = await db.select({ id: hadarTemplates.id }).from(hadarTemplates);
+    if (existing.length > 0) {
+      return res.json({ message: "already_seeded", count: existing.length });
+    }
+    const seeded = await db
+      .insert(hadarTemplates)
+      .values(DEFAULT_SEEDS.map(t => ({ ...t, slots: [], isActive: true })))
+      .returning();
+    res.json({ seeded: seeded.length, templates: seeded });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Admin: quick patch (price / isActive / title) ────────────────────────────
+router.patch("/hadar/admin/templates/:id", adminAuth, async (req, res) => {
+  try {
+    const allowed = ["price", "isActive", "title", "subtitle", "category", "style"] as const;
+    const patch: Record<string, any> = {};
+    for (const key of allowed) {
+      if (key in req.body) patch[key] = req.body[key];
+    }
+    patch.updatedAt = new Date();
+    const [updated] = await db
+      .update(hadarTemplates)
+      .set(patch)
+      .where(eq(hadarTemplates.id, Number(req.params.id)))
+      .returning();
+    if (!updated) return res.status(404).json({ error: "Not found" });
+    res.json(updated);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

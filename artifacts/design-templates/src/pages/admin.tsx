@@ -505,6 +505,44 @@ function TemplateEditor({
   );
 }
 
+// ─── Inline-editable price cell ───────────────────────────────────────────────
+function PriceCell({ tmpl, token, onUpdate }: { tmpl: DBTemplate; token: string; onUpdate: (id: number, price: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(String(Math.round(tmpl.price / 100)));
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const priceShekels = parseFloat(val);
+    if (isNaN(priceShekels) || priceShekels <= 0) { setEditing(false); setVal(String(Math.round(tmpl.price / 100))); return; }
+    setSaving(true);
+    try {
+      await adminFetch(`/hadar/admin/templates/${tmpl.id}`, token, {
+        method: "PATCH", body: JSON.stringify({ price: Math.round(priceShekels * 100) }),
+      });
+      onUpdate(tmpl.id, Math.round(priceShekels * 100));
+    } finally { setSaving(false); setEditing(false); }
+  }
+
+  if (editing) return (
+    <div className="flex items-center gap-1">
+      <span className="text-primary text-sm">₪</span>
+      <input
+        type="number" value={val} onChange={e => setVal(e.target.value)} autoFocus
+        onBlur={save} onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") { setEditing(false); setVal(String(Math.round(tmpl.price / 100))); } }}
+        className="w-20 bg-background border border-primary/40 rounded px-2 py-1 text-sm text-foreground outline-none"
+      />
+      {saving && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
+    </div>
+  );
+
+  return (
+    <button onClick={() => setEditing(true)} className="flex items-center gap-1 group" title="לחץ לעריכת מחיר">
+      <span className="font-bold text-primary text-sm group-hover:underline">₪{Math.round(tmpl.price / 100)}</span>
+      <Edit2 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+    </button>
+  );
+}
+
 // ─── Main Admin Panel ─────────────────────────────────────────────────────────
 type Tab = "orders" | "templates" | "stats";
 
@@ -518,6 +556,8 @@ export default function Admin() {
   const [templates, setTemplates] = useState<DBTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Partial<DBTemplate> | null | "new">(null);
+  const [seeding, setSeeding] = useState(false);
+  const [seedMsg, setSeedMsg] = useState<string | null>(null);
 
   async function login() {
     if (!pw.trim()) return;
@@ -575,6 +615,34 @@ export default function Admin() {
     if (!token || !confirm("למחוק את התבנית?")) return;
     await adminFetch(`/hadar/admin/templates/${id}`, token, { method: "DELETE" });
     setTemplates(prev => prev.filter(t => t.id !== id));
+  }
+
+  async function toggleActive(id: number, current: boolean) {
+    if (!token) return;
+    const updated = await adminFetch(`/hadar/admin/templates/${id}`, token, {
+      method: "PATCH", body: JSON.stringify({ isActive: !current }),
+    });
+    setTemplates(prev => prev.map(t => t.id === id ? { ...t, isActive: updated.isActive } : t));
+  }
+
+  async function seedTemplates() {
+    if (!token) return;
+    setSeeding(true);
+    setSeedMsg(null);
+    try {
+      const result = await adminFetch("/hadar/admin/seed", token, { method: "POST" });
+      if (result.message === "already_seeded") {
+        setSeedMsg(`כבר קיימות ${result.count} תבניות — ריבוי ייבוא אינו נחוץ`);
+      } else {
+        setSeedMsg(`יובאו ${result.seeded} תבניות ברירת מחדל בהצלחה!`);
+        await loadData(token);
+      }
+    } catch (err: any) {
+      setSeedMsg(`שגיאה: ${err.message}`);
+    } finally {
+      setSeeding(false);
+      setTimeout(() => setSeedMsg(null), 5000);
+    }
   }
 
   // ── Login screen ──
@@ -742,48 +810,115 @@ export default function Admin() {
 
           {/* ── Templates ── */}
           {tab === "templates" && (
-            <motion.div key="templates" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <div className="bg-card border border-primary/10 rounded-xl overflow-hidden">
-                <div className="p-4 border-b border-primary/10 flex items-center justify-between">
-                  <h2 className="font-semibold">תבניות ({templates.length})</h2>
+            <motion.div key="templates" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+
+              {/* Toolbar */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm text-muted-foreground">{templates.length} תבניות בגלריה</span>
+                  {seedMsg && (
+                    <span className={`text-xs px-3 py-1 rounded-full border ${seedMsg.startsWith("שגיאה") ? "text-red-400 border-red-400/30 bg-red-400/10" : "text-green-400 border-green-400/30 bg-green-400/10"}`}>
+                      {seedMsg}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {templates.length === 0 && (
+                    <Button size="sm" variant="outline" onClick={seedTemplates} disabled={seeding}
+                      className="gap-2 border-primary/30 text-primary hover:bg-primary/10">
+                      {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                      ייבא 12 תבניות ברירת מחדל
+                    </Button>
+                  )}
+                  {templates.length > 0 && (
+                    <Button size="sm" variant="outline" onClick={seedTemplates} disabled={seeding}
+                      className="gap-1.5 border-muted text-muted-foreground hover:text-foreground text-xs">
+                      {seeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                      בדוק ייבוא
+                    </Button>
+                  )}
                   <Button size="sm" className="bg-primary text-primary-foreground gap-2" onClick={() => setEditingTemplate("new")}>
                     <Plus className="w-4 h-4" /> תבנית חדשה
                   </Button>
                 </div>
-                {templates.length === 0 && !loading && (
-                  <p className="text-muted-foreground text-center py-12 text-sm">אין תבניות עדיין — צור תבנית חדשה</p>
-                )}
-                <div className="divide-y divide-primary/5">
-                  {templates.map(tmpl => (
-                    <div key={tmpl.id} className="p-4 flex items-center gap-4 hover:bg-primary/5 transition-colors">
-                      <div className="w-16 h-16 rounded-lg overflow-hidden border border-primary/20 flex-shrink-0 bg-secondary/30">
+              </div>
+
+              {/* Empty state */}
+              {templates.length === 0 && !loading && (
+                <div className="bg-card border border-dashed border-primary/20 rounded-xl p-16 text-center">
+                  <Package className="w-12 h-12 text-primary/20 mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-2">אין תבניות עדיין</p>
+                  <p className="text-xs text-muted-foreground/60 mb-6">לחץ "ייבא 12 תבניות ברירת מחדל" כדי להתחיל, או צור תבנית חדשה ידנית</p>
+                </div>
+              )}
+
+              {/* Gallery grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {templates.map(tmpl => {
+                  const isGrad = !tmpl.imageUrl || /gradient|linear|radial/i.test(tmpl.imageUrl);
+                  return (
+                    <div key={tmpl.id} className="bg-card border border-primary/10 rounded-xl overflow-hidden hover:border-primary/30 transition-colors group">
+
+                      {/* Thumbnail */}
+                      <div className="relative h-40 bg-secondary/30 overflow-hidden">
                         {tmpl.imageUrl
-                          ? <img src={tmpl.imageUrl} alt={tmpl.title} className="w-full h-full object-cover" />
-                          : <div className="w-full h-full flex items-center justify-center"><Package className="w-6 h-6 text-primary/40" /></div>
+                          ? isGrad
+                            ? <div className="w-full h-full" style={{ background: tmpl.imageUrl }} />
+                            : <img src={tmpl.imageUrl} alt={tmpl.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          : (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-2" style={{ background: "linear-gradient(135deg, #0B1833, #1a2d54)" }}>
+                              <Package className="w-8 h-8 text-primary/40" />
+                              <span className="text-[10px] text-primary/30">ללא תמונה</span>
+                            </div>
+                          )
                         }
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-foreground">{tmpl.title}</p>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${tmpl.isActive ? "bg-green-400/10 text-green-400" : "bg-red-400/10 text-red-400"}`}>
-                            {tmpl.isActive ? "פעיל" : "כבוי"}
-                          </span>
+                        {/* Active toggle overlay */}
+                        <div className="absolute top-2 right-2">
+                          <button
+                            onClick={() => toggleActive(tmpl.id, tmpl.isActive)}
+                            className={`text-[10px] px-2 py-1 rounded-full border font-medium transition-all ${
+                              tmpl.isActive
+                                ? "bg-green-400/20 text-green-400 border-green-400/40 hover:bg-red-400/20 hover:text-red-400 hover:border-red-400/40"
+                                : "bg-red-400/20 text-red-400 border-red-400/40 hover:bg-green-400/20 hover:text-green-400 hover:border-green-400/40"
+                            }`}
+                          >
+                            {tmpl.isActive ? "פעיל ✓" : "כבוי"}
+                          </button>
                         </div>
-                        <p className="text-sm text-muted-foreground">{tmpl.category} · {tmpl.style}</p>
-                        <p className="text-xs text-muted-foreground/70">{tmpl.slots.length} שדות · ₪{tmpl.price / 100} · slug: {tmpl.slug}</p>
+                        {/* Edit button overlay */}
+                        <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button size="sm" variant="secondary" className="h-7 text-xs gap-1 bg-background/80 backdrop-blur-sm" onClick={() => setEditingTemplate(tmpl)}>
+                            <Edit2 className="w-3 h-3" /> ערוך
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="font-bold text-primary">₪{tmpl.price / 100}</span>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => setEditingTemplate(tmpl)}>
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10" onClick={() => deleteTemplate(tmpl.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+
+                      {/* Info */}
+                      <div className="p-3">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm text-foreground truncate">{tmpl.title}</p>
+                            <p className="text-xs text-muted-foreground truncate">{tmpl.subtitle}</p>
+                          </div>
+                          {token && <PriceCell tmpl={tmpl} token={token} onUpdate={(id, price) => setTemplates(prev => prev.map(t => t.id === id ? { ...t, price } : t))} />}
+                        </div>
+
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-primary/5">
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">{tmpl.category}</span>
+                            <span className="text-[10px] bg-secondary text-muted-foreground px-1.5 py-0.5 rounded">{tmpl.style}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-muted-foreground/50">{tmpl.slots.length} שדות</span>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive/60 hover:text-destructive hover:bg-destructive/10" onClick={() => deleteTemplate(tmpl.id)}>
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             </motion.div>
           )}

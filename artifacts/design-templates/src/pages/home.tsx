@@ -1,16 +1,52 @@
 import hadarLogo from "@/assets/logo-hadar.png";
 import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { Search, Crown, CheckCircle2, Clock, LayoutGrid, Image as ImageIcon, Video, Calendar, Palette, PenTool, Send, Menu, X, Sun, Moon, User } from "lucide-react";
+import { Search, Crown, CheckCircle2, Clock, LayoutGrid, Image as ImageIcon, Video, Calendar, Palette, PenTool, Send, Menu, X, Sun, Moon, User, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth, UserButton, SignInButton } from "@clerk/react";
 import { TemplateCard } from "@/components/TemplateCard";
-import { templates, categories, styles } from "@/lib/data";
+import { templates as staticTemplates, categories as staticCategories, styles as staticStyles, Template } from "@/lib/data";
 import { useTheme } from "@/hooks/useTheme";
 import { useLang } from "@/contexts/LangContext";
 import { t } from "@/lib/i18n";
 import { motion, AnimatePresence, useInView, useAnimation } from "framer-motion";
+
+const API_BASE = import.meta.env.BASE_URL.replace(/\/[^/]*\/?$/, "");
+
+function useGalleryTemplates() {
+  const [templates, setTemplates] = useState<Template[]>(staticTemplates);
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<string[]>(staticCategories);
+  const [styles, setStyles] = useState<string[]>(staticStyles);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/hadar/public-templates`)
+      .then(r => r.json())
+      .then((data: any[]) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped: Template[] = data.map(t => ({
+            id: String(t.id),
+            title: t.title,
+            subtitle: t.subtitle,
+            category: t.category,
+            style: t.style,
+            price: Math.round(t.price / 100),
+            image: t.imageUrl || "linear-gradient(135deg, #0B1833 0%, #1a2d54 100%)",
+            isGradient: !t.imageUrl || /gradient|linear|radial/i.test(t.imageUrl),
+            slots: t.slots,
+          }));
+          setTemplates(mapped);
+          setCategories([...new Set(mapped.map(t => t.category).filter(Boolean))]);
+          setStyles([...new Set(mapped.map(t => t.style).filter(Boolean))]);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { templates, loading, categories, styles };
+}
 
 function useIntersectionObserver(options = {}) {
   const [isIntersecting, setIsIntersecting] = useState(false);
@@ -264,6 +300,7 @@ export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { theme, toggle } = useTheme();
   const { lang, toggleLang } = useLang();
+  const { templates, loading: templatesLoading, categories, styles } = useGalleryTemplates();
   
   const [mouseX, setMouseX] = useState(0);
   const [mouseY, setMouseY] = useState(0);
@@ -707,6 +744,12 @@ export default function Home() {
           </div>
 
           {/* Grid */}
+          {templatesLoading ? (
+            <div className="flex justify-center items-center py-24 gap-3 text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              <span>טוען תבניות...</span>
+            </div>
+          ) : (
           <motion.div 
             initial="hidden"
             whileInView="visible"
@@ -730,6 +773,7 @@ export default function Home() {
               </div>
             )}
           </motion.div>
+          )}
         </div>
       </section>
 
