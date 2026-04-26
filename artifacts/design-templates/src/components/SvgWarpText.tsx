@@ -1,175 +1,177 @@
 /**
- * Real SVG textPath warp engine — used by both admin and user editors.
- * All warp types use SVG <textPath> for genuine glyph-level curving,
- * which works correctly with Hebrew RTL without clipping or flipping.
+ * SVG textPath warp engine — shared by admin and user editors.
+ *
+ * HEBREW RTL STRATEGY
+ * -------------------
+ * SVG textPath places characters in Unicode logical order along the path.
+ * For Hebrew ("שלום" stored ש→מ), characters are placed first-char first.
+ * To produce the correct visual order (ש on the right, מ on the left) we draw
+ * ALL paths from RIGHT (x=W) → LEFT (x=0).  That way ש lands rightmost and מ
+ * leftmost, exactly matching natural Hebrew RTL reading.
+ *
+ * We do NOT set direction="rtl" on <text> — that attribute causes each glyph
+ * to be individually rotated/positioned in browser-specific ways, which breaks
+ * Hebrew rendering.  The RTL path direction is all we need.
  */
 import { useId } from "react";
 
 export type WarpType = "none" | "arc-up" | "arc-down" | "wave" | "circle" | "bulge" | "arch";
 
 export const WARP_OPTIONS: { value: WarpType; label: string; icon: string }[] = [
-  { value: "none",     label: "ישר",         icon: "—" },
-  { value: "arc-up",   label: "קשת למעלה",   icon: "⌒" },
-  { value: "arc-down", label: "קשת למטה",    icon: "⌣" },
-  { value: "arch",     label: "כיפה",         icon: "∩" },
-  { value: "bulge",    label: "בליטה",        icon: "◠" },
-  { value: "wave",     label: "גל",           icon: "∿" },
-  { value: "circle",   label: "עיגול",        icon: "○" },
+  { value: "none",     label: "ישר",       icon: "—" },
+  { value: "arc-up",   label: "קשת למעלה", icon: "⌒" },
+  { value: "arc-down", label: "קשת למטה",  icon: "⌣" },
+  { value: "arch",     label: "כיפה",      icon: "∩" },
+  { value: "bulge",    label: "בליטה",     icon: "◠" },
+  { value: "wave",     label: "גל",        icon: "∿" },
+  { value: "circle",   label: "עיגול",     icon: "○" },
 ];
 
-export interface WarpConfig {
-  warpType: WarpType;
-  warpAmount: number;    // 1–100, intensity
-}
+// ─── Geometry ──────────────────────────────────────────────────────────────────
 
-/** Build a gradient id and defs for gradient/texture fill */
-function buildFillDef(uid: string, cssStyle: React.CSSProperties): { fill: string; defEl: React.ReactNode } {
-  const isGrad = !!cssStyle.backgroundImage;
-  const gradFrom = isGrad
-    ? (cssStyle.backgroundImage as string).match(/#[0-9a-fA-F]{3,6}/g)?.[0] || "#D6A84F"
-    : undefined;
-  const gradTo = isGrad
-    ? (cssStyle.backgroundImage as string).match(/#[0-9a-fA-F]{3,6}/g)?.[1] || "#F8F1E3"
-    : undefined;
-
-  const fill = isGrad
-    ? `url(#wg-${uid})`
-    : ((cssStyle.color && cssStyle.color !== "transparent") ? cssStyle.color as string : "#F8F1E3");
-
-  const defEl = isGrad && gradFrom && gradTo ? (
-    <linearGradient id={`wg-${uid}`} x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stopColor={gradFrom} />
-      <stop offset="100%" stopColor={gradTo} />
-    </linearGradient>
-  ) : null;
-
-  return { fill, defEl };
-}
-
-/** Core: compute SVG path + viewBox for each warp type */
-function buildWarpGeometry(
-  type: WarpType,
-  amount: number,
-  W: number,
-  fontSize: number,
-): {
+interface Geo {
   d: string;
-  viewX: number; viewY: number; viewW: number; viewH: number;
+  vX: number; vY: number; vW: number; vH: number; // viewBox values
   svgW: number; svgH: number;
-} {
-  // pct = 0..1 (normalised amount)
-  const pct = Math.min(100, Math.max(0, amount)) / 100;
+}
 
-  // How far above/below the baseline we need room
-  const capRoom   = fontSize * 0.95;   // uppercase letter height above baseline
-  const descRoom  = fontSize * 0.35;   // descender depth below baseline
-  const padX      = 4;
+/**
+ * Build the SVG path for each warp type.
+ *
+ * CRITICAL: every path MUST go from x=W (right) → x=0 (left) so Hebrew
+ * characters land in the correct visual positions.
+ *
+ * @param W   internal coordinate width (path units)
+ * @param sz  font size in those same units
+ * @param pct warp intensity 0..1
+ */
+function buildPath(type: WarpType, W: number, sz: number, pct: number): Geo {
+  // Vertical room
+  const capAbove = sz * 0.95;   // caps above baseline
+  const descBelow = sz * 0.35;  // descenders below baseline
+  const px = 6;                 // horizontal padding
 
-  // Default baseline y (we keep cap room above it)
-  const baseY = capRoom + 2;
+  // baseline sits at capAbove so there is always room for the tallest letters
+  const BY = capAbove + 2;
 
-  // Helper: flat line
-  const flat = () => ({
-    d: `M 0,${baseY} H ${W}`,
-    viewX: -padX, viewY: 0, viewW: W + padX * 2, viewH: baseY + descRoom + 2,
-    svgW: W, svgH: baseY + descRoom + 2,
+  const flat = (): Geo => ({
+    d: `M ${W},${BY} H 0`,
+    vX: -px, vY: 0, vW: W + px * 2, vH: BY + descBelow + 4,
+    svgW: W, svgH: BY + descBelow + 4,
   });
+
+  // helper: radius from half-chord and sagitta
+  const arcR = (halfChord: number, sag: number) =>
+    (halfChord * halfChord + sag * sag) / (2 * sag);
 
   switch (type) {
 
+    // ── arc-up ─────────────────────────────────────────────────────────────
+    // Path RIGHT→LEFT, arc goes UP in the middle.
+    // For RTL path (W→0) we need clockwise (sweep=1) to get the midpoint ABOVE.
     case "arc-up": {
-      // Path curves UP in the middle; sides are lower than centre.
-      // SVG arc: M 0,sideY  A r r 0 0,0  W,sideY
-      //   sweep=0 → counter-clockwise → midpoint is ABOVE (lower y) the chord.
-      const sagitta = pct * W * 0.42;
-      if (sagitta < 1) return flat();
-      const sideY  = baseY + sagitta;           // where sides sit
-      // radius from chord (W) and sagitta
-      const r = (W * W / 4 + sagitta * sagitta) / (2 * sagitta);
-      const svgH   = sideY + descRoom + 2;
-      // The top of the arc is at sideY - sagitta = baseY (exactly where cap room starts)
+      const sag = pct * W * 0.40;
+      if (sag < 1) return flat();
+      const sideY = BY + sag;            // endpoints are BELOW centre
+      const r = arcR(W / 2, sag);
       return {
-        d: `M 0,${sideY} A ${r},${r} 0 0,0 ${W},${sideY}`,
-        viewX: -padX, viewY: 0, viewW: W + padX * 2, viewH: svgH,
-        svgW: W, svgH,
+        d: `M ${W},${sideY} A ${r},${r} 0 0,1 0,${sideY}`,
+        vX: -px, vY: 0, vW: W + px * 2, vH: sideY + descBelow + 4,
+        svgW: W, svgH: sideY + descBelow + 4,
       };
     }
 
+    // ── arc-down ───────────────────────────────────────────────────────────
+    // Path RIGHT→LEFT, arc goes DOWN in the middle.
+    // For RTL path (W→0) counterclockwise (sweep=0) pushes the midpoint DOWN.
     case "arc-down": {
-      // Path curves DOWN in the middle; sides are higher than centre.
-      // sweep=1 → clockwise → midpoint BELOW chord.
-      const sagitta = pct * W * 0.42;
-      if (sagitta < 1) return flat();
-      const r = (W * W / 4 + sagitta * sagitta) / (2 * sagitta);
-      // sides at baseY, centre dips down to baseY + sagitta
-      const svgH = baseY + sagitta + descRoom + 2;
+      const sag = pct * W * 0.40;
+      if (sag < 1) return flat();
+      const r = arcR(W / 2, sag);
+      const botY = BY + sag;
       return {
-        d: `M 0,${baseY} A ${r},${r} 0 0,1 ${W},${baseY}`,
-        viewX: -padX, viewY: 0, viewW: W + padX * 2, viewH: svgH,
-        svgW: W, svgH,
+        d: `M ${W},${BY} A ${r},${r} 0 0,0 0,${BY}`,
+        vX: -px, vY: 0, vW: W + px * 2, vH: botY + descBelow + 4,
+        svgW: W, svgH: botY + descBelow + 4,
       };
     }
 
+    // ── arch ───────────────────────────────────────────────────────────────
+    // Steep cubic-bezier arch: corners low, peak at centre (like a doorway).
+    // Path RIGHT→LEFT — mirror the control-point x values.
     case "arch": {
-      // Steep parabolic arch: sides start low, peak rises sharply at centre.
-      // Cubic bezier: corners at bottom, control points near top-centre.
-      const rise   = pct * W * 0.52;
-      const peakY  = baseY;
-      const sideY  = baseY + rise;
-      const svgH   = sideY + descRoom + 2;
-      // Tight control points near centre x, pulled high
-      const d = `M 0,${sideY} C ${W * 0.22},${peakY} ${W * 0.78},${peakY} ${W},${sideY}`;
+      const rise = pct * W * 0.48;
+      const sideY = BY + rise;
+      const peakY = BY;
+      const svgH = sideY + descBelow + 4;
+      // LTR equivalent: M 0,sideY C W*0.22,peakY W*0.78,peakY W,sideY
+      // Mirrored (RTL):  M W,sideY C W*0.78,peakY W*0.22,peakY 0,sideY
       return {
-        d,
-        viewX: -padX, viewY: 0, viewW: W + padX * 2, viewH: svgH,
+        d: `M ${W},${sideY} C ${W * 0.78},${peakY} ${W * 0.22},${peakY} 0,${sideY}`,
+        vX: -px, vY: 0, vW: W + px * 2, vH: svgH,
         svgW: W, svgH,
       };
     }
 
+    // ── bulge ──────────────────────────────────────────────────────────────
+    // Inverse of arch: sides high, centre dips DOWN.
+    // Path RIGHT→LEFT — mirror control-point x values.
     case "bulge": {
-      // Convex "belly" — inverse of arch: centre dips DOWN, sides stay up.
-      const dip    = pct * W * 0.42;
-      const dipY   = baseY + dip;  // centre of path
-      const sideY  = baseY;
-      const svgH   = dipY + descRoom + 2;
-      const d = `M 0,${sideY} C ${W * 0.25},${dipY} ${W * 0.75},${dipY} ${W},${sideY}`;
+      const dip = pct * W * 0.38;
+      const dipY = BY + dip;
+      const svgH = dipY + descBelow + 4;
+      // LTR: M 0,BY C W*0.25,dipY W*0.75,dipY W,BY
+      // RTL: M W,BY C W*0.75,dipY W*0.25,dipY 0,BY
       return {
-        d,
-        viewX: -padX, viewY: 0, viewW: W + padX * 2, viewH: svgH,
+        d: `M ${W},${BY} C ${W * 0.75},${dipY} ${W * 0.25},${dipY} 0,${BY}`,
+        vX: -px, vY: 0, vW: W + px * 2, vH: svgH,
         svgW: W, svgH,
       };
     }
 
+    // ── wave ───────────────────────────────────────────────────────────────
+    // Sinusoidal path — reversed x so it still goes RIGHT→LEFT.
     case "wave": {
-      // Sinusoidal path — amplitude scales with pct
-      const amp   = pct * fontSize * 1.8;
-      const midY  = baseY + amp;
+      const amp = pct * sz * 1.6;
+      const midY = BY + amp;
+      const STEPS = 120;
       const pts: string[] = [];
-      const steps = 80;
-      for (let i = 0; i <= steps; i++) {
-        const x = (i / steps) * W;
-        const y = midY + amp * Math.sin((i / steps) * Math.PI * 2);
-        pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+      for (let i = 0; i <= STEPS; i++) {
+        // x counts from W down to 0 so path direction is RTL
+        const x = W * (1 - i / STEPS);
+        const y = midY + amp * Math.sin((i / STEPS) * Math.PI * 2);
+        pts.push(`${x.toFixed(2)},${y.toFixed(2)}`);
       }
-      const svgH = midY + amp + descRoom + 2;
+      const svgH = midY + amp + descBelow + 4;
       return {
         d: `M ${pts.join(" L ")}`,
-        viewX: -padX, viewY: 0, viewW: W + padX * 2, viewH: svgH,
+        vX: -px, vY: 0, vW: W + px * 2, vH: svgH,
         svgW: W, svgH,
       };
     }
 
+    // ── circle ─────────────────────────────────────────────────────────────
+    // Full-circle path, clockwise so text reads around the top RTL.
+    // We start at the top-right of the circle so Hebrew letters flow from
+    // the 12-o'clock position going clockwise (left along the top arc).
     case "circle": {
-      // Text follows a full circle (clockwise from top)
-      const r     = W * (0.35 + (1 - pct) * 0.2);  // smaller r = more circular
-      const dim   = r * 2 + fontSize + 4;
-      const cx    = dim / 2;
-      const cy    = dim / 2;
-      // Full circle path (must be two arcs to avoid degenerate path)
-      const d = `M ${cx},${cy - r} A ${r},${r} 0 1,1 ${cx - 0.01},${cy - r}`;
+      const r = W * (0.38 + (1 - pct) * 0.18);
+      const dim = r * 2 + sz + 8;
+      const cx = dim / 2;
+      const cy = dim / 2;
+      // Clockwise full circle: start at top (cx, cy-r), go clockwise.
+      // Two arcs needed to avoid degenerate (zero-length) path.
+      const d =
+        `M ${cx},${cy - r}` +
+        ` A ${r},${r} 0 0,1 ${cx + 0.01},${cy - r}`;
+      // For RTL: clockwise = text goes right from top, then down-right.
+      // We want text to go left from top, so use counter-clockwise (sweep=0).
+      const dRTL =
+        `M ${cx},${cy - r}` +
+        ` A ${r},${r} 0 1,0 ${cx + 0.01},${cy - r}`;
       return {
-        d,
-        viewX: 0, viewY: 0, viewW: dim, viewH: dim,
+        d: dRTL,
+        vX: 0, vY: 0, vW: dim, vH: dim,
         svgW: dim, svgH: dim,
       };
     }
@@ -179,73 +181,115 @@ function buildWarpGeometry(
   }
 }
 
-interface SvgWarpTextProps {
-  text: string;
-  warpType: WarpType;
-  /** Intensity 1–100. Default 40. */
-  warpAmount?: number;
-  cssStyle: React.CSSProperties;
-  /** Internal path width in "virtual px" (default 340). */
-  pathWidth?: number;
+// ─── Fill helper ───────────────────────────────────────────────────────────────
+
+function buildFill(uid: string, css: React.CSSProperties): { fill: string; def: React.ReactNode } {
+  if (!css.backgroundImage) {
+    const color = (css.color && css.color !== "transparent") ? css.color as string : "#F8F1E3";
+    return { fill: color, def: null };
+  }
+  const matches = (css.backgroundImage as string).match(/#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)/g) || [];
+  const from = matches[0] || "#D6A84F";
+  const to   = matches[1] || "#F8F1E3";
+  return {
+    fill: `url(#wg-${uid})`,
+    def: (
+      <linearGradient id={`wg-${uid}`} x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%"   stopColor={from} />
+        <stop offset="100%" stopColor={to} />
+      </linearGradient>
+    ),
+  };
 }
 
-export function SvgWarpText({ text, warpType, warpAmount = 40, cssStyle, pathWidth = 340 }: SvgWarpTextProps) {
+// ─── Public component ──────────────────────────────────────────────────────────
+
+export interface SvgWarpTextProps {
+  text: string;
+  warpType: WarpType;
+  warpAmount?: number;   // 1–100, default 40
+  cssStyle: React.CSSProperties;
+  pathWidth?: number;    // internal coordinate width, default 320
+}
+
+export function SvgWarpText({
+  text,
+  warpType,
+  warpAmount = 40,
+  cssStyle,
+  pathWidth = 320,
+}: SvgWarpTextProps) {
   const uid = useId().replace(/:/g, "");
   const pathId = `wp-${uid}`;
 
-  const fontSize = typeof cssStyle.fontSize === "number" ? cssStyle.fontSize : 16;
-  const W = pathWidth;
+  const sz   = typeof cssStyle.fontSize === "number" ? cssStyle.fontSize : 16;
+  const W    = pathWidth;
+  const pct  = Math.min(100, Math.max(1, warpAmount)) / 100;
+  const geo  = buildPath(warpType, W, sz, pct);
 
-  const geo = buildWarpGeometry(warpType, warpAmount, W, fontSize);
-  const { fill, defEl } = buildFillDef(uid, cssStyle);
+  const { fill, def } = buildFill(uid, cssStyle);
 
-  // Stroke from WebkitTextStroke
-  const strokeStr = typeof cssStyle.WebkitTextStroke === "string" ? cssStyle.WebkitTextStroke : "";
-  const strokeWidthVal = strokeStr ? parseFloat(strokeStr) || 0 : 0;
-  const strokeColorVal = strokeStr ? strokeStr.replace(/^[\d.]+px\s*/, "").trim() : "none";
+  // Stroke
+  const strokeRaw   = typeof cssStyle.WebkitTextStroke === "string" ? cssStyle.WebkitTextStroke : "";
+  const strokeW     = strokeRaw ? parseFloat(strokeRaw) || 0 : 0;
+  const strokeColor = strokeRaw ? strokeRaw.replace(/^[\d.]+px\s*/, "").trim() : "none";
 
-  // textShadow → SVG filter drop-shadow (simplified)
-  const hasShadow = typeof cssStyle.textShadow === "string" && cssStyle.textShadow.length > 0;
-  const shadowParts = hasShadow ? (cssStyle.textShadow as string).split(",")[0].trim().split(/\s+/) : [];
-  const shadowDx   = shadowParts[0] ? parseFloat(shadowParts[0]) : 2;
-  const shadowDy   = shadowParts[1] ? parseFloat(shadowParts[1]) : 2;
-  const shadowBlur = shadowParts[2] ? parseFloat(shadowParts[2]) : 6;
-  const shadowCol  = shadowParts[3] || "rgba(0,0,0,0.7)";
+  // Drop-shadow filter
+  const shadowRaw = typeof cssStyle.textShadow === "string" ? cssStyle.textShadow : "";
+  const hasShadow = shadowRaw.length > 0;
+  const sp        = hasShadow ? shadowRaw.split(",")[0].trim().split(/\s+/) : [];
+  const sdx       = sp[0] ? parseFloat(sp[0]) : 2;
+  const sdy       = sp[1] ? parseFloat(sp[1]) : 2;
+  const sblur     = sp[2] ? parseFloat(sp[2]) : 6;
+  const scol      = sp[3] || "rgba(0,0,0,0.7)";
 
   const filterId = `wsf-${uid}`;
 
-  const { viewX, viewY, viewW, viewH, svgW, svgH } = geo;
-
   return (
     <svg
-      width={svgW}
-      height={svgH}
-      viewBox={`${viewX} ${viewY} ${viewW} ${viewH}`}
-      style={{ display: "block", overflow: "visible", maxWidth: "100%", direction: "rtl" }}
+      width={geo.svgW}
+      height={geo.svgH}
+      viewBox={`${geo.vX} ${geo.vY} ${geo.vW} ${geo.vH}`}
+      style={{ display: "block", overflow: "visible", maxWidth: "100%" }}
+      aria-label={text}
     >
       <defs>
+        {/* The warp path — drawn RIGHT→LEFT for correct Hebrew visual order */}
         <path id={pathId} d={geo.d} />
-        {defEl}
+        {def}
         {hasShadow && (
-          <filter id={filterId} x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx={shadowDx} dy={shadowDy} stdDeviation={shadowBlur / 2} floodColor={shadowCol} />
+          <filter id={filterId} x="-25%" y="-25%" width="150%" height="150%">
+            <feDropShadow
+              dx={sdx} dy={sdy}
+              stdDeviation={sblur / 2}
+              floodColor={scol}
+            />
           </filter>
         )}
       </defs>
 
+      {/*
+        NO direction="rtl" here.
+        The RTL visual order comes purely from the path going W→0.
+        Adding direction="rtl" causes browsers to individually rotate each
+        Hebrew glyph, which is exactly the broken behaviour we're fixing.
+      */}
       <text
         fill={fill}
-        fontSize={fontSize}
+        fontSize={sz}
         fontFamily={cssStyle.fontFamily as string}
         fontWeight={cssStyle.fontWeight as number}
         fontStyle={cssStyle.fontStyle as string}
-        letterSpacing={typeof cssStyle.letterSpacing === "string" ? parseFloat(cssStyle.letterSpacing) : undefined}
+        letterSpacing={
+          typeof cssStyle.letterSpacing === "string"
+            ? parseFloat(cssStyle.letterSpacing)
+            : undefined
+        }
         textDecoration={cssStyle.textDecoration as string}
-        stroke={strokeWidthVal > 0 ? strokeColorVal : "none"}
-        strokeWidth={strokeWidthVal > 0 ? strokeWidthVal : undefined}
+        stroke={strokeW > 0 ? strokeColor : "none"}
+        strokeWidth={strokeW > 0 ? strokeW : undefined}
         paintOrder="stroke"
         filter={hasShadow ? `url(#${filterId})` : undefined}
-        direction="rtl"
       >
         <textPath
           href={`#${pathId}`}
