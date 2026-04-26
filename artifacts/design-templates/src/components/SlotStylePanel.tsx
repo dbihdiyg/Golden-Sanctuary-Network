@@ -58,6 +58,7 @@ export interface SlotStyle {
   arcDegrees?: number;
 
   outline?: boolean;
+  zIndex?: number;
 }
 
 const PRESET_COLORS = [

@@ -2,7 +2,14 @@ import { useState, useCallback, useRef, useEffect, useId } from "react";
 import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useAuth, useUser, useClerk } from "@clerk/react";
 import hadarLogo from "@/assets/logo-hadar.png";
-import { ArrowRight, Crown, MessageCircle, Download, RotateCcw, CheckCircle2, ZoomIn, ZoomOut, Sun, Moon, Lock, Loader2, User, CreditCard, LogIn, Type, ChevronDown, ChevronUp, ImagePlus, X as XIcon, Upload, Layers, AlignLeft, Settings2 } from "lucide-react";
+import {
+  ArrowRight, Crown, MessageCircle, Download, RotateCcw, CheckCircle2,
+  ZoomIn, ZoomOut, Lock, Loader2, User, CreditCard, LogIn, Type,
+  ChevronDown, ChevronUp, ImagePlus, X as XIcon, Upload, Layers,
+  Plus, Copy, Trash2, ChevronUp as Up, ChevronDown as Down,
+  ArrowUp, ArrowDown, Unlock, Move, Settings2, Eye, EyeOff,
+  AlignCenter, AlignLeft, AlignRight, MoreVertical, Save,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TextSlot, Template } from "@/lib/data";
@@ -15,11 +22,9 @@ import { SlotStylePanel, SlotStyle } from "@/components/SlotStylePanel";
 
 export interface LogoPos { x: number; y: number; width: number; }
 
-// ─── Local BA Hebrew fonts (uploaded by user) ─────────────────────────────────
+// ─── Local BA Hebrew fonts ─────────────────────────────────────────────────────
 const LOCAL_BA_FONTS: {
-  name: string;
-  family: string;
-  files: { weight: number; src: string }[];
+  name: string; family: string; files: { weight: number; src: string }[];
 }[] = [
   { name: "ארזי הלבנון",    family: "BA Arzey Halevanon",   files: [{ weight: 300, src: "BAArzeyHalevanon-Light.ttf" }, { weight: 700, src: "BAArzeyHalevanon-Bold.ttf" }] },
   { name: "ברקאי",          family: "BA Barkai",             files: [{ weight: 400, src: "BABarkai-Regular.otf" }] },
@@ -36,29 +41,19 @@ const LOCAL_BA_FONTS: {
   { name: "ראשון לציון",    family: "BA Rishon LeZion",      files: [{ weight: 400, src: "BARishonLezion-Regular.ttf" }] },
 ];
 
-// merge local fonts into the shared list
-LOCAL_BA_FONTS.forEach(f =>
-  HEBREW_FONTS.push({ name: f.name, family: f.family, category: "local" })
-);
+LOCAL_BA_FONTS.forEach(f => HEBREW_FONTS.push({ name: f.name, family: f.family, category: "local" }));
 
 const DEFAULT_FONT = "Frank Ruhl Libre";
+const SYSTEM_SLOT_IDS = new Set(["__elements", "__slotStyles", "__logoPos", "__slotPositions", "__userSlots", "__lockedSlots"]);
 
 function loadLocalFont(family: string) {
   const id = `lfont-${family.replace(/\s/g, "-")}`;
   if (document.getElementById(id)) return;
   const meta = LOCAL_BA_FONTS.find(f => f.family === family);
   if (!meta) return;
-  const base = import.meta.env.BASE_URL; // e.g. "/design-templates/"
+  const base = import.meta.env.BASE_URL;
   const fmt = (src: string) => src.endsWith(".ttf") ? "truetype" : "opentype";
-  const css = meta.files.map(f => `
-    @font-face {
-      font-family: '${meta.family}';
-      src: url('${base}fonts/${f.src}') format('${fmt(f.src)}');
-      font-weight: ${f.weight};
-      font-style: normal;
-      font-display: swap;
-    }
-  `).join("\n");
+  const css = meta.files.map(f => `@font-face { font-family: '${meta.family}'; src: url('${base}fonts/${f.src}') format('${fmt(f.src)}'); font-weight: ${f.weight}; font-style: normal; font-display: swap; }`).join("\n");
   const style = document.createElement("style");
   style.id = id;
   style.textContent = css;
@@ -66,88 +61,8 @@ function loadLocalFont(family: string) {
 }
 
 const TAB_LABELS: Record<"serif" | "sans" | "local" | "custom", string> = {
-  serif:  "סריף",
-  sans:   "סאנס",
-  local:  "עברית",
-  custom: "מותאם",
+  serif: "סריף", sans: "סאנס", local: "עברית", custom: "מותאם",
 };
-
-function FontSelector({ selected, onChange }: { selected: string; onChange: (f: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"serif" | "sans" | "local" | "custom">("serif");
-  const combinedFonts = useCombinedFonts();
-
-  const hasCustom = combinedFonts.some(f => f.category === "custom");
-  const fonts = combinedFonts.filter(f => f.category === tab);
-
-  function handlePick(font: typeof combinedFonts[0]) {
-    if (font.category === "local") loadLocalFont(font.family);
-    else if (font.category !== "custom") loadGoogleFont(font.family);
-    onChange(font.family);
-  }
-
-  return (
-    <div className="border-b border-primary/10">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-5 py-2.5 hover:bg-primary/5 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <Type className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs font-semibold text-foreground">פונט</span>
-          <span className="text-xs text-muted-foreground" style={{ fontFamily: `'${selected}', serif` }}>
-            {selected}
-          </span>
-        </div>
-        {open ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
-      </button>
-
-      {open && (
-        <div className="px-4 pb-3 bg-card/30">
-          {/* Category tabs */}
-          <div className="flex gap-1 mb-2.5 flex-wrap">
-            {(["serif", "sans", "local", ...(hasCustom ? ["custom" as const] : [])] as const).map(t => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`flex-1 text-xs py-1 rounded-md font-medium transition-colors ${tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                {TAB_LABELS[t]}
-              </button>
-            ))}
-          </div>
-          {/* Font list */}
-          <div className="flex flex-col gap-1 max-h-56 overflow-y-auto">
-            {fonts.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">אין פונטים מותאמים</p>
-            )}
-            {fonts.map(font => (
-              <button
-                key={font.family}
-                onClick={() => handlePick(font)}
-                className={`flex items-center justify-between px-3 py-2 rounded-lg text-right transition-colors border ${
-                  selected === font.family
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : "border-transparent hover:border-primary/20 hover:bg-primary/5 text-foreground"
-                }`}
-              >
-                {font.category === "local"
-                  ? <span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">BA</span>
-                  : font.category === "custom"
-                    ? <span className="text-[10px] font-bold text-violet-400 bg-violet-400/10 px-1.5 py-0.5 rounded">✦</span>
-                    : <span className="text-xs text-muted-foreground">{font.category === "serif" ? "סריף" : "סאנס"}</span>
-                }
-                <span className="text-base leading-tight" style={{ fontFamily: `'${font.family}', serif`, direction: "rtl" }}>
-                  {font.name}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/[^/]*\/?$/, "");
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -158,7 +73,7 @@ const previewFontSizePx: Record<string, number> = {
 
 function resolveColor(color?: string): string {
   if (!color) return "#F8F1E3";
-  if (color.startsWith("#") || color.startsWith("rgb")) return color; // hex / rgb direct
+  if (color.startsWith("#") || color.startsWith("rgb")) return color;
   if (color === "gold")  return "#D6A84F";
   if (color === "dark")  return "#0B1833";
   if (color === "cream") return "#F8F1E3";
@@ -169,109 +84,63 @@ function resolveColor(color?: string): string {
 function resolveFont(slotFamily: string | undefined, fontOverride: string): string {
   if (!slotFamily || slotFamily === "serif") return `'${fontOverride}', serif`;
   if (slotFamily === "sans") return `'${fontOverride}', sans-serif`;
-  // Full font name (e.g. "Frank Ruhl Libre") — use directly, no fontOverride
   return `'${slotFamily}', serif`;
 }
 
 function buildTextShadows(ss: SlotStyle | undefined, baseColor: string): string {
   const parts: string[] = [];
-
-  // Basic shadow
   if (ss?.shadow || ss?.shadowX != null || ss?.shadowY != null || ss?.shadowColor) {
-    const x = ss?.shadowX ?? 2;
-    const y = ss?.shadowY ?? 2;
+    const x = ss?.shadowX ?? 2, y = ss?.shadowY ?? 2;
     const blur = ss?.shadowBlur ?? 6;
     const col = ss?.shadowColor || "rgba(0,0,0,0.7)";
     parts.push(`${x}px ${y}px ${blur}px ${col}`);
   }
-
-  // Glow effect
   if (ss?.glow || ss?.glowColor || ss?.glowRadius) {
     const gc = ss?.glowColor || baseColor;
     const gr = ss?.glowRadius ?? 12;
     const intensity = ss?.glowIntensity ?? 2;
-    for (let i = 0; i < intensity; i++) {
-      parts.push(`0 0 ${gr * (i + 1)}px ${gc}`);
-    }
-    // soft inner glow core
+    for (let i = 0; i < intensity; i++) parts.push(`0 0 ${gr * (i + 1)}px ${gc}`);
     if (gc.startsWith("#") && gc.length <= 7) parts.push(`0 0 ${Math.ceil(gr * 0.4)}px ${gc}cc`);
   }
-
-  // 3D Extrude
   if (ss?.extrudeEnabled) {
     const depth = ss.extrudeDepth ?? 5;
     const angle = (ss.extrudeAngle ?? 225) * Math.PI / 180;
     const col = ss.extrudeColor || "rgba(0,0,0,0.6)";
-    const dx = Math.cos(angle);
-    const dy = Math.sin(angle);
-    for (let i = 1; i <= depth; i++) {
-      parts.push(`${(dx * i).toFixed(1)}px ${(dy * i).toFixed(1)}px 0 ${col}`);
-    }
+    for (let i = 1; i <= depth; i++) parts.push(`${(Math.cos(angle) * i).toFixed(1)}px ${(Math.sin(angle) * i).toFixed(1)}px 0 ${col}`);
   }
-
-  // Long shadow
   if (ss?.longShadowEnabled) {
     const len = ss.longShadowLength ?? 40;
     const angle = (ss.longShadowAngle ?? 135) * Math.PI / 180;
     const col = ss.longShadowColor || "rgba(0,0,0,0.15)";
-    const dx = Math.cos(angle);
-    const dy = Math.sin(angle);
-    for (let i = 1; i <= len; i++) {
-      parts.push(`${(dx * i).toFixed(1)}px ${(dy * i).toFixed(1)}px 0 ${col}`);
-    }
+    for (let i = 1; i <= len; i++) parts.push(`${(Math.cos(angle) * i).toFixed(1)}px ${(Math.sin(angle) * i).toFixed(1)}px 0 ${col}`);
   }
-
   return parts.join(", ");
 }
 
 function buildTextureGradient(type: SlotStyle["textureType"]): string | undefined {
   switch (type) {
-    case "gold-foil":
-      return "linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%)";
-    case "silver":
-      return "linear-gradient(135deg, #8e9eab 0%, #eef2f3 30%, #9da9b0 60%, #eef2f3 80%, #8e9eab 100%)";
-    case "fire":
-      return "linear-gradient(0deg, #ff4500 0%, #ff8c00 30%, #ffd700 60%, #fff44f 100%)";
-    case "neon":
-      return "linear-gradient(135deg, #a855f7 0%, #ec4899 35%, #3b82f6 70%, #a855f7 100%)";
-    case "rainbow":
-      return "linear-gradient(90deg, #ff0000, #ff7700, #ffff00, #00ff00, #0000ff, #8b00ff)";
-    default:
-      return undefined;
+    case "gold-foil": return "linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%)";
+    case "silver":    return "linear-gradient(135deg, #8e9eab 0%, #eef2f3 30%, #9da9b0 60%, #eef2f3 80%, #8e9eab 100%)";
+    case "fire":      return "linear-gradient(0deg, #ff4500 0%, #ff8c00 30%, #ffd700 60%, #fff44f 100%)";
+    case "neon":      return "linear-gradient(135deg, #a855f7 0%, #ec4899 35%, #3b82f6 70%, #a855f7 100%)";
+    case "rainbow":   return "linear-gradient(90deg, #ff0000, #ff7700, #ffff00, #00ff00, #0000ff, #8b00ff)";
+    default:          return undefined;
   }
 }
 
-function buildSlotCSS(
-  slot: TextSlot,
-  fontOverride: string,
-  ss?: SlotStyle
-): React.CSSProperties {
+function buildSlotCSS(slot: TextSlot, fontOverride: string, ss?: SlotStyle): React.CSSProperties {
   const baseSz = slot.fontSizePx ?? previewFontSizePx[slot.fontSize || "sm"];
   const baseColor = ss?.color || resolveColor(slot.color);
-  const fontFamily = ss?.fontFamily
-    ? `'${ss.fontFamily}', serif`
-    : resolveFont(slot.fontFamily, fontOverride);
+  const fontFamily = ss?.fontFamily ? `'${ss.fontFamily}', serif` : resolveFont(slot.fontFamily, fontOverride);
   const lh = ss?.lineHeight ?? slot.lineHeight ?? 1.35;
-  const ls = ss?.letterSpacing != null
-    ? `${ss.letterSpacing}px`
-    : slot.letterSpacing != null ? `${slot.letterSpacing}px` : undefined;
-
+  const ls = ss?.letterSpacing != null ? `${ss.letterSpacing}px` : slot.letterSpacing != null ? `${slot.letterSpacing}px` : undefined;
   const textShadow = buildTextShadows(ss, baseColor);
-
-  // Gradient or texture overrides color
-  const texGrad = (ss?.textureType && ss.textureType !== "none")
-    ? buildTextureGradient(ss.textureType)
-    : undefined;
+  const texGrad = ss?.textureType && ss.textureType !== "none" ? buildTextureGradient(ss.textureType) : undefined;
   const useGradient = !!ss?.gradientEnabled || !!texGrad;
-  const gradientBg = texGrad
-    ? texGrad
-    : ss?.gradientEnabled
-      ? `linear-gradient(${ss.gradientAngle ?? 90}deg, ${ss.gradientFrom || "#D6A84F"}, ${ss.gradientTo || "#F8F1E3"})`
-      : undefined;
-
-  const stroke = (ss?.strokeWidth ?? 0) > 0
-    ? `${ss!.strokeWidth}px ${ss?.strokeColor || baseColor}`
-    : ss?.outline ? `1px ${baseColor}` : undefined;
+  const gradientBg = texGrad ?? (ss?.gradientEnabled
+    ? `linear-gradient(${ss.gradientAngle ?? 90}deg, ${ss.gradientFrom || "#D6A84F"}, ${ss.gradientTo || "#F8F1E3"})`
+    : undefined);
+  const stroke = (ss?.strokeWidth ?? 0) > 0 ? `${ss!.strokeWidth}px ${ss?.strokeColor || baseColor}` : ss?.outline ? `1px ${baseColor}` : undefined;
 
   const base: React.CSSProperties = {
     fontSize: ss?.fontSize ?? baseSz,
@@ -286,16 +155,8 @@ function buildSlotCSS(
   };
 
   if (useGradient && gradientBg) {
-    return {
-      ...base,
-      backgroundImage: gradientBg,
-      WebkitBackgroundClip: "text",
-      WebkitTextFillColor: "transparent",
-      backgroundClip: "text",
-      color: "transparent",
-    };
+    return { ...base, backgroundImage: gradientBg, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", color: "transparent" };
   }
-
   return { ...base, color: baseColor };
 }
 
@@ -305,13 +166,11 @@ function buildSlotWrapperCSS(ss?: SlotStyle, slotOpacity?: number): React.CSSPro
   if (ss?.rotation) transforms.push(`rotate(${ss.rotation}deg)`);
   if (ss?.skewX) transforms.push(`skewX(${ss.skewX}deg)`);
   if (ss?.skewY) transforms.push(`skewY(${ss.skewY}deg)`);
-
   const style: React.CSSProperties = {};
   if (transforms.length) style.transform = transforms.join(" ");
   const op = ss?.opacity ?? slotOpacity;
   if (op != null && op !== 1) style.opacity = op;
   if (ss?.blendMode && ss.blendMode !== "normal") style.mixBlendMode = ss.blendMode as React.CSSProperties["mixBlendMode"];
-
   if (ss?.glassEnabled) {
     style.background = ss.glassColor || "rgba(255,255,255,0.08)";
     style.backdropFilter = `blur(${ss.glassBlur ?? 8}px)`;
@@ -319,72 +178,41 @@ function buildSlotWrapperCSS(ss?: SlotStyle, slotOpacity?: number): React.CSSPro
     style.borderRadius = `${ss.glassBorderRadius ?? 8}px`;
     style.padding = "4px 14px";
   }
-
   return style;
 }
 
 function SvgWarpText({ text, warpType, arcDeg, cssStyle }: {
-  text: string;
-  warpType: "arc-up" | "arc-down" | "wave" | "circle";
-  arcDeg: number;
-  cssStyle: React.CSSProperties;
+  text: string; warpType: "arc-up" | "arc-down" | "wave" | "circle";
+  arcDeg: number; cssStyle: React.CSSProperties;
 }) {
   const uid = useId().replace(/:/g, "");
   const W = 300;
   const fontSize = typeof cssStyle.fontSize === "number" ? cssStyle.fontSize : 14;
-  const fill = (cssStyle.color && cssStyle.color !== "transparent")
-    ? cssStyle.color as string
-    : cssStyle.backgroundImage
-      ? `url(#grad-${uid})`
-      : "#F8F1E3";
-
-  const gradFrom = cssStyle.backgroundImage
-    ? (cssStyle.backgroundImage as string).match(/#[0-9a-fA-F]{3,6}/g)?.[0] || "#D6A84F"
-    : undefined;
-  const gradTo = cssStyle.backgroundImage
-    ? (cssStyle.backgroundImage as string).match(/#[0-9a-fA-F]{3,6}/g)?.[1] || "#F8F1E3"
-    : undefined;
+  const fill = (cssStyle.color && cssStyle.color !== "transparent") ? cssStyle.color as string : cssStyle.backgroundImage ? `url(#grad-${uid})` : "#F8F1E3";
+  const gradFrom = cssStyle.backgroundImage ? (cssStyle.backgroundImage as string).match(/#[0-9a-fA-F]{3,6}/g)?.[0] || "#D6A84F" : undefined;
+  const gradTo = cssStyle.backgroundImage ? (cssStyle.backgroundImage as string).match(/#[0-9a-fA-F]{3,6}/g)?.[1] || "#F8F1E3" : undefined;
   const isGradient = !!cssStyle.backgroundImage;
-
-  let pathD = "";
-  let svgW = W, svgH = 80;
-
+  let pathD = "", svgW = W, svgH = 80;
   if (warpType === "arc-up" || warpType === "arc-down") {
-    const H = 100;
-    const absAngle = Math.abs(arcDeg) * Math.PI / 180;
+    const H = 100, absAngle = Math.abs(arcDeg) * Math.PI / 180;
     const r = absAngle < 0.05 ? 99999 : (W / 2) / Math.sin(absAngle / 2);
     const sagitta = r - Math.sqrt(Math.max(0, r * r - (W / 2) * (W / 2)));
     const isUp = warpType === "arc-up";
     const sy = isUp ? sagitta : H - sagitta;
-    const sweep = isUp ? 1 : 0;
-    pathD = `M 0 ${sy} A ${r} ${r} 0 0 ${sweep} ${W} ${sy}`;
+    pathD = `M 0 ${sy} A ${r} ${r} 0 0 ${isUp ? 1 : 0} ${W} ${sy}`;
     svgH = Math.max(H, sagitta + fontSize * 1.4 + 4);
   } else if (warpType === "wave") {
-    const amplitude = Math.max(5, Math.abs(arcDeg) * 0.5);
-    const cy = svgH / 2;
-    const pts: string[] = [];
-    for (let i = 0; i <= 40; i++) {
-      const x = (i / 40) * W;
-      const y = cy + amplitude * Math.sin((i / 40) * Math.PI * 2 * (arcDeg > 0 ? 1 : -1));
-      pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
-    }
+    const amplitude = Math.max(5, Math.abs(arcDeg) * 0.5), cy = svgH / 2;
+    const pts = Array.from({ length: 41 }, (_, i) => `${((i / 40) * W).toFixed(1)},${(cy + amplitude * Math.sin((i / 40) * Math.PI * 2 * (arcDeg > 0 ? 1 : -1))).toFixed(1)}`);
     pathD = `M ${pts.join(" L ")}`;
-    svgH = cy + amplitude + fontSize * 1.2;
-    svgH = Math.max(60, svgH);
+    svgH = Math.max(60, cy + amplitude + fontSize * 1.2);
   } else if (warpType === "circle") {
     const r = Math.max(40, 100 - Math.abs(arcDeg) * 0.3);
-    svgW = r * 2 + 20;
-    svgH = r * 2 + 20;
-    const cx = svgW / 2, cy = svgH / 2;
-    pathD = `M ${cx},${cy - r} A ${r},${r} 0 1 1 ${cx - 0.001},${cy - r}`;
+    svgW = r * 2 + 20; svgH = r * 2 + 20;
+    pathD = `M ${svgW / 2},${svgH / 2 - r} A ${r},${r} 0 1 1 ${svgW / 2 - 0.001},${svgH / 2 - r}`;
   }
-
   return (
-    <svg
-      width={svgW} height={svgH}
-      viewBox={`0 0 ${svgW} ${svgH}`}
-      style={{ display: "block", overflow: "visible", direction: "rtl", maxWidth: "100%" }}
-    >
+    <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ display: "block", overflow: "visible", direction: "rtl", maxWidth: "100%" }}>
       <defs>
         <path id={uid} d={pathD} />
         {isGradient && gradFrom && gradTo && (
@@ -394,224 +222,167 @@ function SvgWarpText({ text, warpType, arcDeg, cssStyle }: {
           </linearGradient>
         )}
       </defs>
-      <text
-        fill={fill}
-        fontSize={fontSize}
-        fontFamily={cssStyle.fontFamily as string}
-        fontWeight={cssStyle.fontWeight as number}
-        fontStyle={cssStyle.fontStyle as string}
+      <text fill={fill} fontSize={fontSize} fontFamily={cssStyle.fontFamily as string}
+        fontWeight={cssStyle.fontWeight as number} fontStyle={cssStyle.fontStyle as string}
         stroke={typeof cssStyle.WebkitTextStroke === "string" ? cssStyle.WebkitTextStroke.split(" ").slice(1).join(" ") : undefined}
         strokeWidth={typeof cssStyle.WebkitTextStroke === "string" ? parseFloat(cssStyle.WebkitTextStroke) || undefined : undefined}
-        paintOrder="stroke"
-      >
-        <textPath href={`#${uid}`} startOffset="50%" textAnchor="middle">
-          {text}
-        </textPath>
+        paintOrder="stroke">
+        <textPath href={`#${uid}`} startOffset="50%" textAnchor="middle">{text}</textPath>
       </text>
     </svg>
   );
 }
 
-function StackedLine({ slot, value, fontOverride, slotStyle }: {
-  slot: TextSlot; value: string; fontOverride: string; slotStyle?: SlotStyle;
-}) {
-  if (!value.trim()) return null;
-  const css = buildSlotCSS(slot, fontOverride, slotStyle);
-  const wrapCSS = buildSlotWrapperCSS(slotStyle, slot.opacity);
-  const warpType = slotStyle?.warpType;
-  const arcDeg = slotStyle?.arcDegrees ?? 0;
-  const plainText = value.replace(/<[^>]+>/g, "");
-
-  if (warpType && warpType !== "none") {
-    return (
-      <div className="text-center my-0.5 w-full flex justify-center" style={wrapCSS}>
-        <SvgWarpText text={plainText} warpType={warpType} arcDeg={arcDeg} cssStyle={css} />
-      </div>
-    );
-  }
-  const isHtml = value.includes("<");
-  return isHtml ? (
-    <div className="text-center leading-snug my-0.5" style={{ ...wrapCSS, ...css }}
-      dangerouslySetInnerHTML={{ __html: value }} />
-  ) : (
-    <div className="text-center leading-snug my-0.5 whitespace-pre-line" style={{ ...wrapCSS, ...css }}>
-      {value}
-    </div>
-  );
-}
-
-function AbsoluteSlot({ slot, value, fontOverride, slotStyle }: {
-  slot: TextSlot; value: string; fontOverride: string; slotStyle?: SlotStyle;
-}) {
-  if (!value.trim() || slot.x == null || slot.y == null) return null;
-  const css = buildSlotCSS(slot, fontOverride, slotStyle);
-  const wrapCSS = buildSlotWrapperCSS(slotStyle, slot.opacity);
-  const w = slot.width ?? 80;
-  const warpType = slotStyle?.warpType;
-  const arcDeg = slotStyle?.arcDegrees ?? 0;
-  const plainText = value.replace(/<[^>]+>/g, "");
-
-  return (
-    <div style={{
-      position: "absolute", left: `${slot.x}%`, top: `${slot.y}%`, width: `${w}%`,
-      textAlign: slot.align ?? "center",
-      whiteSpace: "pre-line", direction: "rtl", pointerEvents: "none",
-      zIndex: slot.zIndex ?? undefined,
-      ...wrapCSS,
-      transform: `translateX(-50%)${wrapCSS.transform ? ` ${wrapCSS.transform}` : ""}`,
-    }}>
-      {(warpType && warpType !== "none") ? (
-        <div className="flex justify-center">
-          <SvgWarpText text={plainText} warpType={warpType} arcDeg={arcDeg} cssStyle={css} />
-        </div>
-      ) : (
-        <span style={css}>{value}</span>
-      )}
-    </div>
-  );
-}
-
+// ─── Logo Uploader ─────────────────────────────────────────────────────────────
 function LogoUploader({ logoUrl, onChange }: { logoUrl: string | null; onChange: (url: string | null) => void }) {
   const [open, setOpen] = useState(false);
-  const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
   const handleFile = (file: File) => {
     if (!file.type.startsWith("image/")) return;
     const reader = new FileReader();
     reader.onload = e => onChange(e.target?.result as string);
     reader.readAsDataURL(file);
   };
-
   return (
     <div className="border-b border-primary/10">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-5 py-2.5 hover:bg-primary/5 transition-colors"
-      >
+      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-primary/5 transition-colors">
         <div className="flex items-center gap-2">
           <ImagePlus className="w-3.5 h-3.5 text-primary" />
           <span className="text-xs font-semibold text-foreground">לוגו</span>
-          {logoUrl
-            ? <span className="text-xs text-green-500 font-medium">הועלה ✓</span>
-            : <span className="text-xs text-muted-foreground">אין לוגו</span>
-          }
+          {logoUrl ? <span className="text-xs text-green-500 font-medium">הועלה ✓</span> : <span className="text-xs text-muted-foreground">אין לוגו</span>}
         </div>
         {open ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
       </button>
-
       {open && (
-        <div className="px-4 pb-4 bg-card/30">
-          {logoUrl ? (
-            <div className="flex flex-col items-center gap-3">
-              <div className="relative w-full rounded-xl border border-primary/20 bg-background/60 p-3 flex items-center justify-center overflow-hidden" style={{ minHeight: 80 }}>
-                <img src={logoUrl} alt="לוגו" className="max-h-16 max-w-full object-contain" />
-                <button
-                  onClick={() => onChange(null)}
-                  className="absolute top-2 left-2 w-5 h-5 rounded-full bg-red-500/80 hover:bg-red-500 text-white flex items-center justify-center transition-colors"
-                  title="הסר לוגו"
-                >
-                  <XIcon className="w-3 h-3" />
-                </button>
+        <div className="px-4 pb-3 space-y-2">
+          <div className="border-2 border-dashed border-primary/20 rounded-xl p-3 text-center hover:border-primary/40 transition-colors cursor-pointer bg-primary/5"
+            onClick={() => inputRef.current?.click()}>
+            {logoUrl ? (
+              <img src={logoUrl} alt="לוגו" className="h-12 mx-auto object-contain" />
+            ) : (
+              <div className="text-muted-foreground">
+                <Upload className="w-5 h-5 mx-auto mb-1 opacity-50" />
+                <p className="text-xs">לחצו להעלאת לוגו</p>
               </div>
-              <button
-                onClick={() => inputRef.current?.click()}
-                className="text-xs text-primary hover:text-primary/80 transition-colors underline underline-offset-2"
-              >
-                החלף לוגו
-              </button>
-            </div>
-          ) : (
-            <div
-              onClick={() => inputRef.current?.click()}
-              onDragOver={e => { e.preventDefault(); setDragging(true); }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={e => {
-                e.preventDefault(); setDragging(false);
-                const file = e.dataTransfer.files[0];
-                if (file) handleFile(file);
-              }}
-              className={`w-full rounded-xl border-2 border-dashed p-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${
-                dragging ? "border-primary bg-primary/10 scale-[1.01]" : "border-primary/20 hover:border-primary/50 hover:bg-primary/5"
-              }`}
-            >
-              <Upload className="w-6 h-6 text-primary/60" />
-              <p className="text-xs font-medium text-foreground text-center">גרירה או לחיצה להעלאה</p>
-              <p className="text-[10px] text-muted-foreground text-center">PNG, JPG, SVG · עד 5MB</p>
-            </div>
+            )}
+          </div>
+          {logoUrl && (
+            <button onClick={() => onChange(null)} className="w-full text-xs text-destructive hover:text-destructive/80 transition-colors py-1">
+              הסר לוגו
+            </button>
           )}
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-          />
-          <p className="text-[10px] text-muted-foreground mt-2 text-center">הלוגו יופיע בראש ההזמנה</p>
+          <input ref={inputRef} type="file" accept="image/*" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
         </div>
       )}
     </div>
   );
 }
 
-interface InvitationPreviewProps {
+// ─── Slot position ─────────────────────────────────────────────────────────────
+interface SlotPos { x: number; y: number; width: number; }
+
+function getDefaultPos(index: number, total: number): SlotPos {
+  const spacing = total > 1 ? 50 / Math.max(1, total - 1) : 0;
+  return { x: 50, y: 20 + index * spacing, width: 80 };
+}
+
+// ─── Interactive Canvas ────────────────────────────────────────────────────────
+const GUIDE_POSITIONS = [0, 25, 50, 75, 100];
+const SNAP_THRESHOLD = 2;
+
+interface CanvasProps {
   template: Template;
   values: Record<string, string>;
-  zoom: number;
+  slotStyles: Record<string, SlotStyle>;
+  slotPositions: Record<string, SlotPos>;
+  allSlots: TextSlot[];
+  activeSlotId: string | null;
+  lockedSlots: Set<string>;
   fontOverride: string;
   logoUrl: string | null;
   logoPos: LogoPos;
-  slotStyles: Record<string, SlotStyle>;
-  placedElements?: PlacedElement[];
-  selectedElementUid?: string | null;
-  onSelectElement?: (uid: string | null) => void;
+  placedElements: PlacedElement[];
+  selectedElementUid: string | null;
+  zoom: number;
+  canvasRef?: React.RefObject<HTMLDivElement>;
+  onSlotSelect: (id: string | null) => void;
+  onSlotMove: (id: string, x: number, y: number) => void;
   onLogoMove?: (pos: LogoPos) => void;
+  onSelectElement?: (uid: string | null) => void;
 }
 
-function InvitationPreview({
-  template, values, zoom, fontOverride, logoUrl, logoPos, slotStyles,
-  placedElements, selectedElementUid, onSelectElement, onLogoMove,
-}: InvitationPreviewProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const dragging = useRef<{ type: "logo" | "element"; startX: number; startY: number; startPosX: number; startPosY: number; uid?: string } | null>(null);
+function InteractiveCanvas({
+  template, values, slotStyles, slotPositions, allSlots, activeSlotId, lockedSlots,
+  fontOverride, logoUrl, logoPos, placedElements, selectedElementUid, zoom,
+  canvasRef: externalRef, onSlotSelect, onSlotMove, onLogoMove, onSelectElement,
+}: CanvasProps) {
+  const internalRef = useRef<HTMLDivElement>(null);
+  const canvasRef = externalRef || internalRef;
+  const dragRef = useRef<{
+    type: "slot" | "logo"; id: string;
+    startCX: number; startCY: number;
+    startX: number; startY: number;
+  } | null>(null);
+  const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
 
-  const slots = (template.slots || []).filter(s => s.id !== "__elements");
-  const hasCoords = slots.some(s => s.x != null && s.y != null);
+  const dims = (template.dimensions as { width: number; height: number } | undefined) ?? { width: 600, height: 800 };
+  const aspectRatio = `${dims.width}/${dims.height}`;
 
-  // Separate frames from regular elements
-  const frames = (placedElements ?? []).filter(pe => pe.isFrame);
-  const regularElements = (placedElements ?? []).filter(pe => !pe.isFrame);
+  const frames = placedElements.filter(pe => pe.isFrame);
+  const regularElements = placedElements.filter(pe => !pe.isFrame);
+  const displaySlots = allSlots.filter(s => !SYSTEM_SLOT_IDS.has(s.id));
 
-  const getContainerPct = (clientX: number, clientY: number) => {
-    if (!containerRef.current) return { x: 0, y: 0 };
-    const rect = containerRef.current.getBoundingClientRect();
+  const getPct = (clientX: number, clientY: number) => {
+    if (!canvasRef.current) return { x: 0, y: 0 };
+    const rect = canvasRef.current.getBoundingClientRect();
     return {
       x: ((clientX - rect.left) / rect.width) * 100,
       y: ((clientY - rect.top) / rect.height) * 100,
     };
   };
 
+  const handleSlotPointerDown = (slotId: string, e: React.PointerEvent) => {
+    e.stopPropagation();
+    onSlotSelect(slotId);
+    if (lockedSlots.has(slotId)) return;
+    const pos = slotPositions[slotId] ?? { x: 50, y: 50 };
+    dragRef.current = { type: "slot", id: slotId, startCX: e.clientX, startCY: e.clientY, startX: pos.x, startY: pos.y };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!dragging.current) return;
-    const pct = getContainerPct(e.clientX, e.clientY);
-    const dx = pct.x - dragging.current.startX;
-    const dy = pct.y - dragging.current.startY;
-    if (dragging.current.type === "logo") {
-      onLogoMove?.({
-        x: Math.max(0, Math.min(90, dragging.current.startPosX + dx)),
-        y: Math.max(0, Math.min(90, dragging.current.startPosY + dy)),
-        width: logoPos.width,
-      });
+    if (!dragRef.current || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const dxPct = (e.clientX - dragRef.current.startCX) / rect.width * 100;
+    const dyPct = (e.clientY - dragRef.current.startCY) / rect.height * 100;
+    let newX = Math.max(0, Math.min(100, dragRef.current.startX + dxPct));
+    let newY = Math.max(0, Math.min(100, dragRef.current.startY + dyPct));
+
+    const newGuides: { x?: number; y?: number } = {};
+    for (const g of GUIDE_POSITIONS) {
+      if (Math.abs(newX - g) < SNAP_THRESHOLD) { newX = g; newGuides.x = g; break; }
+    }
+    for (const g of GUIDE_POSITIONS) {
+      if (Math.abs(newY - g) < SNAP_THRESHOLD) { newY = g; newGuides.y = g; break; }
+    }
+    setGuides(newGuides);
+
+    if (dragRef.current.type === "slot") {
+      onSlotMove(dragRef.current.id, newX, newY);
+    } else if (dragRef.current.type === "logo" && onLogoMove) {
+      onLogoMove({ ...logoPos, x: Math.max(0, Math.min(90, newX)), y: Math.max(0, Math.min(90, newY)) });
     }
   };
 
-  const handlePointerUp = () => { dragging.current = null; };
+  const handlePointerUp = () => { dragRef.current = null; setGuides({}); };
 
   return (
     <div
-      ref={containerRef}
-      className="relative w-full overflow-hidden rounded-xl shadow-2xl border border-primary/20 select-none"
-      style={{ aspectRatio: "3/4", transform: `scale(${zoom})`, transformOrigin: "top center", transition: "transform 0.2s ease" }}
+      ref={canvasRef}
+      className="relative select-none rounded-xl shadow-2xl border border-primary/20 overflow-hidden"
+      style={{ width: "100%", maxWidth: 520, aspectRatio, transform: `scale(${zoom})`, transformOrigin: "top center", transition: "transform 0.2s ease", touchAction: "none" }}
+      onClick={e => { if (e.target === canvasRef.current) onSlotSelect(null); }}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
@@ -620,27 +391,18 @@ function InvitationPreview({
       {template.isGradient ? (
         <div className="absolute inset-0" style={{ background: template.image }} />
       ) : (
-        <img src={template.image} alt={template.title} className="absolute inset-0 w-full h-full object-cover" />
+        <img src={template.image} alt={template.title} className="absolute inset-0 w-full h-full" style={{ objectFit: "contain" }} draggable={false} />
       )}
 
-      {/* Decorative borders for gradient templates */}
+      {/* Gradient template decorative borders */}
       {template.isGradient && (
         <>
           <div className="absolute inset-3 border border-[#D6A84F]/40 rounded-lg pointer-events-none" />
           <div className="absolute inset-5 border border-[#D6A84F]/20 rounded-lg pointer-events-none" />
-          {(["top-3 right-3", "top-3 left-3", "bottom-3 right-3", "bottom-3 left-3"] as const).map((pos) => (
-            <div key={pos} className={`absolute ${pos} w-6 h-6 pointer-events-none`} style={{
-              borderTop: pos.includes("top") ? "2px solid #D6A84F" : "none",
-              borderBottom: pos.includes("bottom") ? "2px solid #D6A84F" : "none",
-              borderRight: pos.includes("right") ? "2px solid #D6A84F" : "none",
-              borderLeft: pos.includes("left") ? "2px solid #D6A84F" : "none",
-            }} />
-          ))}
         </>
       )}
-      {!template.isGradient && !hasCoords && <div className="absolute inset-0 bg-black/45" />}
 
-      {/* Frames layer (behind text) */}
+      {/* Frame elements */}
       {frames.map(pe => (
         <img key={pe.uid} src={pe.src} alt="" draggable={false} style={{
           position: "absolute", inset: 0, width: "100%", height: "100%",
@@ -649,44 +411,81 @@ function InvitationPreview({
         }} />
       ))}
 
-      {/* Text content */}
-      {hasCoords ? (
-        <div className="absolute inset-0" style={{ zIndex: 10 }}>
-          {slots.map(slot => (
-            <AbsoluteSlot
-              key={slot.id}
-              slot={slot}
-              value={values[slot.id] ?? slot.defaultValue}
-              fontOverride={fontOverride}
-              slotStyle={slotStyles[slot.id]}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-8 py-10 gap-0.5 overflow-hidden" dir="rtl" style={{ zIndex: 10 }}>
-          <div className="w-24 h-px bg-[#D6A84F]/50 mb-2" />
-          {slots.map(slot => {
-            const val = values[slot.id] ?? slot.defaultValue;
-            if (!val.trim()) return null;
-            return (
-              <StackedLine
-                key={slot.id}
-                slot={slot}
-                value={val}
-                fontOverride={fontOverride}
-                slotStyle={slotStyles[slot.id]}
-              />
-            );
-          })}
-          <div className="w-24 h-px bg-[#D6A84F]/50 mt-2" />
-        </div>
-      )}
+      {/* Text slots — draggable */}
+      {displaySlots.map(slot => {
+        const pos = slotPositions[slot.id] ?? { x: 50, y: 50, width: 80 };
+        const value = values[slot.id] ?? slot.defaultValue;
+        const selected = activeSlotId === slot.id;
+        const locked = lockedSlots.has(slot.id);
+        const css = buildSlotCSS(slot, fontOverride, slotStyles[slot.id]);
+        const wrapCSS = buildSlotWrapperCSS(slotStyles[slot.id], slot.opacity);
+        const zIdx = (slotStyles[slot.id]?.zIndex as number) ?? (slot.zIndex ?? 10);
+        const warpType = slotStyles[slot.id]?.warpType;
+        const arcDeg = slotStyles[slot.id]?.arcDegrees ?? 0;
+        const plainText = value.replace(/<[^>]+>/g, "");
+
+        return (
+          <div
+            key={slot.id}
+            style={{
+              position: "absolute",
+              left: `${pos.x}%`,
+              top: `${pos.y}%`,
+              width: `${pos.width}%`,
+              transform: `translateX(-50%)${wrapCSS.transform ? ` ${wrapCSS.transform}` : ""}`,
+              textAlign: slot.align ?? "center",
+              direction: "rtl",
+              cursor: locked ? "not-allowed" : "move",
+              zIndex: zIdx,
+              userSelect: "none",
+              opacity: wrapCSS.opacity,
+              mixBlendMode: wrapCSS.mixBlendMode,
+              background: wrapCSS.background,
+              backdropFilter: wrapCSS.backdropFilter,
+              WebkitBackdropFilter: (wrapCSS as any).WebkitBackdropFilter,
+              borderRadius: wrapCSS.borderRadius,
+              padding: wrapCSS.padding,
+            }}
+            onPointerDown={e => handleSlotPointerDown(slot.id, e)}
+            onClick={e => e.stopPropagation()}
+          >
+            {warpType && warpType !== "none" ? (
+              <div className="flex justify-center">
+                <SvgWarpText text={plainText} warpType={warpType} arcDeg={arcDeg} cssStyle={css} />
+              </div>
+            ) : (
+              <span style={css} className="whitespace-pre-line">{value}</span>
+            )}
+
+            {/* Selection bounding box */}
+            {selected && (
+              <div style={{
+                position: "absolute", inset: -5,
+                border: `2px solid ${locked ? "#6B7280" : "#D6A84F"}`,
+                borderStyle: locked ? "dashed" : "solid",
+                borderRadius: 4, pointerEvents: "none",
+                boxShadow: locked ? "none" : "0 0 0 1px rgba(214,168,79,0.2)",
+              }} />
+            )}
+            {/* Move cursor indicator when selected */}
+            {selected && !locked && (
+              <div style={{
+                position: "absolute", top: -18, left: "50%", transform: "translateX(-50%)",
+                background: "#D6A84F", color: "#0B1833", borderRadius: 4, padding: "1px 6px",
+                fontSize: 9, fontWeight: 700, pointerEvents: "none", whiteSpace: "nowrap",
+              }}>
+                {slot.label || "טקסט"}
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       {/* Regular placed elements */}
       {regularElements.map(pe => (
         <div
           key={pe.uid}
-          onClick={() => onSelectElement?.(pe.uid === selectedElementUid ? null : pe.uid)}
+          onClick={e => { e.stopPropagation(); onSelectElement?.(pe.uid === selectedElementUid ? null : pe.uid); }}
           style={{
             position: "absolute", left: `${pe.x}%`, top: `${pe.y}%`, width: `${pe.width}%`,
             opacity: pe.opacity, cursor: "pointer", zIndex: 20,
@@ -701,110 +500,62 @@ function InvitationPreview({
         </div>
       ))}
 
-      {/* Draggable logo */}
+      {/* Logo */}
       {logoUrl && (
         <div
-          style={{
-            position: "absolute",
-            left: `${logoPos.x}%`,
-            top: `${logoPos.y}%`,
-            width: `${logoPos.width}%`,
-            zIndex: 25,
-            cursor: onLogoMove ? "grab" : "default",
-            touchAction: "none",
-          }}
+          style={{ position: "absolute", left: `${logoPos.x}%`, top: `${logoPos.y}%`, width: `${logoPos.width}%`, zIndex: 25, cursor: onLogoMove ? "grab" : "default", touchAction: "none" }}
           onPointerDown={e => {
             if (!onLogoMove) return;
             e.stopPropagation();
-            const pct = getContainerPct(e.clientX, e.clientY);
-            dragging.current = {
-              type: "logo", startX: pct.x, startY: pct.y,
-              startPosX: logoPos.x, startPosY: logoPos.y,
-            };
-            (e.target as HTMLElement).setPointerCapture(e.pointerId);
+            dragRef.current = { type: "logo", id: "logo", startCX: e.clientX, startCY: e.clientY, startX: logoPos.x, startY: logoPos.y };
+            (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
           }}
         >
-          <img
-            src={logoUrl} alt="לוגו" draggable={false}
-            style={{ width: "100%", height: "auto", objectFit: "contain", filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.5))" }}
-          />
-          {/* Resize handle */}
+          <img src={logoUrl} alt="לוגו" draggable={false} style={{ width: "100%", height: "auto", objectFit: "contain", filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.5))" }} />
           {onLogoMove && (
-            <>
-              {/* Size up/down buttons */}
-              <div
-                className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-0.5"
-                onPointerDown={e => e.stopPropagation()}
-              >
-                <button
-                  className="w-4 h-4 rounded-full bg-primary text-white text-[10px] flex items-center justify-center shadow hover:bg-primary/80"
-                  onPointerDown={e => e.stopPropagation()}
-                  onClick={e => { e.stopPropagation(); onLogoMove({ ...logoPos, width: Math.max(5, logoPos.width - 5) }); }}
-                >−</button>
-                <button
-                  className="w-4 h-4 rounded-full bg-primary text-white text-[10px] flex items-center justify-center shadow hover:bg-primary/80"
-                  onPointerDown={e => e.stopPropagation()}
-                  onClick={e => { e.stopPropagation(); onLogoMove({ ...logoPos, width: Math.min(80, logoPos.width + 5) }); }}
-                >+</button>
-              </div>
-            </>
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-0.5" onPointerDown={e => e.stopPropagation()}>
+              <button className="w-4 h-4 rounded-full bg-primary text-white text-[10px] flex items-center justify-center shadow"
+                onClick={e => { e.stopPropagation(); onLogoMove({ ...logoPos, width: Math.max(5, logoPos.width - 5) }); }}>−</button>
+              <button className="w-4 h-4 rounded-full bg-primary text-white text-[10px] flex items-center justify-center shadow"
+                onClick={e => { e.stopPropagation(); onLogoMove({ ...logoPos, width: Math.min(80, logoPos.width + 5) }); }}>+</button>
+            </div>
           )}
         </div>
       )}
 
+      {/* Smart guides */}
+      {guides.x !== undefined && (
+        <div style={{ position: "absolute", left: `${guides.x}%`, top: 0, height: "100%", width: 1, background: "#D6A84F", opacity: 0.8, pointerEvents: "none", zIndex: 200 }} />
+      )}
+      {guides.y !== undefined && (
+        <div style={{ position: "absolute", top: `${guides.y}%`, left: 0, width: "100%", height: 1, background: "#D6A84F", opacity: 0.8, pointerEvents: "none", zIndex: 200 }} />
+      )}
+
       {/* Watermark */}
-      <div className="absolute bottom-2.5 left-0 right-0 flex items-center justify-center pointer-events-none" style={{ opacity: 0.28, zIndex: 30 }}>
-        <img src={hadarLogo} alt="הדר" style={{ height: 18, width: "auto", objectFit: "contain" }} />
+      <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center pointer-events-none" style={{ opacity: 0.25, zIndex: 30 }}>
+        <img src={hadarLogo} alt="הדר" style={{ height: 16, width: "auto", objectFit: "contain" }} />
       </div>
     </div>
   );
 }
 
+// ─── Auth / Payment walls ──────────────────────────────────────────────────────
 function AuthWall({ templateId }: { templateId: string }) {
   const { redirectToSignIn } = useClerk();
   const redirectUrl = `${basePath}/editor/${templateId}`;
   return (
     <div className="absolute inset-0 z-20 rounded-xl overflow-hidden">
-      {/* Decorative blurred invitation mockup */}
       <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, #0B1833 0%, #0f2347 50%, #0B1833 100%)" }} />
-      {/* Concentric golden rings */}
-      {[...Array(4)].map((_, i) => (
-        <div key={i} className="absolute border border-primary/10 rounded-full" style={{
-          width: `${280 + i * 100}px`, height: `${280 + i * 100}px`,
-          top: "50%", left: "50%",
-          transform: "translate(-50%, -50%)",
-        }} />
-      ))}
-      {/* Simulated blurred invitation card */}
-      <div className="absolute inset-8 rounded-xl opacity-20 blur-sm overflow-hidden" style={{ background: "linear-gradient(135deg, #1a2d50 0%, #243960 100%)" }}>
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-          <div className="w-16 h-0.5 bg-primary/60 rounded" />
-          <div className="w-24 h-3 bg-primary/30 rounded" />
-          <div className="w-32 h-5 bg-primary/50 rounded mt-1" />
-          <div className="w-20 h-3 bg-primary/30 rounded" />
-          <div className="w-16 h-0.5 bg-primary/60 rounded mt-1" />
-          <div className="w-28 h-3 bg-foreground/15 rounded mt-2" />
-          <div className="w-36 h-3 bg-foreground/15 rounded" />
-          <div className="w-24 h-3 bg-foreground/15 rounded" />
-        </div>
-      </div>
-      {/* Frosted glass overlay */}
-      <div className="absolute inset-0 backdrop-blur-[2px]" style={{ background: "linear-gradient(160deg, rgba(11,24,51,0.82) 0%, rgba(15,32,64,0.78) 100%)" }} />
-      {/* Content */}
+      <div className="absolute inset-0 backdrop-blur-[2px]" style={{ background: "rgba(11,24,51,0.82)" }} />
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="text-center px-8" dir="rtl">
-          <div className="w-16 h-16 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center mx-auto mb-4">
-            <LogIn className="w-7 h-7 text-primary" />
+          <div className="w-14 h-14 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center mx-auto mb-4">
+            <LogIn className="w-6 h-6 text-primary" />
           </div>
-          <div className="w-12 h-0.5 bg-primary/40 mx-auto mb-4" />
-          <h3 className="font-serif text-2xl font-bold mb-2 text-foreground drop-shadow-lg">נדרשת כניסה לחשבון</h3>
-          <p className="text-sm text-primary/60 mb-6 leading-relaxed">כנסו כדי לשמור את העיצוב<br />ולהמשיך לשלב התשלום</p>
-          <Button
-            onClick={() => redirectToSignIn({ redirectUrl })}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold gap-2 px-7 py-5 text-base shadow-lg shadow-primary/20"
-          >
-            <LogIn className="w-4 h-4" />
-            כניסה / הרשמה
+          <h3 className="font-serif text-xl font-bold mb-2 text-foreground">נדרשת כניסה</h3>
+          <p className="text-sm text-primary/60 mb-5">כנסו כדי לשמור ולשלם</p>
+          <Button onClick={() => redirectToSignIn({ redirectUrl })} className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold gap-2 px-6 py-4">
+            <LogIn className="w-4 h-4" />כניסה / הרשמה
           </Button>
         </div>
       </div>
@@ -815,33 +566,17 @@ function AuthWall({ templateId }: { templateId: string }) {
 function PaymentWall({ onPay, onClose, loading, designName }: { onPay: () => void; onClose: () => void; loading: boolean; designName: string }) {
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-      >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          onClick={e => e.stopPropagation()}
-          className="bg-card border border-primary/20 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl relative"
-          dir="rtl"
-        >
-          <button
-            onClick={onClose}
-            className="absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-foreground transition-colors"
-          >
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+          onClick={e => e.stopPropagation()} className="bg-card border border-primary/20 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl relative" dir="rtl">
+          <button onClick={onClose} className="absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center hover:bg-primary/10 text-muted-foreground">
             <XIcon className="w-4 h-4" />
           </button>
           <Crown className="w-10 h-10 text-primary mx-auto mb-1" />
           <div className="w-16 h-px bg-primary/30 mx-auto mb-4" />
           <h2 className="font-serif text-2xl font-bold mb-2 text-foreground">קבלת העיצוב הסופי</h2>
-          <p className="text-muted-foreground text-sm mb-6">
-            לאחר התשלום תקבלו קבצי עיצוב סופיים בפורמטים מלאים לבית דפוס ולרשתות החברתיות, מוכנים להדפסה ושיתוף.
-          </p>
+          <p className="text-muted-foreground text-sm mb-6">לאחר התשלום תקבלו קבצי עיצוב סופיים לבית דפוס ולרשתות החברתיות.</p>
           <div className="bg-secondary/40 border border-primary/10 rounded-xl p-4 mb-6">
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm text-foreground font-medium">{designName}</span>
@@ -850,30 +585,81 @@ function PaymentWall({ onPay, onClose, loading, designName }: { onPay: () => voi
             <p className="text-xs text-muted-foreground text-right">קבצי DXF, PNG, PDF • שירות לקוחות VIP</p>
           </div>
           <ul className="text-right text-xs text-muted-foreground mb-6 space-y-1.5">
-            {["קבצי עיצוב סופיים לבית דפוס (PDF/PNG)", "גרסה לרשתות חברתיות (WhatsApp, Instagram)", "תיקון אחד ללא תוספת מחיר", "מסירה תוך 48 שעות"].map(item => (
-              <li key={item} className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
-                {item}
-              </li>
+            {["קבצי עיצוב סופיים לבית דפוס (PDF/PNG)", "גרסה לרשתות חברתיות", "תיקון אחד ללא תוספת", "מסירה תוך 48 שעות"].map(item => (
+              <li key={item} className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />{item}</li>
             ))}
           </ul>
-          <Button
-            onClick={onPay}
-            disabled={loading}
-            className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 font-bold gap-2 text-base shadow-lg shadow-primary/20"
-          >
+          <Button onClick={onPay} disabled={loading} className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 font-bold gap-2 text-base shadow-lg">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
             {loading ? "מעביר לתשלום..." : "לתשלום מאובטח — ₪49"}
           </Button>
-          <p className="text-[11px] text-muted-foreground mt-3">
-            תשלום מאובטח דרך Stripe • ניתן לבטל עד 24 שעות
-          </p>
+          <p className="text-[11px] text-muted-foreground mt-3">תשלום מאובטח דרך Stripe</p>
         </motion.div>
       </motion.div>
     </AnimatePresence>
   );
 }
 
+// ─── Layer item ────────────────────────────────────────────────────────────────
+function LayerItem({
+  slot, index, selected, locked, visible, value,
+  onSelect, onToggleLock, onToggleVisible, onDuplicate, onDelete, onBringUp, onSendDown,
+}: {
+  slot: TextSlot; index: number; selected: boolean; locked: boolean; visible: boolean; value: string;
+  onSelect: () => void; onToggleLock: () => void; onToggleVisible: () => void;
+  onDuplicate: () => void; onDelete: () => void; onBringUp: () => void; onSendDown: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const isUserSlot = slot.id.startsWith("user_");
+  return (
+    <div
+      className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg cursor-pointer transition-all group relative ${selected ? "bg-primary/15 border border-primary/30" : "hover:bg-primary/5 border border-transparent"}`}
+      onClick={onSelect}
+    >
+      <div className="w-5 h-5 rounded bg-primary/10 text-primary text-[9px] font-bold flex items-center justify-center shrink-0">
+        {locked ? <Lock className="w-2.5 h-2.5" /> : index + 1}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-medium text-foreground truncate">{slot.label || "טקסט"}</p>
+        <p className="text-[9px] text-muted-foreground truncate">{value?.replace(/<[^>]+>/g, "").slice(0, 20) || "ריק"}</p>
+      </div>
+      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+        <button onClick={onToggleVisible} className="p-0.5 hover:text-primary transition-colors" title={visible ? "הסתר" : "הצג"}>
+          {visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3 text-muted-foreground" />}
+        </button>
+        <button onClick={onToggleLock} className="p-0.5 hover:text-primary transition-colors" title={locked ? "בטל נעילה" : "נעל"}>
+          {locked ? <Lock className="w-3 h-3 text-amber-500" /> : <Unlock className="w-3 h-3" />}
+        </button>
+        <div className="relative">
+          <button onClick={() => setMenuOpen(o => !o)} className="p-0.5 hover:text-primary transition-colors">
+            <MoreVertical className="w-3 h-3" />
+          </button>
+          {menuOpen && (
+            <div className="absolute left-0 top-full mt-1 bg-card border border-primary/20 rounded-xl shadow-xl z-50 w-32 py-1 text-xs"
+              onMouseLeave={() => setMenuOpen(false)}>
+              <button className="w-full px-3 py-1.5 text-right hover:bg-primary/10 flex items-center gap-2" onClick={() => { onBringUp(); setMenuOpen(false); }}>
+                <ArrowUp className="w-3 h-3" />הבא קדימה
+              </button>
+              <button className="w-full px-3 py-1.5 text-right hover:bg-primary/10 flex items-center gap-2" onClick={() => { onSendDown(); setMenuOpen(false); }}>
+                <ArrowDown className="w-3 h-3" />שלח אחורה
+              </button>
+              <button className="w-full px-3 py-1.5 text-right hover:bg-primary/10 flex items-center gap-2" onClick={() => { onDuplicate(); setMenuOpen(false); }}>
+                <Copy className="w-3 h-3" />שכפל
+              </button>
+              {isUserSlot && (
+                <button className="w-full px-3 py-1.5 text-right hover:bg-destructive/10 text-destructive flex items-center gap-2" onClick={() => { onDelete(); setMenuOpen(false); }}>
+                  <Trash2 className="w-3 h-3" />מחק
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Editor ───────────────────────────────────────────────────────────────
 export default function Editor() {
   const params = useParams();
   const id = params.id;
@@ -890,40 +676,24 @@ export default function Editor() {
       .then((data: any[]) => {
         if (!Array.isArray(data)) throw new Error("bad response");
         const found = data.find(t => String(t.id) === id || t.slug === id);
-        if (!found) {
-          console.warn("[HADAR] template not found, id=", id, "available:", data.map(t => t.id));
-          setTemplate(null);
-          setTemplateLoadError(true);
-          return;
-        }
+        if (!found) { setTemplate(null); setTemplateLoadError(true); return; }
         const bgImg = found.displayImageUrl || found.imageUrl;
         const isGrad = !bgImg || /gradient|linear|radial/i.test(bgImg);
         const mapped: Template = {
-          id: String(found.id),
-          slug: found.slug,
-          title: found.title,
-          subtitle: found.subtitle,
-          category: found.category,
-          style: found.style,
-          price: Math.round((found.price || 0) / 100),
-          image: bgImg || "linear-gradient(135deg, #0B1833 0%, #1a2d54 100%)",
-          isGradient: isGrad,
+          id: String(found.id), slug: found.slug, title: found.title, subtitle: found.subtitle,
+          category: found.category, style: found.style, price: Math.round((found.price || 0) / 100),
+          image: bgImg || "linear-gradient(135deg, #0B1833 0%, #1a2d54 100%)", isGradient: isGrad,
           slots: Array.isArray(found.slots) ? found.slots : [],
-          galleryImageUrl: found.galleryImageUrl,
-          displayImageUrl: found.displayImageUrl,
+          galleryImageUrl: found.galleryImageUrl, displayImageUrl: found.displayImageUrl,
           dimensions: found.dimensions,
         };
-        console.log("[HADAR] template loaded:", mapped.id, "title:", mapped.title, "baseImage:", bgImg || "(gradient)", "slots:", mapped.slots?.length);
+        console.log("[HADAR] template loaded:", mapped.id, "slots:", mapped.slots?.length);
         setTemplate(mapped);
       })
-      .catch(err => {
-        console.error("[HADAR] template load failed:", err);
-        setTemplate(null);
-        setTemplateLoadError(true);
-      });
+      .catch(err => { console.error("[HADAR] template load failed:", err); setTemplate(null); setTemplateLoadError(true); });
   }, [id]);
 
-  const { theme, toggle } = useTheme();
+  const { theme } = useTheme();
   const { isSignedIn, isLoaded, getToken } = useAuth();
   const { user } = useUser();
   const { redirectToSignIn } = useClerk();
@@ -933,6 +703,7 @@ export default function Editor() {
   const designIdParam = searchParams.get("design");
   const paymentStatus = searchParams.get("payment");
 
+  // ── Core state ────────────────────────────────────────────────────────────────
   const [zoom, setZoom] = useState(1);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -944,34 +715,60 @@ export default function Editor() {
   const [designName, setDesignName] = useState("עיצוב שלי");
   const [selectedFont, setSelectedFont] = useState(DEFAULT_FONT);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [sidebarTab, setSidebarTab] = useState<"text" | "elements">("text");
+  const [logoPos, setLogoPos] = useState<LogoPos>({ x: 30, y: 2, width: 40 });
   const [placedElements, setPlacedElements] = useState<PlacedElement[]>([]);
   const [selectedElementUid, setSelectedElementUid] = useState<string | null>(null);
+
+  // ── Per-slot state ────────────────────────────────────────────────────────────
+  const [values, setValues] = useState<Record<string, string>>({});
   const [slotStyles, setSlotStyles] = useState<Record<string, SlotStyle>>({});
+  const [slotPositions, setSlotPositions] = useState<Record<string, SlotPos>>({});
+  const [userSlots, setUserSlots] = useState<TextSlot[]>([]);
+  const [lockedSlots, setLockedSlots] = useState<Set<string>>(new Set());
+  const [hiddenSlots, setHiddenSlots] = useState<Set<string>>(new Set());
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
-  const [logoPos, setLogoPos] = useState<LogoPos>({ x: 30, y: 2, width: 40 });
+  const [rightTab, setRightTab] = useState<"text" | "elements" | "design">("text");
+  const [elementsTab, setElementsTab] = useState(false);
+
   const previewRef = useRef<HTMLDivElement>(null);
 
-  // Load default font on mount
+  // ── Derived ────────────────────────────────────────────────────────────────────
+  const templateSlots = template && template !== "loading" ? (template.slots || []).filter(s => !SYSTEM_SLOT_IDS.has(s.id)) : [];
+  const allSlots = [...templateSlots, ...userSlots];
+  const visibleSlots = allSlots.filter(s => !hiddenSlots.has(s.id));
+  const activeSlot = allSlots.find(s => s.id === activeSlotId) ?? null;
+
+  // ── Load default font ─────────────────────────────────────────────────────────
   useEffect(() => { loadGoogleFont(DEFAULT_FONT); }, []);
 
+  // ── Initialize slot values + positions when template loads ────────────────────
   const initValues = useCallback(() => {
     const tmpl = template && template !== "loading" ? template : null;
     const init: Record<string, string> = {};
-    (tmpl?.slots || []).forEach(s => { init[s.id] = s.defaultValue; });
+    (tmpl?.slots || []).filter(s => !SYSTEM_SLOT_IDS.has(s.id)).forEach(s => { init[s.id] = s.defaultValue; });
     return init;
   }, [template]);
 
-  const [values, setValues] = useState<Record<string, string>>({});
+  const initPositions = useCallback((slots: TextSlot[], existing: Record<string, SlotPos> = {}): Record<string, SlotPos> => {
+    const pos: Record<string, SlotPos> = { ...existing };
+    slots.filter(s => !SYSTEM_SLOT_IDS.has(s.id)).forEach((s, i, arr) => {
+      if (!pos[s.id]) {
+        pos[s.id] = s.x != null && s.y != null
+          ? { x: s.x, y: s.y, width: s.width ?? 80 }
+          : getDefaultPos(i, arr.length);
+      }
+    });
+    return pos;
+  }, []);
 
-  // Re-initialize slot values when template loads (only if no design loaded from server)
   useEffect(() => {
     if (!template || template === "loading") return;
-    if (designId) return; // design will be loaded from server
+    if (designId) return;
     setValues(initValues());
+    setSlotPositions(initPositions(template.slots || []));
   }, [template]);
 
-  // Load existing design if designId is in URL
+  // ── Load existing design ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!designId || !isSignedIn) return;
     const load = async () => {
@@ -986,27 +783,22 @@ export default function Editor() {
           setValues(fv);
           setDesignName(data.designName || "עיצוב שלי");
           if (data.status === "paid") setPaySuccess(true);
+          try { const els = JSON.parse(fv["__elements"] || "[]"); if (Array.isArray(els)) setPlacedElements(els); } catch {}
+          try { const ss = JSON.parse(fv["__slotStyles"] || "{}"); if (ss && typeof ss === "object") setSlotStyles(ss); } catch {}
+          try { const lp = JSON.parse(fv["__logoPos"] || "null"); if (lp && typeof lp === "object") setLogoPos(lp); } catch {}
           try {
-            const els = JSON.parse(fv["__elements"] || "[]");
-            if (Array.isArray(els)) setPlacedElements(els);
+            const sp = JSON.parse(fv["__slotPositions"] || "{}");
+            if (sp && typeof sp === "object") setSlotPositions(prev => initPositions(template && template !== "loading" ? (template.slots || []) : [], { ...sp }));
           } catch {}
-          try {
-            const ss = JSON.parse(fv["__slotStyles"] || "{}");
-            if (ss && typeof ss === "object") setSlotStyles(ss);
-          } catch {}
-          try {
-            const lp = JSON.parse(fv["__logoPos"] || "null");
-            if (lp && typeof lp === "object") setLogoPos(lp);
-          } catch {}
+          try { const us = JSON.parse(fv["__userSlots"] || "[]"); if (Array.isArray(us)) setUserSlots(us); } catch {}
+          try { const ls = JSON.parse(fv["__lockedSlots"] || "[]"); if (Array.isArray(ls)) setLockedSlots(new Set(ls)); } catch {}
         }
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) { console.error(err); }
     };
     load();
   }, [designId, isSignedIn]);
 
-  // Handle payment return
+  // ── Payment return ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (paymentStatus === "success") {
       const sessionId = searchParams.get("session_id");
@@ -1014,13 +806,8 @@ export default function Editor() {
         const verify = async () => {
           try {
             const token = await getToken();
-            const res = await fetch(`${API_BASE}/api/hadar/checkout/verify?session_id=${sessionId}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            if (res.ok) {
-              const data = await res.json();
-              if (data.status === "paid") setPaySuccess(true);
-            }
+            const res = await fetch(`${API_BASE}/api/hadar/checkout/verify?session_id=${sessionId}`, { headers: { Authorization: `Bearer ${token}` } });
+            if (res.ok) { const data = await res.json(); if (data.status === "paid") setPaySuccess(true); }
           } catch {}
         };
         verify();
@@ -1028,48 +815,98 @@ export default function Editor() {
     }
   }, [paymentStatus, isSignedIn]);
 
-  const updateValue = (id: string, val: string) => {
-    setValues(prev => ({ ...prev, [id]: val }));
-    setSaved(false);
-  };
-
-  const resetAll = () => {
-    setValues(initValues());
-    setSaved(false);
-  };
-
-  const getFieldValuesWithElements = useCallback(() => {
-    return {
-      ...values,
-      "__elements": JSON.stringify(placedElements),
-      "__slotStyles": JSON.stringify(slotStyles),
-      "__logoPos": JSON.stringify(logoPos),
+  // ── Keyboard: arrow keys to nudge selected slot ───────────────────────────────
+  useEffect(() => {
+    if (!activeSlotId) return;
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toUpperCase();
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+      const arrows = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+      if (!arrows.includes(e.key)) return;
+      e.preventDefault();
+      const step = e.shiftKey ? 5 : 0.5;
+      setSlotPositions(prev => {
+        const pos = prev[activeSlotId] ?? { x: 50, y: 50, width: 80 };
+        const dx = e.key === "ArrowLeft" ? step : e.key === "ArrowRight" ? -step : 0;
+        const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+        return { ...prev, [activeSlotId]: { ...pos, x: Math.max(0, Math.min(100, pos.x + dx)), y: Math.max(0, Math.min(100, pos.y + dy)) } };
+      });
+      setSaved(false);
     };
-  }, [values, placedElements, slotStyles, logoPos]);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [activeSlotId]);
 
-  const handleAddElement = useCallback((el: { id: number; fileContent: string; category?: string }) => {
-    const uid = `el_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    const isFrame = el.category === "מסגרות";
-    setPlacedElements(prev => [...prev, {
-      uid, elementId: el.id, src: el.fileContent, category: el.category,
-      x: isFrame ? 0 : 35, y: isFrame ? 0 : 35, width: isFrame ? 100 : 25,
-      tintColor: "", opacity: 1, isFrame,
-    }]);
-    setSelectedElementUid(uid);
-    setSidebarTab("elements");
-    setSaved(false);
-  }, []);
+  // ── Handlers ──────────────────────────────────────────────────────────────────
+  const updateValue = (id: string, val: string) => { setValues(prev => ({ ...prev, [id]: val })); setSaved(false); };
+  const resetAll = () => { setValues(initValues()); setSaved(false); };
 
-  const handleUpdateElement = useCallback((uid: string, patch: Partial<PlacedElement>) => {
-    setPlacedElements(prev => prev.map(e => e.uid === uid ? { ...e, ...patch } : e));
+  const addTextBox = () => {
+    const newId = `user_${Date.now()}`;
+    const newSlot: TextSlot = { id: newId, label: "שדה טקסט", placeholder: "הקלידו...", defaultValue: "טקסט חדש", x: 50, y: 50, width: 70 };
+    setUserSlots(prev => [...prev, newSlot]);
+    setSlotPositions(prev => ({ ...prev, [newId]: { x: 50, y: 50 + Object.keys(prev).length * 5, width: 70 } }));
+    setValues(prev => ({ ...prev, [newId]: "טקסט חדש" }));
+    setSlotStyles(prev => ({ ...prev, [newId]: { fontSize: 16, color: "#F8F1E3" } }));
+    setActiveSlotId(newId);
     setSaved(false);
-  }, []);
+  };
 
-  const handleDeleteElement = useCallback((uid: string) => {
-    setPlacedElements(prev => prev.filter(e => e.uid !== uid));
-    if (selectedElementUid === uid) setSelectedElementUid(null);
+  const duplicateSlot = (slotId: string) => {
+    const original = allSlots.find(s => s.id === slotId);
+    if (!original) return;
+    const newId = `user_${Date.now()}`;
+    const origPos = slotPositions[slotId] ?? { x: 50, y: 50, width: 80 };
+    setUserSlots(prev => [...prev, { ...original, id: newId, label: `${original.label} (עותק)` }]);
+    setSlotPositions(prev => ({ ...prev, [newId]: { ...origPos, x: Math.min(95, origPos.x + 5), y: Math.min(95, origPos.y + 5) } }));
+    setValues(prev => ({ ...prev, [newId]: values[slotId] ?? original.defaultValue }));
+    setSlotStyles(prev => ({ ...prev, [newId]: { ...(prev[slotId] || {}) } }));
+    setActiveSlotId(newId);
     setSaved(false);
-  }, [selectedElementUid]);
+  };
+
+  const deleteUserSlot = (slotId: string) => {
+    setUserSlots(prev => prev.filter(s => s.id !== slotId));
+    setValues(prev => { const n = { ...prev }; delete n[slotId]; return n; });
+    setSlotStyles(prev => { const n = { ...prev }; delete n[slotId]; return n; });
+    setSlotPositions(prev => { const n = { ...prev }; delete n[slotId]; return n; });
+    if (activeSlotId === slotId) setActiveSlotId(null);
+    setSaved(false);
+  };
+
+  const toggleLock = (slotId: string) => {
+    setLockedSlots(prev => { const n = new Set(prev); n.has(slotId) ? n.delete(slotId) : n.add(slotId); return n; });
+  };
+
+  const toggleVisible = (slotId: string) => {
+    setHiddenSlots(prev => { const n = new Set(prev); n.has(slotId) ? n.delete(slotId) : n.add(slotId); return n; });
+  };
+
+  const bringForward = (slotId: string) => {
+    setSlotStyles(prev => {
+      const z = ((prev[slotId]?.zIndex as number) ?? 10) + 1;
+      return { ...prev, [slotId]: { ...(prev[slotId] || {}), zIndex: z } };
+    });
+    setSaved(false);
+  };
+
+  const sendBackward = (slotId: string) => {
+    setSlotStyles(prev => {
+      const z = Math.max(1, ((prev[slotId]?.zIndex as number) ?? 10) - 1);
+      return { ...prev, [slotId]: { ...(prev[slotId] || {}), zIndex: z } };
+    });
+    setSaved(false);
+  };
+
+  const getFieldValuesWithElements = useCallback(() => ({
+    ...values,
+    "__elements": JSON.stringify(placedElements),
+    "__slotStyles": JSON.stringify(slotStyles),
+    "__logoPos": JSON.stringify(logoPos),
+    "__slotPositions": JSON.stringify(slotPositions),
+    "__userSlots": JSON.stringify(userSlots),
+    "__lockedSlots": JSON.stringify([...lockedSlots]),
+  }), [values, placedElements, slotStyles, logoPos, slotPositions, userSlots, lockedSlots]);
 
   const handleAutoSave = async (): Promise<number | null> => {
     if (!isSignedIn || !template || template === "loading") return null;
@@ -1088,441 +925,553 @@ export default function Editor() {
         const res = await fetch(`${API_BASE}/api/hadar/designs`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ templateId: template.id, fieldValues: fv, designName }),
+          body: JSON.stringify({ templateId: (template as Template).id, fieldValues: fv, designName }),
         });
         const data = await res.json();
         setDesignId(data.id);
         return data.id;
       }
-    } catch (err) {
-      console.error(err);
-      return null;
-    } finally {
-      setSaving(false);
-    }
+    } catch (err) { console.error(err); return null; }
+    finally { setSaving(false); setSaved(true); }
   };
 
-  const handleSave = async () => {
-    await handleAutoSave();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-  };
+  const handleSave = () => handleAutoSave();
 
-  const handleDownloadClick = () => {
-    if (!isLoaded || !isSignedIn) return;
-    if (paySuccess) {
-      handleDownload(); // already paid — go straight to download
-      return;
-    }
-    console.log("[HADAR] opening payment wall for template", typeof template === "object" && template !== null ? template.id : "loading");
-    setShowPayment(true);
+  const handleDownloadClick = async () => {
+    if (paySuccess) { handleDownload(); return; }
+    if (!isSignedIn) return;
+    const savedId = await handleAutoSave();
+    if (savedId) setShowPayment(true);
   };
 
   const handlePay = async () => {
     if (!isSignedIn || !template || template === "loading") return;
     setPayLoading(true);
-    console.log("[HADAR] starting checkout for template", template.id, "designId", designId);
     try {
-      const savedDesignId = await handleAutoSave();
+      const savedId = await handleAutoSave();
+      if (!savedId) { setPayLoading(false); return; }
       const token = await getToken();
       const res = await fetch(`${API_BASE}/api/hadar/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          templateId: template.id,
-          fieldValues: values,
-          designName,
-          designId: savedDesignId,
-        }),
+        body: JSON.stringify({ designId: savedId, templateTitle: (template as Template).title }),
       });
       const data = await res.json();
-      console.log("[HADAR] checkout response:", data);
-      if (data.url) {
-        if (data.designId) setDesignId(data.designId);
-        window.location.href = data.url;
-      } else {
-        alert("שגיאה בפתיחת עמוד התשלום");
-      }
-    } catch (err) {
-      console.error("[HADAR] checkout error:", err);
-      alert("שגיאה, נסו שוב");
-    } finally {
-      setPayLoading(false);
-    }
+      console.log("[HADAR] checkout:", data.url ? "redirect" : "error");
+      if (data.url) { window.location.href = data.url; return; }
+    } catch (err) { console.error("[HADAR] checkout error:", err); }
+    setPayLoading(false);
   };
 
   const handleDownload = async () => {
-    if (!previewRef.current || downloading) return;
-    console.log("[HADAR] starting download for template", typeof template === "object" && template !== null ? template.id : null);
+    if (!previewRef.current) return;
     setDownloading(true);
+    console.log("[HADAR] starting download");
     try {
       const html2canvas = (await import("html2canvas")).default;
-      const target = previewRef.current.children[0] as HTMLElement;
-      const savedTransform = target.style.transform;
-      const savedTransition = target.style.transition;
-      target.style.transform = "scale(1)";
-      target.style.transition = "none";
-      const canvas = await html2canvas(target, {
-        scale: 3,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: null,
-        logging: false,
-        imageTimeout: 15000,
+      const canvas = await html2canvas(previewRef.current, {
+        scale: 3, useCORS: true, allowTaint: true,
+        backgroundColor: null, logging: false,
       });
-      target.style.transform = savedTransform;
-      target.style.transition = savedTransition;
       const link = document.createElement("a");
-      link.download = `${designName || "הזמנה"}.png`;
+      link.download = `hadar-${designName.replace(/\s+/g, "-")}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
-      console.log("[HADAR] download complete");
-    } catch (err) {
-      console.error("[HADAR] download error:", err);
-      alert("שגיאה בהורדה, נסו שוב");
-    } finally {
-      setDownloading(false);
-    }
+      console.log("[HADAR] download done");
+    } catch (err) { console.error("[HADAR] download failed:", err); }
+    finally { setDownloading(false); }
   };
 
   const handleWhatsApp = () => {
-    const tmplTitle = typeof template === "object" && template !== null ? template.title : "";
-    const msg = encodeURIComponent(`שלום, אני מעוניין לבצע הזמנה לתבנית "${tmplTitle}". כבר ערכתי את הפרטים באונליין.`);
-    window.open(`https://wa.me/972500000000?text=${msg}`, "_blank");
+    const msg = `שלום, אני מעוניין בעיצוב הזמנה — ${designName}`;
+    window.open(`https://wa.me/972501234567?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
+  const handleAddElement = useCallback((el: { id: number; fileContent: string; category?: string }) => {
+    const uid = `el_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const isFrame = el.category === "מסגרות";
+    setPlacedElements(prev => [...prev, { uid, elementId: el.id, src: el.fileContent, category: el.category, x: isFrame ? 0 : 35, y: isFrame ? 0 : 35, width: isFrame ? 100 : 25, tintColor: "", opacity: 1, isFrame }]);
+    setSelectedElementUid(uid);
+    setSaved(false);
+  }, []);
+
+  const handleUpdateElement = useCallback((uid: string, patch: Partial<PlacedElement>) => {
+    setPlacedElements(prev => prev.map(e => e.uid === uid ? { ...e, ...patch } : e));
+    setSaved(false);
+  }, []);
+
+  const handleDeleteElement = useCallback((uid: string) => {
+    setPlacedElements(prev => prev.filter(e => e.uid !== uid));
+    if (selectedElementUid === uid) setSelectedElementUid(null);
+    setSaved(false);
+  }, [selectedElementUid]);
+
+  // ── Loading / Error states ────────────────────────────────────────────────────
   if (template === "loading") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
         <div className="text-center space-y-4">
-          <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
-          <p className="text-muted-foreground text-sm">טוען תבנית...</p>
+          <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
+          <p className="text-sm text-muted-foreground">טוען תבנית...</p>
         </div>
       </div>
     );
   }
 
-  if (!template) {
+  if (!template || templateLoadError) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4" dir="rtl">
-        <div className="text-center">
-          <h1 className="font-serif text-3xl mb-4 text-foreground">התבנית לא נמצאה</h1>
-          {templateLoadError && <p className="text-muted-foreground text-sm mb-4">לא הצלחנו למצוא את התבנית המבוקשת</p>}
-          <Link href="/"><Button variant="outline" className="border-primary text-primary">חזרה לגלריה</Button></Link>
+      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
+        <div className="text-center space-y-4">
+          <p className="text-lg font-semibold text-foreground">תבנית לא נמצאה</p>
+          <Link href="/design-templates"><Button variant="outline">חזרה לגלריה</Button></Link>
         </div>
       </div>
     );
   }
 
-  const slots = template.slots || [];
+  const tmpl = template as Template;
 
+  // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans" dir="rtl">
-
-      {showPayment && !paySuccess && (
-        <PaymentWall onPay={handlePay} onClose={() => setShowPayment(false)} loading={payLoading} designName={designName} />
-      )}
-
-      {/* Sticky Header */}
-      <header className="border-b border-primary/10 bg-background/90 backdrop-blur-md sticky top-0 z-40 shadow-sm">
-        <div className="max-w-screen-xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href={`/template/${template.id}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors group shrink-0">
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              <span className="hidden sm:inline text-sm font-medium">חזרה</span>
-            </Link>
-            <div className="hidden sm:block w-px h-5 bg-primary/20" />
-            <div className="min-w-0">
-              <p className="font-semibold text-sm text-foreground truncate">{template.title}</p>
-              <p className="text-xs text-muted-foreground truncate">{template.subtitle}</p>
-            </div>
-          </div>
-
-          <Link href="/" className="shrink-0">
-            <img src={hadarLogo} alt="הדר" style={{ height: 36, width: "auto", objectFit: "contain" }} />
-          </Link>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <button onClick={toggle} className="rounded-full p-1.5 border border-primary/20 text-primary hover:bg-primary/10 transition-colors">
-              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+    <div className="fixed inset-0 flex flex-col bg-background" dir="rtl">
+      {/* ── HEADER ── */}
+      <header className="h-12 border-b border-primary/10 bg-card flex items-center justify-between px-3 shrink-0 z-10">
+        <div className="flex items-center gap-2">
+          <Link href="/design-templates">
+            <button className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-xs transition-colors">
+              <ArrowRight className="w-3.5 h-3.5" />
+              גלריה
             </button>
-            {isSignedIn ? (
-              <Link href="/my-designs">
-                <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-primary gap-1.5 h-8 px-2 hidden sm:flex">
-                  <User className="w-3.5 h-3.5" />
-                  <span className="text-xs">העיצובים שלי</span>
-                </Button>
-              </Link>
-            ) : null}
-            <Button size="sm" variant="ghost" onClick={resetAll} className="text-muted-foreground hover:text-foreground gap-1.5 h-8 px-2 hidden sm:flex">
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="text-xs">איפוס</span>
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={saving}
-              className={`gap-1.5 h-8 px-3 text-xs transition-all ${saved ? "bg-green-600 hover:bg-green-700" : "bg-primary hover:bg-primary/90"} text-primary-foreground`}
-            >
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : saved ? <CheckCircle2 className="w-3.5 h-3.5" /> : null}
-              {saving ? "שומר..." : saved ? "נשמר!" : "שמירה"}
-            </Button>
-          </div>
+          </Link>
+          <div className="w-px h-4 bg-primary/20" />
+          <img src={hadarLogo} alt="הדר" className="h-6 w-auto" />
+          <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[160px]">{tmpl.title}</span>
+        </div>
+
+        {/* Steps */}
+        <div className="hidden md:flex items-center gap-1 text-[10px]">
+          {[{ n: "1", l: "ערכו", done: true }, { n: "2", l: "שמרו", done: isSignedIn && saved }, { n: "3", l: "תשלום", done: paySuccess }].map((step, i) => (
+            <div key={step.n} className="flex items-center gap-1">
+              {i > 0 && <span className="text-primary/30">←</span>}
+              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${step.done ? "bg-green-600 text-white" : "bg-primary/20 text-primary"}`}>
+                {step.done ? "✓" : step.n}
+              </span>
+              <span className={step.done ? "text-green-600" : "text-muted-foreground"}>{step.l}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {isSignedIn && (
+            <Link href="/my-designs">
+              <Button size="sm" variant="ghost" className="text-muted-foreground gap-1 h-7 px-2 hidden sm:flex text-xs">
+                <User className="w-3 h-3" />העיצובים שלי
+              </Button>
+            </Link>
+          )}
+          <Button size="sm" variant="ghost" onClick={resetAll} className="text-muted-foreground gap-1 h-7 px-2 text-xs">
+            <RotateCcw className="w-3 h-3" />
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={saving}
+            className={`gap-1 h-7 px-3 text-xs ${saved ? "bg-green-600 hover:bg-green-700" : "bg-primary hover:bg-primary/90"} text-primary-foreground`}>
+            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : saved ? <CheckCircle2 className="w-3 h-3" /> : <Save className="w-3 h-3" />}
+            {saving ? "שומר..." : saved ? "נשמר!" : "שמירה"}
+          </Button>
         </div>
       </header>
 
       {/* Payment success banner */}
       {paySuccess && (
-        <div className="bg-green-600 text-white text-center py-2.5 px-4 text-sm font-medium flex items-center justify-center gap-2">
-          <CheckCircle2 className="w-4 h-4" />
-          התשלום הצליח! העיצוב הסופי יישלח אליכם תוך 48 שעות. לפניות: <button onClick={handleWhatsApp} className="underline">ווצאפ</button>
+        <div className="bg-green-600 text-white text-center py-2 px-4 text-xs font-medium flex items-center justify-center gap-2 shrink-0">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          התשלום הצליח! לשאלות: <button onClick={handleWhatsApp} className="underline">ווצאפ</button>
         </div>
       )}
 
-      {/* Main layout */}
-      <div className="max-w-screen-xl mx-auto flex flex-col lg:flex-row h-[calc(100vh-56px)]">
+      {/* ── MAIN 3-COLUMN LAYOUT ── */}
+      <div className="flex flex-1 overflow-hidden">
 
-        {/* ── LEFT PANEL: fields ── */}
-        <aside className="lg:w-[420px] xl:w-[460px] shrink-0 border-b lg:border-b-0 lg:border-l border-primary/10 flex flex-col bg-card/50">
-          <div className="px-5 py-3 border-b border-primary/10 bg-card flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-sm text-foreground">עורך העיצוב</p>
-              <p className="text-xs text-muted-foreground">{slots.length} שדות טקסט</p>
+        {/* ── LEFT: Layers panel ── */}
+        <div className="w-48 shrink-0 border-l border-primary/10 bg-card flex flex-col hidden lg:flex">
+          <div className="px-3 py-2 border-b border-primary/10 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs font-bold text-foreground">שכבות</span>
             </div>
-            <span className="text-xs bg-primary/10 text-primary border border-primary/20 rounded-full px-2.5 py-0.5 font-medium">
-              ₪{template.price}
-            </span>
-          </div>
-
-          {/* Steps guide */}
-          <div className="px-5 py-2.5 border-b border-primary/10 bg-primary/5">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-              {[
-                { n: "1", label: "ערכו", done: true },
-                { n: "2", label: "שמרו", done: isSignedIn && saved },
-                { n: "3", label: "תשלום", done: paySuccess },
-                { n: "4", label: "קבצים", done: false },
-              ].map((step, i) => (
-                <div key={step.n} className="flex items-center gap-1">
-                  {i > 0 && <span className="text-primary/30">←</span>}
-                  <div className="flex items-center gap-1.5">
-                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${step.done ? "bg-green-600 text-white" : "bg-primary/20 text-primary"}`}>
-                      {step.done ? "✓" : step.n}
-                    </span>
-                    <span className={step.done ? "text-green-600" : ""}>{step.label}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Sidebar Tabs */}
-          <div className="flex border-b border-primary/10 bg-card">
             <button
-              onClick={() => setSidebarTab("text")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-all ${
-                sidebarTab === "text"
-                  ? "text-primary border-b-2 border-primary"
-                  : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
-              }`}
+              onClick={addTextBox}
+              className="w-5 h-5 rounded bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
+              title="הוסף תיבת טקסט"
             >
-              <AlignLeft className="w-3.5 h-3.5" />
-              טקסטים
-            </button>
-            <button
-              onClick={() => setSidebarTab("elements")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-all ${
-                sidebarTab === "elements"
-                  ? "text-primary border-b-2 border-primary"
-                  : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              אלמנטים
-              {placedElements.length > 0 && (
-                <span className="bg-primary text-primary-foreground text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
-                  {placedElements.length}
-                </span>
-              )}
+              <Plus className="w-3 h-3" />
             </button>
           </div>
+          <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
+            {allSlots.filter(s => !SYSTEM_SLOT_IDS.has(s.id)).map((slot, i) => (
+              <LayerItem
+                key={slot.id}
+                slot={slot}
+                index={i}
+                selected={activeSlotId === slot.id}
+                locked={lockedSlots.has(slot.id)}
+                visible={!hiddenSlots.has(slot.id)}
+                value={values[slot.id] ?? slot.defaultValue}
+                onSelect={() => setActiveSlotId(activeSlotId === slot.id ? null : slot.id)}
+                onToggleLock={() => toggleLock(slot.id)}
+                onToggleVisible={() => toggleVisible(slot.id)}
+                onDuplicate={() => duplicateSlot(slot.id)}
+                onDelete={() => deleteUserSlot(slot.id)}
+                onBringUp={() => bringForward(slot.id)}
+                onSendDown={() => sendBackward(slot.id)}
+              />
+            ))}
+            {allSlots.filter(s => !SYSTEM_SLOT_IDS.has(s.id)).length === 0 && (
+              <p className="text-[10px] text-muted-foreground text-center py-4">אין שכבות</p>
+            )}
+          </div>
+          <div className="border-t border-primary/10 p-2">
+            <button
+              onClick={addTextBox}
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs text-primary hover:bg-primary/10 rounded-lg transition-colors border border-dashed border-primary/30"
+            >
+              <Plus className="w-3 h-3" />
+              הוסף טקסט
+            </button>
+          </div>
+        </div>
 
-          {/* ── TAB: Text ── */}
-          {sidebarTab === "text" && (
-            <>
-              {/* Design name input */}
-              {isSignedIn && (
-                <div className="px-5 py-2 border-b border-primary/10 bg-card/30">
-                  <Input
-                    value={designName}
-                    onChange={e => setDesignName(e.target.value)}
-                    placeholder="שם העיצוב שלכם..."
-                    className="h-8 text-xs bg-transparent border-0 border-b border-primary/10 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary/40 text-foreground placeholder:text-muted-foreground/40"
-                    dir="rtl"
-                  />
-                </div>
-              )}
+        {/* ── CENTER: Canvas ── */}
+        <main className="flex-1 bg-secondary/20 flex flex-col items-center overflow-auto">
+          {/* Zoom controls */}
+          <div className="flex items-center gap-2 bg-card border border-primary/10 rounded-full px-3 py-1 shadow-sm mt-3 mb-3 self-center shrink-0">
+            <button onClick={() => setZoom(z => Math.max(0.4, z - 0.1))} className="text-muted-foreground hover:text-foreground p-0.5">
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-xs font-mono w-9 text-center">{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom(z => Math.min(1.8, z + 0.1))} className="text-muted-foreground hover:text-foreground p-0.5">
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+            <div className="w-px h-3 bg-primary/20" />
+            <span className="text-[10px] text-muted-foreground">גרור לזוז • חיצים לכוונון</span>
+          </div>
 
-              {/* Font selector */}
-              <FontSelector selected={selectedFont} onChange={setSelectedFont} />
-
-              {/* Logo uploader */}
-              <LogoUploader logoUrl={logoUrl} onChange={setLogoUrl} />
-
-              {/* Fields list with rich text + per-slot styling */}
-              <div className="flex-1 overflow-y-auto">
-                <div className="px-4 py-3 space-y-2">
-                  {slots.filter(s => s.id !== "__elements" && s.id !== "__slotStyles" && s.id !== "__logoPos").map((slot, index) => {
-                    const isActive = activeSlotId === slot.id;
-                    const hasStyle = Object.keys(slotStyles[slot.id] || {}).length > 0;
-                    return (
-                      <motion.div
-                        key={slot.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.03 }}
-                      >
-                        <div className={`bg-background border rounded-xl px-3 py-2.5 transition-all ${isActive ? "border-primary/50 shadow-sm shadow-primary/10" : "border-primary/10 hover:border-primary/30"}`}>
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
-                                {slot.fixed ? <Lock className="w-2.5 h-2.5" /> : index + 1}
-                              </div>
-                              <span className="text-[11px] font-semibold text-foreground">{slot.label}</span>
-                              {slot.fixed && <span className="text-[9px] bg-amber-500/15 text-amber-600 px-1.5 py-0.5 rounded-full">קבוע</span>}
-                              {!slot.fixed && hasStyle && <span className="text-[9px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">מעוצב</span>}
-                            </div>
-                            {!slot.fixed && (
-                              <button
-                                onClick={() => setActiveSlotId(isActive ? null : slot.id)}
-                                className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"}`}
-                                title="עיצוב שדה"
-                              >
-                                <Settings2 className="w-3 h-3" />
-                                {isActive ? "סגור" : "עיצוב"}
-                              </button>
-                            )}
-                          </div>
-                          {slot.fixed ? (
-                            <div className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 border border-primary/5 flex items-center gap-2">
-                              <Lock className="w-3 h-3 text-muted-foreground/50 shrink-0" />
-                              <span className="truncate">{slot.defaultValue || slot.placeholder}</span>
-                            </div>
-                          ) : (
-                            <RichTextSlot
-                              label=""
-                              value={values[slot.id] ?? slot.defaultValue}
-                              placeholder={slot.placeholder}
-                              multiline={!!slot.multiline}
-                              onChange={html => { updateValue(slot.id, html); setSaved(false); }}
-                            />
-                          )}
-                          {isActive && !slot.fixed && (
-                            <SlotStylePanel
-                              slotId={slot.id}
-                              style={slotStyles[slot.id] || {}}
-                              onChange={patch => {
-                                setSlotStyles(prev => ({ ...prev, [slot.id]: { ...(prev[slot.id] || {}), ...patch } }));
-                                setSaved(false);
-                              }}
-                            />
-                          )}
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* ── TAB: Elements ── */}
-          {sidebarTab === "elements" && (
-            <ElementsPanel
+          {/* Canvas */}
+          <div className="px-4 pb-4 w-full max-w-sm relative" style={{ transformOrigin: "top center" }}>
+            <InteractiveCanvas
+              template={tmpl}
+              values={values}
+              slotStyles={slotStyles}
+              slotPositions={slotPositions}
+              allSlots={visibleSlots}
+              activeSlotId={activeSlotId}
+              lockedSlots={lockedSlots}
+              fontOverride={selectedFont}
+              logoUrl={logoUrl}
+              logoPos={logoPos}
               placedElements={placedElements}
-              selectedUid={selectedElementUid}
-              onSelect={setSelectedElementUid}
-              onAdd={handleAddElement}
-              onUpdate={handleUpdateElement}
-              onDelete={handleDeleteElement}
+              selectedElementUid={selectedElementUid}
+              zoom={zoom}
+              canvasRef={previewRef as React.RefObject<HTMLDivElement>}
+              onSlotSelect={id => {
+                setActiveSlotId(id);
+                if (id) setRightTab("text");
+              }}
+              onSlotMove={(slotId, x, y) => {
+                setSlotPositions(prev => ({ ...prev, [slotId]: { ...(prev[slotId] ?? { width: 80 }), x, y } }));
+                setSaved(false);
+              }}
+              onLogoMove={pos => { setLogoPos(pos); setSaved(false); }}
+              onSelectElement={uid => { setSelectedElementUid(uid); if (uid) setRightTab("elements" as any); }}
             />
-          )}
+            {isLoaded && !isSignedIn && <AuthWall templateId={tmpl.id} />}
+          </div>
+
+          <p className="text-[10px] text-muted-foreground text-center pb-4 px-4">
+            זוהי תצוגה מקדימה — העיצוב הסופי מוכן על ידי הסטודיו
+          </p>
+        </main>
+
+        {/* ── RIGHT: Properties panel ── */}
+        <aside className="w-72 xl:w-80 shrink-0 border-r border-primary/10 bg-card flex flex-col">
+          {/* Tab bar */}
+          <div className="flex border-b border-primary/10 shrink-0">
+            {(["text", "elements"] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setRightTab(tab)}
+                className={`flex-1 py-2.5 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${rightTab === tab ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"}`}
+              >
+                {tab === "text" ? <><Type className="w-3 h-3" />טקסטים</> : <><Layers className="w-3 h-3" />אלמנטים{placedElements.length > 0 && <span className="bg-primary text-primary-foreground text-[9px] rounded-full w-4 h-4 flex items-center justify-center">{placedElements.length}</span>}</>}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {/* ── Text tab ── */}
+            {rightTab === "text" && (
+              <div className="divide-y divide-primary/10">
+                {/* Design name */}
+                {isSignedIn && (
+                  <div className="px-4 py-2.5">
+                    <Input
+                      value={designName}
+                      onChange={e => setDesignName(e.target.value)}
+                      placeholder="שם העיצוב שלכם..."
+                      className="h-8 text-xs bg-transparent border-0 border-b border-primary/10 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary/40"
+                      dir="rtl"
+                    />
+                  </div>
+                )}
+
+                {/* Global font */}
+                <div className="border-b border-primary/10">
+                  <button className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-primary/5 transition-colors"
+                    onClick={() => setElementsTab(o => !o)}>
+                    <div className="flex items-center gap-2">
+                      <Type className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-xs font-semibold">פונט גלובלי</span>
+                      <span className="text-xs text-muted-foreground" style={{ fontFamily: `'${selectedFont}', serif` }}>{selectedFont}</span>
+                    </div>
+                    {elementsTab ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                  </button>
+                  {elementsTab && (
+                    <FontPickerPanel selected={selectedFont} onChange={f => { setSelectedFont(f); setSaved(false); }} />
+                  )}
+                </div>
+
+                {/* Logo */}
+                <LogoUploader logoUrl={logoUrl} onChange={url => { setLogoUrl(url); setSaved(false); }} />
+
+                {/* Active slot editor */}
+                {activeSlot ? (
+                  <div className="p-4 space-y-3">
+                    {/* Slot header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded bg-primary/10 text-primary flex items-center justify-center">
+                          <Type className="w-3 h-3" />
+                        </div>
+                        <span className="text-xs font-bold text-foreground">{activeSlot.label}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => bringForward(activeSlot.id)} className="p-1 hover:bg-primary/10 rounded text-muted-foreground hover:text-primary transition-colors" title="הבא קדימה">
+                          <ArrowUp className="w-3 h-3" />
+                        </button>
+                        <button onClick={() => sendBackward(activeSlot.id)} className="p-1 hover:bg-primary/10 rounded text-muted-foreground hover:text-primary transition-colors" title="שלח אחורה">
+                          <ArrowDown className="w-3 h-3" />
+                        </button>
+                        <button onClick={() => duplicateSlot(activeSlot.id)} className="p-1 hover:bg-primary/10 rounded text-muted-foreground hover:text-primary transition-colors" title="שכפל">
+                          <Copy className="w-3 h-3" />
+                        </button>
+                        <button onClick={() => toggleLock(activeSlot.id)} className={`p-1 rounded transition-colors ${lockedSlots.has(activeSlot.id) ? "text-amber-500 bg-amber-500/10" : "hover:bg-primary/10 text-muted-foreground hover:text-primary"}`} title="נעל">
+                          {lockedSlots.has(activeSlot.id) ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                        </button>
+                        {activeSlot.id.startsWith("user_") && (
+                          <button onClick={() => deleteUserSlot(activeSlot.id)} className="p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive transition-colors" title="מחק">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Position controls */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {(["x", "y", "width"] as const).map(field => (
+                        <div key={field}>
+                          <label className="text-[9px] text-muted-foreground uppercase font-medium">
+                            {field === "x" ? "X %" : field === "y" ? "Y %" : "רוחב %"}
+                          </label>
+                          <input
+                            type="number" min={0} max={100}
+                            value={Math.round(slotPositions[activeSlot.id]?.[field] ?? (field === "width" ? 80 : 50))}
+                            onChange={e => {
+                              const v = Math.max(0, Math.min(100, Number(e.target.value)));
+                              setSlotPositions(prev => ({ ...prev, [activeSlot.id]: { ...(prev[activeSlot.id] ?? { x: 50, y: 50, width: 80 }), [field]: v } }));
+                              setSaved(false);
+                            }}
+                            className="w-full h-7 text-xs bg-background border border-primary/15 rounded-md px-2 text-center"
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Alignment quick buttons */}
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] text-muted-foreground ml-1">יישור:</span>
+                      {[
+                        { v: "right" as const, icon: <AlignRight className="w-3 h-3" />, label: "ימין" },
+                        { v: "center" as const, icon: <AlignCenter className="w-3 h-3" />, label: "מרכז" },
+                        { v: "left" as const, icon: <AlignLeft className="w-3 h-3" />, label: "שמאל" },
+                      ].map(({ v, icon, label }) => (
+                        <button key={v} title={label}
+                          onClick={() => setUserSlots(prev => prev.map(s => s.id === activeSlot.id ? { ...s, align: v } : s))}
+                          className={`p-1.5 rounded border transition-all ${activeSlot.align === v ? "border-primary bg-primary/10 text-primary" : "border-primary/15 text-muted-foreground hover:border-primary/40"}`}>
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Text content */}
+                    {!activeSlot.fixed ? (
+                      <RichTextSlot
+                        label=""
+                        value={values[activeSlot.id] ?? activeSlot.defaultValue}
+                        placeholder={activeSlot.placeholder}
+                        multiline={!!activeSlot.multiline}
+                        onChange={html => { updateValue(activeSlot.id, html); }}
+                      />
+                    ) : (
+                      <div className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 flex items-center gap-2">
+                        <Lock className="w-3 h-3 opacity-50 shrink-0" />
+                        <span>{activeSlot.defaultValue}</span>
+                      </div>
+                    )}
+
+                    {/* Style panel */}
+                    {!activeSlot.fixed && (
+                      <SlotStylePanel
+                        slotId={activeSlot.id}
+                        style={slotStyles[activeSlot.id] || {}}
+                        onChange={patch => {
+                          setSlotStyles(prev => ({ ...prev, [activeSlot.id]: { ...(prev[activeSlot.id] || {}), ...patch } }));
+                          setSaved(false);
+                        }}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-4 space-y-3">
+                    {/* All slots list */}
+                    <p className="text-xs text-muted-foreground">בחרו שדה טקסט לעריכה — לחצו עליו בקנבס או כאן:</p>
+                    {allSlots.filter(s => !SYSTEM_SLOT_IDS.has(s.id)).map((slot, i) => (
+                      <div
+                        key={slot.id}
+                        className="bg-background border border-primary/10 rounded-xl px-3 py-2.5 cursor-pointer hover:border-primary/30 transition-all"
+                        onClick={() => setActiveSlotId(slot.id)}
+                      >
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <div className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold shrink-0">
+                            {slot.fixed ? <Lock className="w-2.5 h-2.5" /> : i + 1}
+                          </div>
+                          <span className="text-[11px] font-semibold">{slot.label}</span>
+                        </div>
+                        {!slot.fixed ? (
+                          <RichTextSlot
+                            label=""
+                            value={values[slot.id] ?? slot.defaultValue}
+                            placeholder={slot.placeholder}
+                            multiline={!!slot.multiline}
+                            onChange={html => { updateValue(slot.id, html); }}
+                          />
+                        ) : (
+                          <div className="text-xs text-muted-foreground bg-muted/40 rounded px-2 py-1 flex items-center gap-1.5">
+                            <Lock className="w-2.5 h-2.5 opacity-40 shrink-0" />
+                            <span className="truncate">{slot.defaultValue}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      onClick={addTextBox}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-primary hover:bg-primary/10 rounded-xl transition-colors border border-dashed border-primary/30"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      הוסף תיבת טקסט חדשה
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Elements tab ── */}
+            {rightTab === "elements" && (
+              <ElementsPanel
+                placedElements={placedElements}
+                selectedUid={selectedElementUid}
+                onSelect={setSelectedElementUid}
+                onAdd={handleAddElement}
+                onUpdate={handleUpdateElement}
+                onDelete={handleDeleteElement}
+              />
+            )}
+          </div>
 
           {/* Bottom action bar */}
-          <div className="border-t border-primary/10 bg-card p-4 space-y-2">
+          <div className="border-t border-primary/10 bg-card p-3 space-y-2 shrink-0">
             {paySuccess ? (
               <>
-                <Button
-                  onClick={handleDownload}
-                  disabled={downloading}
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-11 font-bold shadow-lg shadow-primary/20"
-                >
+                <Button onClick={handleDownload} disabled={downloading}
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-10 font-bold shadow-lg">
                   {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  {downloading ? "מכין קובץ..." : "הורדת העיצוב (PNG איכות גבוהה)"}
+                  {downloading ? "מכין קובץ..." : "הורדת PNG איכות גבוהה"}
                 </Button>
-                <Button onClick={handleWhatsApp} variant="outline" className="w-full border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10 gap-2 h-9 text-sm">
-                  <MessageCircle className="w-4 h-4" />
-                  שלחו לסטודיו לגרסת הדפוס
+                <Button onClick={handleWhatsApp} variant="outline" className="w-full border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10 gap-2 h-8 text-xs">
+                  <MessageCircle className="w-3.5 h-3.5" />שלחו לסטודיו לגרסת הדפוס
                 </Button>
               </>
             ) : isSignedIn ? (
-              <Button onClick={handleDownloadClick} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-11 font-bold shadow-lg shadow-primary/20">
-                <CreditCard className="w-4 h-4" />
-                קבלת העיצוב הסופי — ₪49
+              <Button onClick={handleDownloadClick} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-10 font-bold shadow-lg">
+                <CreditCard className="w-4 h-4" />קבלת העיצוב הסופי — ₪49
               </Button>
             ) : (
-              <Button
-                onClick={() => redirectToSignIn({ redirectUrl: `${basePath}/editor/${template.id}` })}
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-11 font-bold"
-              >
-                <LogIn className="w-4 h-4" />
-                כניסה לשמירה ותשלום
+              <Button onClick={() => redirectToSignIn({ redirectUrl: `${basePath}/editor/${tmpl.id}` })}
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-10 font-bold">
+                <LogIn className="w-4 h-4" />כניסה לשמירה ותשלום
               </Button>
             )}
             {!paySuccess && (
-              <Button onClick={handleWhatsApp} variant="outline" className="w-full border-primary/20 text-primary hover:bg-primary/10 gap-2 h-9 text-sm">
-                <MessageCircle className="w-4 h-4" />
-                שלחו לסטודיו דרך ווצאפ
+              <Button onClick={handleWhatsApp} variant="outline" className="w-full border-primary/20 text-primary hover:bg-primary/10 gap-2 h-8 text-xs">
+                <MessageCircle className="w-3.5 h-3.5" />שלחו לסטודיו דרך ווצאפ
               </Button>
             )}
           </div>
         </aside>
+      </div>
 
-        {/* ── RIGHT PANEL: live preview ── */}
-        <main className="flex-1 overflow-y-auto bg-secondary/30 flex flex-col items-center justify-start p-4 md:p-8 gap-4">
-          <div className="flex items-center gap-2 bg-card border border-primary/10 rounded-full px-3 py-1.5 shadow-sm self-start lg:self-center">
-            <span className="text-xs text-muted-foreground font-medium">תצוגה מקדימה</span>
-            <div className="w-px h-4 bg-primary/20" />
-            <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="text-muted-foreground hover:text-foreground transition-colors p-0.5">
-              <ZoomOut className="w-3.5 h-3.5" />
-            </button>
-            <span className="text-xs font-mono text-foreground w-9 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(z => Math.min(1.4, z + 0.1))} className="text-muted-foreground hover:text-foreground transition-colors p-0.5">
-              <ZoomIn className="w-3.5 h-3.5" />
-            </button>
-          </div>
+      {/* Payment modal */}
+      {showPayment && (
+        <PaymentWall
+          onPay={handlePay}
+          onClose={() => setShowPayment(false)}
+          loading={payLoading}
+          designName={designName}
+        />
+      )}
+    </div>
+  );
+}
 
-          <div ref={previewRef} className="w-full max-w-xs sm:max-w-sm md:max-w-md relative" style={{ transformOrigin: "top center" }}>
-            <InvitationPreview
-              template={template}
-              values={values}
-              zoom={zoom}
-              fontOverride={selectedFont}
-              logoUrl={logoUrl}
-              logoPos={logoPos}
-              slotStyles={slotStyles}
-              placedElements={placedElements}
-              selectedElementUid={selectedElementUid}
-              onSelectElement={uid => { setSelectedElementUid(uid); if (uid) setSidebarTab("elements"); }}
-              onLogoMove={pos => { setLogoPos(pos); setSaved(false); }}
-            />
-            {isLoaded && !isSignedIn && <AuthWall templateId={template.id} />}
-          </div>
-
-          <p className="text-xs text-muted-foreground text-center max-w-xs pb-4">
-            זוהי תצוגה מקדימה. העיצוב הסופי יבוצע על-ידי הסטודיו שלנו בהתאמה מדויקת לבקשתכם.
-          </p>
-        </main>
+// ─── Font picker panel (for global font) ──────────────────────────────────────
+function FontPickerPanel({ selected, onChange }: { selected: string; onChange: (f: string) => void }) {
+  const [tab, setTab] = useState<"serif" | "sans" | "local" | "custom">("serif");
+  const combinedFonts = useCombinedFonts();
+  const hasCustom = combinedFonts.some(f => f.category === "custom");
+  const fonts = combinedFonts.filter(f => f.category === tab);
+  const handlePick = (font: typeof combinedFonts[0]) => {
+    if (font.category === "local") loadLocalFont(font.family);
+    else if (font.category !== "custom") loadGoogleFont(font.family);
+    onChange(font.family);
+  };
+  return (
+    <div className="px-4 pb-3">
+      <div className="flex gap-1 mb-2 flex-wrap">
+        {(["serif", "sans", "local", ...(hasCustom ? ["custom" as const] : [])] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`flex-1 text-xs py-1 rounded-md font-medium transition-colors ${tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            {TAB_LABELS[t]}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
+        {fonts.map(font => (
+          <button key={font.family} onClick={() => handlePick(font)}
+            className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-right transition-colors border ${selected === font.family ? "border-primary/40 bg-primary/10 text-primary" : "border-transparent hover:border-primary/20 hover:bg-primary/5 text-foreground"}`}>
+            {font.category === "local" ? <span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">BA</span>
+              : font.category === "custom" ? <span className="text-[10px] font-bold text-violet-400 bg-violet-400/10 px-1.5 py-0.5 rounded">✦</span>
+              : <span className="text-xs text-muted-foreground">{font.category === "serif" ? "סריף" : "סאנס"}</span>}
+            <span className="text-base leading-tight" style={{ fontFamily: `'${font.family}', serif`, direction: "rtl" }}>{font.name}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
