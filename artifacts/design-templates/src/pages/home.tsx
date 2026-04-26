@@ -341,7 +341,7 @@ export default function Home() {
       >
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 36px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {/* Left: nav links (hidden on mobile) */}
-          <nav className="hidden md:flex" style={{ gap: 28, direction: "rtl" }}>
+          <nav className="hidden md:flex" style={{ gap: 28, direction: "rtl", alignItems: "center" }}>
             {[
               { href: "#gallery", label: "גלריה", isLink: false },
               { href: "#services", label: "שירותים", isLink: false },
