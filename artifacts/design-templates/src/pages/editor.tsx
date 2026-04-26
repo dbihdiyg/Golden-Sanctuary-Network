@@ -108,17 +108,48 @@ function InvitationPreview({ template, values, zoom }: {
 
 function AuthWall({ templateId }: { templateId: string }) {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-20 rounded-xl">
-      <div className="text-center p-8">
-        <LogIn className="w-10 h-10 text-primary mx-auto mb-3" />
-        <h3 className="font-serif text-xl font-bold mb-2 text-foreground">נדרשת כניסה לחשבון</h3>
-        <p className="text-sm text-muted-foreground mb-5">כנסו כדי לשמור ולהמשיך לשלב התשלום</p>
-        <SignInButton mode="redirect" forceRedirectUrl={`${basePath}/editor/${templateId}`}>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold gap-2">
-            <LogIn className="w-4 h-4" />
-            כניסה / הרשמה
-          </Button>
-        </SignInButton>
+    <div className="absolute inset-0 z-20 rounded-xl overflow-hidden">
+      {/* Decorative blurred invitation mockup */}
+      <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, #0B1833 0%, #0f2347 50%, #0B1833 100%)" }} />
+      {/* Concentric golden rings */}
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="absolute border border-primary/10 rounded-full" style={{
+          width: `${280 + i * 100}px`, height: `${280 + i * 100}px`,
+          top: "50%", left: "50%",
+          transform: "translate(-50%, -50%)",
+        }} />
+      ))}
+      {/* Simulated blurred invitation card */}
+      <div className="absolute inset-8 rounded-xl opacity-20 blur-sm overflow-hidden" style={{ background: "linear-gradient(135deg, #1a2d50 0%, #243960 100%)" }}>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+          <div className="w-16 h-0.5 bg-primary/60 rounded" />
+          <div className="w-24 h-3 bg-primary/30 rounded" />
+          <div className="w-32 h-5 bg-primary/50 rounded mt-1" />
+          <div className="w-20 h-3 bg-primary/30 rounded" />
+          <div className="w-16 h-0.5 bg-primary/60 rounded mt-1" />
+          <div className="w-28 h-3 bg-foreground/15 rounded mt-2" />
+          <div className="w-36 h-3 bg-foreground/15 rounded" />
+          <div className="w-24 h-3 bg-foreground/15 rounded" />
+        </div>
+      </div>
+      {/* Frosted glass overlay */}
+      <div className="absolute inset-0 backdrop-blur-[2px]" style={{ background: "linear-gradient(160deg, rgba(11,24,51,0.82) 0%, rgba(15,32,64,0.78) 100%)" }} />
+      {/* Content */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="text-center px-8" dir="rtl">
+          <div className="w-16 h-16 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center mx-auto mb-4">
+            <LogIn className="w-7 h-7 text-primary" />
+          </div>
+          <div className="w-12 h-0.5 bg-primary/40 mx-auto mb-4" />
+          <h3 className="font-serif text-2xl font-bold mb-2 text-foreground drop-shadow-lg">נדרשת כניסה לחשבון</h3>
+          <p className="text-sm text-primary/60 mb-6 leading-relaxed">כנסו כדי לשמור את העיצוב<br />ולהמשיך לשלב התשלום</p>
+          <SignInButton mode="redirect" forceRedirectUrl={`${basePath}/editor/${templateId}`}>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold gap-2 px-7 py-5 text-base shadow-lg shadow-primary/20">
+              <LogIn className="w-4 h-4" />
+              כניסה / הרשמה
+            </Button>
+          </SignInButton>
+        </div>
       </div>
     </div>
   );
