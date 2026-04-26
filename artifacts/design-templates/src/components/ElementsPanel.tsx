@@ -13,6 +13,8 @@ export type PlacedElement = {
   width: number;
   tintColor: string;
   opacity: number;
+  isFrame?: boolean;
+  category?: string;
 };
 
 interface LibraryElement {
@@ -173,7 +175,12 @@ export function ElementsPanel({
                         style={{ filter: pe.tintColor ? colorToFilter(pe.tintColor) : "" }}
                       />
                     </div>
-                    <span className="text-xs text-foreground flex-1 truncate">אלמנט {i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs text-foreground block truncate">
+                        {pe.isFrame ? "מסגרת" : `אלמנט ${i + 1}`}
+                      </span>
+                      {pe.category && <span className="text-[10px] text-muted-foreground">{pe.category}</span>}
+                    </div>
                     <button
                       onClick={e => { e.stopPropagation(); onDelete(pe.uid); }}
                       className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors shrink-0"
@@ -184,7 +191,8 @@ export function ElementsPanel({
 
                   {pe.uid === selectedUid && (
                     <div className="space-y-3 pt-1" onClick={e => e.stopPropagation()}>
-                      {/* Position X / Y */}
+                      {/* Position X / Y (non-frames only) */}
+                      {!pe.isFrame && (<>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="text-[10px] text-muted-foreground block mb-1">מיקום X</label>
@@ -226,6 +234,7 @@ export function ElementsPanel({
                           <span className="text-[10px] text-muted-foreground w-7 text-left">{pe.width}%</span>
                         </div>
                       </div>
+                      </>)}
 
                       {/* Opacity */}
                       <div>

@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import { HEBREW_FONTS } from "@/pages/editor";
+import { HEBREW_FONTS } from "@/lib/fonts";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 const FONT_SIZES = [10, 12, 14, 16, 18, 22, 28, 36, 48];

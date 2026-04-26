@@ -1,34 +1,19 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useId } from "react";
 import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useAuth, useUser, SignInButton } from "@clerk/react";
 import hadarLogo from "@/assets/logo-hadar.png";
-import { ArrowRight, Crown, MessageCircle, Download, RotateCcw, CheckCircle2, ZoomIn, ZoomOut, Sun, Moon, Lock, Loader2, User, CreditCard, LogIn, Type, ChevronDown, ChevronUp, ImagePlus, X as XIcon, Upload, Layers, AlignLeft } from "lucide-react";
+import { ArrowRight, Crown, MessageCircle, Download, RotateCcw, CheckCircle2, ZoomIn, ZoomOut, Sun, Moon, Lock, Loader2, User, CreditCard, LogIn, Type, ChevronDown, ChevronUp, ImagePlus, X as XIcon, Upload, Layers, AlignLeft, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { templates, TextSlot } from "@/lib/data";
+import { HEBREW_FONTS, loadGoogleFont } from "@/lib/fonts";
 import { useTheme } from "@/hooks/useTheme";
 import { motion, AnimatePresence } from "framer-motion";
 import { ElementsPanel, PlacedElement, colorToFilter } from "@/components/ElementsPanel";
 import { RichTextSlot } from "@/components/RichTextSlot";
+import { SlotStylePanel, SlotStyle } from "@/components/SlotStylePanel";
 
-// ─── Hebrew fonts — Google Fonts (free / OFL) ────────────────────────────────
-export const HEBREW_FONTS: { name: string; family: string; category: "serif" | "sans" | "local" }[] = [
-  { name: "Frank Ruhl Libre", family: "Frank Ruhl Libre",  category: "serif" },
-  { name: "Noto Serif Hebrew", family: "Noto Serif Hebrew", category: "serif" },
-  { name: "David Libre",       family: "David Libre",       category: "serif" },
-  { name: "Miriam Libre",      family: "Miriam Libre",      category: "serif" },
-  { name: "Suez One",          family: "Suez One",          category: "serif" },
-  { name: "Tinos",             family: "Tinos",             category: "serif" },
-  { name: "Heebo",             family: "Heebo",             category: "sans"  },
-  { name: "Rubik",             family: "Rubik",             category: "sans"  },
-  { name: "Assistant",         family: "Assistant",         category: "sans"  },
-  { name: "Secular One",       family: "Secular One",       category: "sans"  },
-  { name: "Varela Round",      family: "Varela Round",      category: "sans"  },
-  { name: "Alef",              family: "Alef",              category: "sans"  },
-  { name: "Noto Sans Hebrew",  family: "Noto Sans Hebrew",  category: "sans"  },
-  { name: "Cousine",           family: "Cousine",           category: "sans"  },
-];
+export interface LogoPos { x: number; y: number; width: number; }
 
 // ─── Local BA Hebrew fonts (uploaded by user) ─────────────────────────────────
 const LOCAL_BA_FONTS: {
@@ -57,16 +42,6 @@ LOCAL_BA_FONTS.forEach(f =>
 );
 
 const DEFAULT_FONT = "Frank Ruhl Libre";
-
-function loadGoogleFont(family: string) {
-  const id = `gfont-${family.replace(/\s/g, "-")}`;
-  if (document.getElementById(id)) return;
-  const link = document.createElement("link");
-  link.id = id;
-  link.rel = "stylesheet";
-  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@400;700&display=swap`;
-  document.head.appendChild(link);
-}
 
 function loadLocalFont(family: string) {
   const id = `lfont-${family.replace(/\s/g, "-")}`;
@@ -184,37 +159,117 @@ function resolveFont(slotFamily: string | undefined, fontOverride: string): stri
   return `'${fontOverride}', ${slotFamily === "serif" ? "serif" : "sans-serif"}`;
 }
 
-function StackedLine({ slot, value, fontOverride }: { slot: TextSlot; value: string; fontOverride: string }) {
-  if (!value.trim()) return null;
-  const sz = previewFontSizePx[slot.fontSize || "sm"];
+function buildSlotCSS(
+  slot: TextSlot,
+  fontOverride: string,
+  ss?: SlotStyle
+): React.CSSProperties {
+  const baseSz = previewFontSizePx[slot.fontSize || "sm"];
+  const color = ss?.color || resolveColor(slot.color);
+  const shadows: string[] = [];
+  if (ss?.shadow) shadows.push("2px 2px 6px rgba(0,0,0,0.7)");
+  if (ss?.glow) shadows.push(`0 0 10px ${color}, 0 0 20px ${color}80`);
+  const fontFamily = ss?.fontFamily
+    ? `'${ss.fontFamily}', serif`
+    : resolveFont(slot.fontFamily, fontOverride);
+  return {
+    fontSize: ss?.fontSize ?? baseSz,
+    fontFamily,
+    fontWeight: (ss?.bold ?? slot.bold) ? 700 : 400,
+    fontStyle: (ss?.italic ?? slot.italic) ? "italic" : "normal",
+    textDecoration: ss?.underline ? "underline" : undefined,
+    color,
+    lineHeight: slot.lineHeight ?? 1.35,
+    letterSpacing: ss?.letterSpacing ? `${ss.letterSpacing * 0.05}px` : undefined,
+    textShadow: shadows.length ? shadows.join(", ") : undefined,
+    WebkitTextStroke: ss?.outline ? `1px ${color}` : undefined,
+  };
+}
+
+function SvgArcText({ text, arcDeg, cssStyle }: {
+  text: string; arcDeg: number; cssStyle: React.CSSProperties;
+}) {
+  const uid = useId().replace(/:/g, "");
+  const W = 280, H = 100;
+  const absAngle = Math.abs(arcDeg) * Math.PI / 180;
+  const r = absAngle < 0.05 ? 99999 : (W / 2) / Math.sin(absAngle / 2);
+  const sagitta = r - Math.sqrt(Math.max(0, r * r - (W / 2) * (W / 2)));
+  const isUp = arcDeg > 0;
+  const sy = isUp ? sagitta : H - sagitta;
+  const sweep = isUp ? 1 : 0;
+  const pathD = `M 0 ${sy} A ${r} ${r} 0 0 ${sweep} ${W} ${sy}`;
+  const fontSize = typeof cssStyle.fontSize === "number" ? cssStyle.fontSize : 14;
+  const svgH = sagitta + fontSize * 1.4 + 4;
+
   return (
-    <div className="text-center leading-snug my-0.5 whitespace-pre-line" style={{
-      fontSize: sz,
-      fontFamily: resolveFont(slot.fontFamily, fontOverride),
-      fontWeight: slot.bold ? 700 : 400,
-      fontStyle: slot.italic ? "italic" : "normal",
-      color: resolveColor(slot.color),
-      lineHeight: slot.lineHeight ?? 1.35,
-    }}>
+    <svg
+      width={W} height={Math.max(H, svgH)}
+      viewBox={`0 0 ${W} ${Math.max(H, svgH)}`}
+      style={{ display: "block", overflow: "visible", direction: "rtl" }}
+    >
+      <defs><path id={uid} d={pathD} /></defs>
+      <text
+        fill={cssStyle.color as string}
+        fontSize={fontSize}
+        fontFamily={cssStyle.fontFamily as string}
+        fontWeight={cssStyle.fontWeight as number}
+        fontStyle={cssStyle.fontStyle as string}
+        style={{ textShadow: cssStyle.textShadow, letterSpacing: cssStyle.letterSpacing as string }}
+      >
+        <textPath href={`#${uid}`} startOffset="50%" textAnchor="middle">
+          {text}
+        </textPath>
+      </text>
+    </svg>
+  );
+}
+
+function StackedLine({ slot, value, fontOverride, slotStyle }: {
+  slot: TextSlot; value: string; fontOverride: string; slotStyle?: SlotStyle;
+}) {
+  if (!value.trim()) return null;
+  const css = buildSlotCSS(slot, fontOverride, slotStyle);
+  const arcDeg = slotStyle?.arcDegrees ?? 0;
+  const plainText = value.replace(/<[^>]+>/g, "");
+
+  if (arcDeg !== 0) {
+    return (
+      <div className="text-center my-0.5 w-full">
+        <SvgArcText text={plainText} arcDeg={arcDeg} cssStyle={css} />
+      </div>
+    );
+  }
+  const isHtml = value.includes("<");
+  return isHtml ? (
+    <div className="text-center leading-snug my-0.5" style={css}
+      dangerouslySetInnerHTML={{ __html: value }} />
+  ) : (
+    <div className="text-center leading-snug my-0.5 whitespace-pre-line" style={css}>
       {value}
     </div>
   );
 }
 
-function AbsoluteSlot({ slot, value, fontOverride }: { slot: TextSlot; value: string; fontOverride: string }) {
+function AbsoluteSlot({ slot, value, fontOverride, slotStyle }: {
+  slot: TextSlot; value: string; fontOverride: string; slotStyle?: SlotStyle;
+}) {
   if (!value.trim() || slot.x == null || slot.y == null) return null;
-  const sz = previewFontSizePx[slot.fontSize || "sm"];
+  const css = buildSlotCSS(slot, fontOverride, slotStyle);
   const w = slot.width ?? 80;
+  const arcDeg = slotStyle?.arcDegrees ?? 0;
+  const plainText = value.replace(/<[^>]+>/g, "");
+
   return (
     <div style={{
       position: "absolute", left: `${slot.x}%`, top: `${slot.y}%`, width: `${w}%`,
-      transform: "translateX(-50%)", fontSize: sz,
-      fontFamily: resolveFont(slot.fontFamily, fontOverride),
-      fontWeight: slot.bold ? 700 : 400, fontStyle: slot.italic ? "italic" : "normal",
-      color: resolveColor(slot.color), textAlign: slot.align ?? "center",
-      lineHeight: slot.lineHeight ?? 1.35, whiteSpace: "pre-line", direction: "rtl", pointerEvents: "none",
+      transform: "translateX(-50%)", textAlign: slot.align ?? "center",
+      whiteSpace: "pre-line", direction: "rtl", pointerEvents: "none",
     }}>
-      {value}
+      {arcDeg !== 0 ? (
+        <SvgArcText text={plainText} arcDeg={arcDeg} cssStyle={css} />
+      ) : (
+        <span style={css}>{value}</span>
+      )}
     </div>
   );
 }
@@ -302,21 +357,76 @@ function LogoUploader({ logoUrl, onChange }: { logoUrl: string | null; onChange:
   );
 }
 
-function InvitationPreview({ template, values, zoom, fontOverride, logoUrl, placedElements, selectedElementUid, onSelectElement }: {
-  template: typeof templates[0]; values: Record<string, string>; zoom: number; fontOverride: string; logoUrl: string | null;
-  placedElements?: PlacedElement[]; selectedElementUid?: string | null; onSelectElement?: (uid: string | null) => void;
-}) {
+interface InvitationPreviewProps {
+  template: typeof templates[0];
+  values: Record<string, string>;
+  zoom: number;
+  fontOverride: string;
+  logoUrl: string | null;
+  logoPos: LogoPos;
+  slotStyles: Record<string, SlotStyle>;
+  placedElements?: PlacedElement[];
+  selectedElementUid?: string | null;
+  onSelectElement?: (uid: string | null) => void;
+  onLogoMove?: (pos: LogoPos) => void;
+}
+
+function InvitationPreview({
+  template, values, zoom, fontOverride, logoUrl, logoPos, slotStyles,
+  placedElements, selectedElementUid, onSelectElement, onLogoMove,
+}: InvitationPreviewProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef<{ type: "logo" | "element"; startX: number; startY: number; startPosX: number; startPosY: number; uid?: string } | null>(null);
+
   const slots = (template.slots || []).filter(s => s.id !== "__elements");
   const hasCoords = slots.some(s => s.x != null && s.y != null);
+
+  // Separate frames from regular elements
+  const frames = (placedElements ?? []).filter(pe => pe.isFrame);
+  const regularElements = (placedElements ?? []).filter(pe => !pe.isFrame);
+
+  const getContainerPct = (clientX: number, clientY: number) => {
+    if (!containerRef.current) return { x: 0, y: 0 };
+    const rect = containerRef.current.getBoundingClientRect();
+    return {
+      x: ((clientX - rect.left) / rect.width) * 100,
+      y: ((clientY - rect.top) / rect.height) * 100,
+    };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const pct = getContainerPct(e.clientX, e.clientY);
+    const dx = pct.x - dragging.current.startX;
+    const dy = pct.y - dragging.current.startY;
+    if (dragging.current.type === "logo") {
+      onLogoMove?.({
+        x: Math.max(0, Math.min(90, dragging.current.startPosX + dx)),
+        y: Math.max(0, Math.min(90, dragging.current.startPosY + dy)),
+        width: logoPos.width,
+      });
+    }
+  };
+
+  const handlePointerUp = () => { dragging.current = null; };
+
   return (
-    <div className="relative w-full overflow-hidden rounded-xl shadow-2xl border border-primary/20" style={{
-      aspectRatio: "3/4", transform: `scale(${zoom})`, transformOrigin: "top center", transition: "transform 0.2s ease",
-    }}>
+    <div
+      ref={containerRef}
+      className="relative w-full overflow-hidden rounded-xl shadow-2xl border border-primary/20 select-none"
+      style={{ aspectRatio: "3/4", transform: `scale(${zoom})`, transformOrigin: "top center", transition: "transform 0.2s ease" }}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+    >
+      {/* Background */}
       {template.isGradient ? (
         <div className="absolute inset-0" style={{ background: template.image }} />
       ) : (
         <img src={template.image} alt={template.title} className="absolute inset-0 w-full h-full object-cover" />
       )}
+
+      {/* Decorative borders for gradient templates */}
       {template.isGradient && (
         <>
           <div className="absolute inset-3 border border-[#D6A84F]/40 rounded-lg pointer-events-none" />
@@ -332,72 +442,120 @@ function InvitationPreview({ template, values, zoom, fontOverride, logoUrl, plac
         </>
       )}
       {!template.isGradient && !hasCoords && <div className="absolute inset-0 bg-black/45" />}
+
+      {/* Frames layer (behind text) */}
+      {frames.map(pe => (
+        <img key={pe.uid} src={pe.src} alt="" draggable={false} style={{
+          position: "absolute", inset: 0, width: "100%", height: "100%",
+          objectFit: "fill", zIndex: 5, pointerEvents: "none", opacity: pe.opacity,
+          filter: pe.tintColor ? colorToFilter(pe.tintColor) : undefined,
+        }} />
+      ))}
+
+      {/* Text content */}
       {hasCoords ? (
-        <div className="absolute inset-0">
-          {logoUrl && (
-            <div style={{ position: "absolute", top: "5%", left: "50%", transform: "translateX(-50%)", zIndex: 10 }}>
-              <img src={logoUrl} alt="לוגו" style={{ maxHeight: 32, maxWidth: "40%", objectFit: "contain", filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.4))" }} />
-            </div>
-          )}
-          {slots.map(slot => <AbsoluteSlot key={slot.id} slot={slot} value={values[slot.id] ?? slot.defaultValue} fontOverride={fontOverride} />)}
+        <div className="absolute inset-0" style={{ zIndex: 10 }}>
+          {slots.map(slot => (
+            <AbsoluteSlot
+              key={slot.id}
+              slot={slot}
+              value={values[slot.id] ?? slot.defaultValue}
+              fontOverride={fontOverride}
+              slotStyle={slotStyles[slot.id]}
+            />
+          ))}
         </div>
       ) : (
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-8 py-10 gap-0.5 overflow-hidden" dir="rtl">
-          {logoUrl && (
-            <img src={logoUrl} alt="לוגו" className="mb-2 object-contain" style={{ maxHeight: 36, maxWidth: "45%", filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.5))" }} />
-          )}
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-8 py-10 gap-0.5 overflow-hidden" dir="rtl" style={{ zIndex: 10 }}>
           <div className="w-24 h-px bg-[#D6A84F]/50 mb-2" />
           {slots.map(slot => {
             const val = values[slot.id] ?? slot.defaultValue;
-            const isHtml = val.includes("<");
-            const sz = previewFontSizePx[slot.fontSize || "sm"];
             if (!val.trim()) return null;
-            return isHtml ? (
-              <div key={slot.id} className="text-center leading-snug my-0.5" style={{
-                fontSize: sz, fontFamily: resolveFont(slot.fontFamily, fontOverride),
-                fontWeight: slot.bold ? 700 : 400, fontStyle: slot.italic ? "italic" : "normal",
-                color: resolveColor(slot.color), lineHeight: slot.lineHeight ?? 1.35, direction: "rtl",
-              }} dangerouslySetInnerHTML={{ __html: val }} />
-            ) : (
-              <StackedLine key={slot.id} slot={slot} value={val} fontOverride={fontOverride} />
+            return (
+              <StackedLine
+                key={slot.id}
+                slot={slot}
+                value={val}
+                fontOverride={fontOverride}
+                slotStyle={slotStyles[slot.id]}
+              />
             );
           })}
           <div className="w-24 h-px bg-[#D6A84F]/50 mt-2" />
         </div>
       )}
 
-      {/* ── Placed elements layer ── */}
-      {(placedElements ?? []).map(pe => (
+      {/* Regular placed elements */}
+      {regularElements.map(pe => (
         <div
           key={pe.uid}
           onClick={() => onSelectElement?.(pe.uid === selectedElementUid ? null : pe.uid)}
           style={{
-            position: "absolute",
-            left: `${pe.x}%`,
-            top: `${pe.y}%`,
-            width: `${pe.width}%`,
-            opacity: pe.opacity,
-            cursor: "pointer",
-            zIndex: 20,
+            position: "absolute", left: `${pe.x}%`, top: `${pe.y}%`, width: `${pe.width}%`,
+            opacity: pe.opacity, cursor: "pointer", zIndex: 20,
             outline: pe.uid === selectedElementUid ? "2px solid #D6A84F" : "none",
-            outlineOffset: 2,
-            borderRadius: 4,
+            outlineOffset: 2, borderRadius: 4,
           }}
         >
-          <img
-            src={pe.src}
-            alt=""
-            style={{
-              width: "100%",
-              height: "auto",
-              display: "block",
-              filter: pe.tintColor ? colorToFilter(pe.tintColor) : "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",
-            }}
-            draggable={false}
-          />
+          <img src={pe.src} alt="" draggable={false} style={{
+            width: "100%", height: "auto", display: "block",
+            filter: pe.tintColor ? colorToFilter(pe.tintColor) : "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",
+          }} />
         </div>
       ))}
 
+      {/* Draggable logo */}
+      {logoUrl && (
+        <div
+          style={{
+            position: "absolute",
+            left: `${logoPos.x}%`,
+            top: `${logoPos.y}%`,
+            width: `${logoPos.width}%`,
+            zIndex: 25,
+            cursor: onLogoMove ? "grab" : "default",
+            touchAction: "none",
+          }}
+          onPointerDown={e => {
+            if (!onLogoMove) return;
+            e.stopPropagation();
+            const pct = getContainerPct(e.clientX, e.clientY);
+            dragging.current = {
+              type: "logo", startX: pct.x, startY: pct.y,
+              startPosX: logoPos.x, startPosY: logoPos.y,
+            };
+            (e.target as HTMLElement).setPointerCapture(e.pointerId);
+          }}
+        >
+          <img
+            src={logoUrl} alt="לוגו" draggable={false}
+            style={{ width: "100%", height: "auto", objectFit: "contain", filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.5))" }}
+          />
+          {/* Resize handle */}
+          {onLogoMove && (
+            <>
+              {/* Size up/down buttons */}
+              <div
+                className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-0.5"
+                onPointerDown={e => e.stopPropagation()}
+              >
+                <button
+                  className="w-4 h-4 rounded-full bg-primary text-white text-[10px] flex items-center justify-center shadow hover:bg-primary/80"
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={e => { e.stopPropagation(); onLogoMove({ ...logoPos, width: Math.max(5, logoPos.width - 5) }); }}
+                >−</button>
+                <button
+                  className="w-4 h-4 rounded-full bg-primary text-white text-[10px] flex items-center justify-center shadow hover:bg-primary/80"
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={e => { e.stopPropagation(); onLogoMove({ ...logoPos, width: Math.min(80, logoPos.width + 5) }); }}
+                >+</button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Watermark */}
       <div className="absolute bottom-2.5 left-0 right-0 flex items-center justify-center pointer-events-none" style={{ opacity: 0.28, zIndex: 30 }}>
         <img src={hadarLogo} alt="הדר" style={{ height: 18, width: "auto", objectFit: "contain" }} />
       </div>
@@ -534,6 +692,9 @@ export default function Editor() {
   const [sidebarTab, setSidebarTab] = useState<"text" | "elements">("text");
   const [placedElements, setPlacedElements] = useState<PlacedElement[]>([]);
   const [selectedElementUid, setSelectedElementUid] = useState<string | null>(null);
+  const [slotStyles, setSlotStyles] = useState<Record<string, SlotStyle>>({});
+  const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
+  const [logoPos, setLogoPos] = useState<LogoPos>({ x: 30, y: 2, width: 40 });
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Load default font on mount
@@ -565,6 +726,14 @@ export default function Editor() {
           try {
             const els = JSON.parse(fv["__elements"] || "[]");
             if (Array.isArray(els)) setPlacedElements(els);
+          } catch {}
+          try {
+            const ss = JSON.parse(fv["__slotStyles"] || "{}");
+            if (ss && typeof ss === "object") setSlotStyles(ss);
+          } catch {}
+          try {
+            const lp = JSON.parse(fv["__logoPos"] || "null");
+            if (lp && typeof lp === "object") setLogoPos(lp);
           } catch {}
         }
       } catch (err) {
@@ -607,14 +776,21 @@ export default function Editor() {
   };
 
   const getFieldValuesWithElements = useCallback(() => {
-    return { ...values, "__elements": JSON.stringify(placedElements) };
-  }, [values, placedElements]);
+    return {
+      ...values,
+      "__elements": JSON.stringify(placedElements),
+      "__slotStyles": JSON.stringify(slotStyles),
+      "__logoPos": JSON.stringify(logoPos),
+    };
+  }, [values, placedElements, slotStyles, logoPos]);
 
-  const handleAddElement = useCallback((el: { id: number; fileContent: string }) => {
+  const handleAddElement = useCallback((el: { id: number; fileContent: string; category?: string }) => {
     const uid = `el_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const isFrame = el.category === "מסגרות";
     setPlacedElements(prev => [...prev, {
-      uid, elementId: el.id, src: el.fileContent,
-      x: 40, y: 40, width: 20, tintColor: "", opacity: 1,
+      uid, elementId: el.id, src: el.fileContent, category: el.category,
+      x: isFrame ? 0 : 35, y: isFrame ? 0 : 35, width: isFrame ? 100 : 25,
+      tintColor: "", opacity: 1, isFrame,
     }]);
     setSelectedElementUid(uid);
     setSidebarTab("elements");
@@ -880,37 +1056,58 @@ export default function Editor() {
               {/* Logo uploader */}
               <LogoUploader logoUrl={logoUrl} onChange={setLogoUrl} />
 
-              {/* Fields list with rich text */}
+              {/* Fields list with rich text + per-slot styling */}
               <div className="flex-1 overflow-y-auto">
-                <div className="px-4 py-3 space-y-3">
-                  <p className="text-[10px] text-muted-foreground">
-                    בחרו חלק מהטקסט לשינוי גודל או גופן ספציפי
-                  </p>
-                  {slots.filter(s => s.id !== "__elements").map((slot, index) => (
-                    <motion.div
-                      key={slot.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                    >
-                      <div className="bg-background border border-primary/10 rounded-xl px-3 py-2.5 hover:border-primary/30 transition-colors focus-within:border-primary/50 focus-within:shadow-sm focus-within:shadow-primary/10">
-                        <div className="flex items-start gap-2">
-                          <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
-                            {index + 1}
+                <div className="px-4 py-3 space-y-2">
+                  {slots.filter(s => s.id !== "__elements" && s.id !== "__slotStyles" && s.id !== "__logoPos").map((slot, index) => {
+                    const isActive = activeSlotId === slot.id;
+                    const hasStyle = Object.keys(slotStyles[slot.id] || {}).length > 0;
+                    return (
+                      <motion.div
+                        key={slot.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                      >
+                        <div className={`bg-background border rounded-xl px-3 py-2.5 transition-all ${isActive ? "border-primary/50 shadow-sm shadow-primary/10" : "border-primary/10 hover:border-primary/30"}`}>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
+                                {index + 1}
+                              </div>
+                              <span className="text-[11px] font-semibold text-foreground">{slot.label}</span>
+                              {hasStyle && <span className="text-[9px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">מעוצב</span>}
+                            </div>
+                            <button
+                              onClick={() => setActiveSlotId(isActive ? null : slot.id)}
+                              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"}`}
+                              title="עיצוב שדה"
+                            >
+                              <Settings2 className="w-3 h-3" />
+                              {isActive ? "סגור" : "עיצוב"}
+                            </button>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <RichTextSlot
-                              label={slot.label}
-                              value={values[slot.id] ?? slot.defaultValue}
-                              placeholder={slot.placeholder}
-                              multiline={slot.multiline}
-                              onChange={html => updateValue(slot.id, html)}
+                          <RichTextSlot
+                            label=""
+                            value={values[slot.id] ?? slot.defaultValue}
+                            placeholder={slot.placeholder}
+                            multiline={slot.multiline}
+                            onChange={html => { updateValue(slot.id, html); setSaved(false); }}
+                          />
+                          {isActive && (
+                            <SlotStylePanel
+                              slotId={slot.id}
+                              style={slotStyles[slot.id] || {}}
+                              onChange={patch => {
+                                setSlotStyles(prev => ({ ...prev, [slot.id]: { ...(prev[slot.id] || {}), ...patch } }));
+                                setSaved(false);
+                              }}
                             />
-                          </div>
+                          )}
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </div>
             </>
@@ -976,9 +1173,12 @@ export default function Editor() {
               zoom={zoom}
               fontOverride={selectedFont}
               logoUrl={logoUrl}
+              logoPos={logoPos}
+              slotStyles={slotStyles}
               placedElements={placedElements}
               selectedElementUid={selectedElementUid}
               onSelectElement={uid => { setSelectedElementUid(uid); if (uid) setSidebarTab("elements"); }}
+              onLogoMove={pos => { setLogoPos(pos); setSaved(false); }}
             />
             {isLoaded && !isSignedIn && <AuthWall templateId={template.id} />}
           </div>
