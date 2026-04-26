@@ -14,7 +14,13 @@ export interface TextSlot {
   fontFamily?: "serif" | "sans";
   bold?: boolean;
   italic?: boolean;
-  color?: "gold" | "white" | "dark" | "inherit";
+  color?: "gold" | "white" | "dark" | "cream" | "inherit";
+  // Absolute positioning (in % of image dimensions) — for custom Photoshop templates
+  x?: number;       // % from left edge
+  y?: number;       // % from top edge
+  width?: number;   // % width of the text box
+  align?: "center" | "right" | "left";
+  lineHeight?: number; // multiplier e.g. 1.2
 }
 
 export interface Template {

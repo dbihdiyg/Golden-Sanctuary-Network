@@ -8,43 +8,78 @@ import { templates, TextSlot } from "@/lib/data";
 import { useTheme } from "@/hooks/useTheme";
 import { motion } from "framer-motion";
 
-const fontSizeMap: Record<string, string> = {
-  xs: "text-xs",
-  sm: "text-sm",
-  md: "text-base",
-  lg: "text-lg",
-  xl: "text-xl",
-  "2xl": "text-2xl md:text-3xl",
+// px font sizes for CSS — used in both modes
+const previewFontSizePx: Record<string, number> = {
+  xs: 9,
+  sm: 11,
+  md: 13,
+  lg: 16,
+  xl: 20,
+  "2xl": 26,
 };
 
-const previewFontSizeMap: Record<string, string> = {
-  xs: "text-[10px]",
-  sm: "text-[12px]",
-  md: "text-[14px]",
-  lg: "text-[16px]",
-  xl: "text-[20px]",
-  "2xl": "text-[26px]",
-};
+// Color resolver
+function resolveColor(color?: string): string {
+  if (color === "gold") return "#D6A84F";
+  if (color === "dark") return "#0B1833";
+  if (color === "cream") return "#F8F1E3";
+  return "#F8F1E3"; // default cream/white
+}
 
-function PreviewLine({ slot, value }: { slot: TextSlot; value: string }) {
+// Stacked mode: renders one text block in a vertical flow
+function StackedLine({ slot, value }: { slot: TextSlot; value: string }) {
   if (!value.trim()) return null;
+  const sz = previewFontSizePx[slot.fontSize || "sm"];
+  return (
+    <div
+      className="text-center leading-snug my-0.5 whitespace-pre-line"
+      style={{
+        fontSize: sz,
+        fontFamily: slot.fontFamily === "serif" ? "'Noto Serif Hebrew', serif" : "'Heebo', sans-serif",
+        fontWeight: slot.bold ? 700 : 400,
+        fontStyle: slot.italic ? "italic" : "normal",
+        color: resolveColor(slot.color),
+        lineHeight: slot.lineHeight ?? 1.35,
+      }}
+    >
+      {value}
+    </div>
+  );
+}
 
-  const sizeClass = previewFontSizeMap[slot.fontSize || "sm"];
-  const fontClass = slot.fontFamily === "serif" ? "font-serif" : "font-sans";
-  const weightClass = slot.bold ? "font-bold" : "font-normal";
-  const italicClass = slot.italic ? "italic" : "";
+// Absolute mode: renders text at exact x/y percentage coordinates
+function AbsoluteSlot({ slot, value, containerW, containerH }: {
+  slot: TextSlot;
+  value: string;
+  containerW: number;
+  containerH: number;
+}) {
+  if (!value.trim() || slot.x == null || slot.y == null) return null;
 
-  let colorClass = "text-[#F8F1E3]";
-  if (slot.color === "gold") colorClass = "text-[#D6A84F]";
-  if (slot.color === "dark") colorClass = "text-[#0B1833]";
-
-  const lines = value.split("\n");
+  const sz = previewFontSizePx[slot.fontSize || "sm"];
+  const w = slot.width ?? 80;
 
   return (
-    <div className={`text-center leading-snug ${sizeClass} ${fontClass} ${weightClass} ${italicClass} ${colorClass} my-0.5`}>
-      {lines.map((line, i) => (
-        <div key={i}>{line}</div>
-      ))}
+    <div
+      style={{
+        position: "absolute",
+        left: `${slot.x}%`,
+        top: `${slot.y}%`,
+        width: `${w}%`,
+        transform: "translateX(-50%)",
+        fontSize: sz,
+        fontFamily: slot.fontFamily === "serif" ? "'Noto Serif Hebrew', serif" : "'Heebo', sans-serif",
+        fontWeight: slot.bold ? 700 : 400,
+        fontStyle: slot.italic ? "italic" : "normal",
+        color: resolveColor(slot.color),
+        textAlign: slot.align ?? "center",
+        lineHeight: slot.lineHeight ?? 1.35,
+        whiteSpace: "pre-line",
+        direction: "rtl",
+        pointerEvents: "none",
+      }}
+    >
+      {value}
     </div>
   );
 }
@@ -56,6 +91,9 @@ function InvitationPreview({ template, values, zoom }: {
 }) {
   const slots = template.slots || [];
 
+  // Detect mode: if ANY slot has x/y coordinates → use absolute positioning
+  const hasCoords = slots.some(s => s.x != null && s.y != null);
+
   return (
     <div
       className="relative w-full overflow-hidden rounded-xl shadow-2xl border border-primary/20"
@@ -66,7 +104,7 @@ function InvitationPreview({ template, values, zoom }: {
         transition: "transform 0.2s ease",
       }}
     >
-      {/* Background */}
+      {/* ── BACKGROUND ── */}
       {template.isGradient ? (
         <div className="absolute inset-0" style={{ background: template.image }} />
       ) : (
@@ -77,44 +115,58 @@ function InvitationPreview({ template, values, zoom }: {
         />
       )}
 
-      {/* Dark overlay for readability on photo templates */}
-      {!template.isGradient && (
+      {/* For gradient templates: decorative frame & ornaments */}
+      {template.isGradient && (
+        <>
+          <div className="absolute inset-3 border border-[#D6A84F]/40 rounded-lg pointer-events-none" />
+          <div className="absolute inset-5 border border-[#D6A84F]/20 rounded-lg pointer-events-none" />
+          {(["top-3 right-3", "top-3 left-3", "bottom-3 right-3", "bottom-3 left-3"] as const).map((pos) => (
+            <div key={pos} className={`absolute ${pos} w-6 h-6 pointer-events-none`}
+              style={{
+                borderTop: pos.includes("top") ? "2px solid #D6A84F" : "none",
+                borderBottom: pos.includes("bottom") ? "2px solid #D6A84F" : "none",
+                borderRight: pos.includes("right") ? "2px solid #D6A84F" : "none",
+                borderLeft: pos.includes("left") ? "2px solid #D6A84F" : "none",
+              }}
+            />
+          ))}
+        </>
+      )}
+
+      {/* For photo templates without coords: semi-transparent overlay for readability */}
+      {!template.isGradient && !hasCoords && (
         <div className="absolute inset-0 bg-black/45" />
       )}
 
-      {/* Gold ornamental border */}
-      <div className="absolute inset-3 border border-[#D6A84F]/40 rounded-lg pointer-events-none" />
-      <div className="absolute inset-5 border border-[#D6A84F]/20 rounded-lg pointer-events-none" />
-
-      {/* Corner ornaments */}
-      {["top-3 right-3", "top-3 left-3", "bottom-3 right-3", "bottom-3 left-3"].map((pos) => (
-        <div key={pos} className={`absolute ${pos} w-6 h-6 border-[#D6A84F]/60 pointer-events-none`}
-          style={{
-            borderTop: pos.includes("top") ? "2px solid #D6A84F" : "none",
-            borderBottom: pos.includes("bottom") ? "2px solid #D6A84F" : "none",
-            borderRight: pos.includes("right") ? "2px solid #D6A84F" : "none",
-            borderLeft: pos.includes("left") ? "2px solid #D6A84F" : "none",
-          }}
-        />
-      ))}
-
-      {/* Text content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center px-8 py-10 gap-0.5 overflow-hidden" dir="rtl">
-        {/* Top divider */}
-        <div className="w-24 h-px bg-[#D6A84F]/50 mb-2" />
-
-        {slots.map((slot) => (
-          <PreviewLine key={slot.id} slot={slot} value={values[slot.id] ?? slot.defaultValue} />
-        ))}
-
-        {/* Bottom divider */}
-        <div className="w-24 h-px bg-[#D6A84F]/50 mt-2" />
-
-        {/* Studio watermark */}
-        <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-1 opacity-40">
-          <Crown className="w-2.5 h-2.5 text-[#D6A84F]" />
-          <span className="text-[9px] font-serif text-[#D6A84F] tracking-widest">הדר</span>
+      {/* ── TEXT LAYER ── */}
+      {hasCoords ? (
+        // ABSOLUTE MODE: each slot placed at its exact x/y position
+        <div className="absolute inset-0">
+          {slots.map(slot => (
+            <AbsoluteSlot
+              key={slot.id}
+              slot={slot}
+              value={values[slot.id] ?? slot.defaultValue}
+              containerW={400}
+              containerH={533}
+            />
+          ))}
         </div>
+      ) : (
+        // STACKED MODE: centered vertical flow (default for templates without coords)
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-8 py-10 gap-0.5 overflow-hidden" dir="rtl">
+          <div className="w-24 h-px bg-[#D6A84F]/50 mb-2" />
+          {slots.map(slot => (
+            <StackedLine key={slot.id} slot={slot} value={values[slot.id] ?? slot.defaultValue} />
+          ))}
+          <div className="w-24 h-px bg-[#D6A84F]/50 mt-2" />
+        </div>
+      )}
+
+      {/* Studio watermark */}
+      <div className="absolute bottom-2.5 left-0 right-0 flex items-center justify-center gap-1 opacity-30 pointer-events-none">
+        <Crown className="w-2.5 h-2.5 text-[#D6A84F]" />
+        <span className="text-[9px] font-serif text-[#D6A84F] tracking-widest">הדר</span>
       </div>
     </div>
   );
