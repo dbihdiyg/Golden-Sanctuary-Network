@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
 import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
+import { stripeWebhookHandler } from "./routes/hadar-stripe";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -29,6 +30,9 @@ app.use(
 );
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+
+// Stripe webhook MUST come before express.json() — needs raw body
+app.use("/api", express.raw({ type: "application/json" }), stripeWebhookHandler());
 
 app.use(cors({ credentials: true, origin: true }));
 app.use(express.json({ limit: "15mb" }));

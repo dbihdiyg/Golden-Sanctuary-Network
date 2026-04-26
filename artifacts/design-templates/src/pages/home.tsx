@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { Search, Crown, CheckCircle2, Clock, LayoutGrid, Image as ImageIcon, Video, Calendar, Palette, PenTool, Send, Menu, X, Sun, Moon } from "lucide-react";
+import { Search, Crown, CheckCircle2, Clock, LayoutGrid, Image as ImageIcon, Video, Calendar, Palette, PenTool, Send, Menu, X, Sun, Moon, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useAuth, UserButton, SignInButton } from "@clerk/react";
 import { TemplateCard } from "@/components/TemplateCard";
 import { templates, categories, styles } from "@/lib/data";
 import { useTheme } from "@/hooks/useTheme";
@@ -31,6 +32,31 @@ function useIntersectionObserver(options = {}) {
   }, [options]);
 
   return [ref, isIntersecting] as const;
+}
+
+function AuthNavButton() {
+  const { isSignedIn, isLoaded } = useAuth();
+  if (!isLoaded) return null;
+  if (isSignedIn) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <Link href="/my-designs">
+          <Button size="sm" variant="ghost" className="text-primary border border-primary/20 hover:bg-primary/10 gap-1.5 h-8 px-2.5 text-xs">
+            <User className="w-3.5 h-3.5" />
+            העיצובים שלי
+          </Button>
+        </Link>
+        <UserButton afterSignOutUrl="/" appearance={{ variables: { colorPrimary: "#D6A84F" } }} />
+      </div>
+    );
+  }
+  return (
+    <SignInButton mode="redirect">
+      <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 h-8 px-3 text-xs font-bold">
+        כניסה
+      </Button>
+    </SignInButton>
+  );
 }
 
 export default function Home() {
@@ -132,6 +158,7 @@ export default function Home() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <AuthNavButton />
             <button onClick={toggleLang} className="rounded border border-primary/30 text-primary px-2 py-1 text-xs font-bold hover:bg-primary/10 transition-colors">
               {lang === "he" ? "EN" : "עב"}
             </button>

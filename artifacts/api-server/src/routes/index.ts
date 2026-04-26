@@ -11,6 +11,8 @@ import newsletterRouter from "./newsletter";
 import chatbotRouter from "./chatbot";
 import analyticsRouter from "./analytics";
 import hadarAiRouter from "./hadar-ai";
+import hadarStripeRouter from "./hadar-stripe";
+import hadarDesignsRouter from "./hadar-designs";
 
 const router: IRouter = Router();
 
@@ -26,5 +28,7 @@ router.use("/newsletter", newsletterRouter);
 router.use("/chatbot", chatbotRouter);
 router.use(analyticsRouter);
 router.use(hadarAiRouter);
+router.use(hadarStripeRouter);
+router.use(hadarDesignsRouter);
 
 export default router;

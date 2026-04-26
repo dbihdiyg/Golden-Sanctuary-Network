@@ -106,3 +106,43 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - Requires: `OPENAI_API_KEY` env var
 - Generates Hebrew ceremonial invitation text via GPT-4o-mini
 - Used in order form with one-click generation
+
+### Auth (Clerk) — הדר
+- ClerkProvider wraps the entire הדר app
+- Sign-in: `/design-templates/sign-in` — branded with gold theme, הדר logo header
+- Sign-up: `/design-templates/sign-up` — same branding
+- Home page nav: "כניסה" button for guests, UserButton + "העיצובים שלי" for signed-in users
+
+### User Flow (Login → Edit → Pay → Files)
+1. User browses gallery → clicks "ערוך" on a template
+2. Editor page opens with auth wall overlay on preview — "נדרשת כניסה לחשבון"
+3. User signs in/up → returns to editor (auth wall disappears)
+4. User edits text fields and can save drafts
+5. Clicks "קבלת העיצוב הסופי — ₪49" → Payment modal (PaymentWall component)
+6. Modal describes what they get, confirms price → Redirects to Stripe Checkout
+7. After payment → returns to editor with success banner
+8. Editor verifies payment via `/api/hadar/checkout/verify`
+9. WhatsApp link to get the final design files
+
+### My Designs Portal
+- `/design-templates/my-designs` — shows all saved designs for signed-in users
+- Cards show template preview, status badge (draft/paid/submitted), date
+- Edit, delete, and "לתשלום" CTA per card
+- Redirects to sign-in if not authenticated
+
+### Stripe Integration
+- Stripe connector: `connector:ccfg_stripe_01K611P4YQR0SZM11XFRQJC44Y` (connected as sandbox)
+- `stripeClient.ts` in api-server — fetches credentials from Replit Connectors API
+- `POST /api/hadar/checkout` — creates Stripe Checkout session (mode: payment, ₪49)
+- `GET /api/hadar/checkout/verify?session_id=...` — verifies payment after return
+- `POST /api/hadar/webhook` — Stripe webhook handler (registered BEFORE express.json())
+
+### Saved Designs API (auth required)
+- `GET /api/hadar/designs` — list user's designs
+- `POST /api/hadar/designs` — create new design draft
+- `PATCH /api/hadar/designs/:id` — update design fields
+- `DELETE /api/hadar/designs/:id` — delete design
+
+### Database Tables (הדר)
+- `hadar_designs` — id, clerk_user_id, template_id, design_name, field_values (jsonb), status (draft/paid/submitted), stripe_session_id, created_at, updated_at
+- `hadar_orders` — id, clerk_user_id, design_id, template_id, stripe_session_id, stripe_payment_intent, amount, currency, status (pending/paid/failed), created_at

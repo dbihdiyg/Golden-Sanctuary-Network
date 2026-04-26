@@ -1,49 +1,115 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { lazy, Suspense } from "react";
+import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
+import { ClerkProvider, useAuth } from "@clerk/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AnimatePresence } from "framer-motion";
-import NotFound from "@/pages/not-found";
-import Home from "@/pages/home";
-import TemplateDetail from "@/pages/TemplateDetail";
-import Order from "@/pages/order";
-import Help from "@/pages/help";
-import Admin from "@/pages/admin";
-import Editor from "@/pages/editor";
-import { ChatWidget } from "@/components/ChatWidget";
+import { Loader2 } from "lucide-react";
 import { LangProvider } from "@/contexts/LangContext";
+import { ChatWidget } from "@/components/ChatWidget";
 
-const queryClient = new QueryClient();
+import Home from "@/pages/home";
+import NotFound from "@/pages/not-found";
+import SignInPage from "@/pages/SignInPage";
+import SignUpPage from "@/pages/SignUpPage";
 
-function Router() {
+const TemplateDetail = lazy(() => import("@/pages/TemplateDetail"));
+const Order = lazy(() => import("@/pages/order"));
+const Help = lazy(() => import("@/pages/help"));
+const Admin = lazy(() => import("@/pages/admin"));
+const Editor = lazy(() => import("@/pages/editor"));
+const MyDesigns = lazy(() => import("@/pages/MyDesigns"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 30_000, retry: 1 },
+  },
+});
+
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function PageLoader() {
+  return (
+    <div className="flex min-h-[60dvh] items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
+function MyDesignsRoute() {
+  const { isSignedIn, isLoaded } = useAuth();
+
+  if (!isLoaded) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return <Redirect to="/sign-in" />;
+  }
+
+  return <MyDesigns />;
+}
+
+function AppRoutes() {
   return (
     <AnimatePresence mode="wait">
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/template/:id" component={TemplateDetail} />
-        <Route path="/order" component={Order} />
-        <Route path="/help" component={Help} />
-        <Route path="/admin" component={Admin} />
-        <Route path="/editor/:id" component={Editor} />
-        <Route component={NotFound} />
-      </Switch>
+      <Suspense fallback={<PageLoader />}>
+        <Switch>
+          <Route path="/" component={Home} />
+          <Route path="/sign-in/*?" component={SignInPage} />
+          <Route path="/sign-up/*?" component={SignUpPage} />
+          <Route path="/my-designs" component={MyDesignsRoute} />
+          <Route path="/template/:id" component={TemplateDetail} />
+          <Route path="/order" component={Order} />
+          <Route path="/help" component={Help} />
+          <Route path="/admin" component={Admin} />
+          <Route path="/editor/:id" component={Editor} />
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
     </AnimatePresence>
+  );
+}
+
+function ClerkProviderWithRoutes() {
+  const [, setLocation] = useLocation();
+
+  function stripBase(path: string): string {
+    return basePath && path.startsWith(basePath)
+      ? path.slice(basePath.length) || "/"
+      : path;
+  }
+
+  return (
+    <ClerkProvider
+      publishableKey={clerkPubKey}
+      routerPush={(to) => setLocation(stripBase(to))}
+      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+    >
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <AppRoutes />
+          <ChatWidget />
+        </TooltipProvider>
+        <Toaster />
+      </QueryClientProvider>
+    </ClerkProvider>
   );
 }
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <LangProvider>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-            <ChatWidget />
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
-      </LangProvider>
-    </QueryClientProvider>
+    <LangProvider>
+      <WouterRouter base={basePath}>
+        <ClerkProviderWithRoutes />
+      </WouterRouter>
+    </LangProvider>
   );
 }
 
