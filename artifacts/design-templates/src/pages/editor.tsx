@@ -12,7 +12,7 @@ import {
   AlignCenterHorizontal, AlignCenterVertical,
   AlignEndHorizontal, AlignEndVertical,
   AlignStartHorizontal, AlignStartVertical,
-  Crosshair,
+  Crosshair, Wand2, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -734,6 +734,7 @@ export default function Editor() {
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
   const [rightTab, setRightTab] = useState<"text" | "elements" | "design">("text");
   const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
+  const [smartApplied, setSmartApplied] = useState(false);
 
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -871,6 +872,88 @@ export default function Editor() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [activeSlotId]);
+
+  // ── Smart Layout helpers (defined inside so they can close over state setters) ─
+  const applySmartLayout = useCallback(() => {
+    type SlotRole = "title" | "subtitle" | "details" | "footer" | "other";
+    const ROLE_ORDER: SlotRole[] = ["title", "subtitle", "details", "footer", "other"];
+
+    function classify(label: string, idx: number): SlotRole {
+      const l = label.toLowerCase();
+      if (/שם|כותרת|ראשי|חתן|כלה|הורים|משפחה|ברוכים|מוזמן|מוזמנת/.test(l)) return "title";
+      if (/תת|subtitle|כיתוב|תבנית|קטגוריה|תואר|תיאור/.test(l)) return "subtitle";
+      if (/תאריך|שעה|מקום|כתובת|פרטים|אולם|מסיבה|agenda/.test(l)) return "details";
+      if (/טלפון|הזמנה|footer|נא|rsvp|אישור|פרטי/.test(l)) return "footer";
+      if (idx === 0) return "title";
+      if (idx === 1) return "subtitle";
+      return "other";
+    }
+
+    const ROLE_FONT: Record<SlotRole, string> = {
+      title: "Noto Serif Hebrew",
+      subtitle: "Frank Ruhl Libre",
+      details: "Heebo",
+      footer: "Heebo",
+      other: "Frank Ruhl Libre",
+    };
+    const ROLE_SIZE: Record<SlotRole, number> = { title: 38, subtitle: 26, details: 20, footer: 14, other: 22 };
+    const ROLE_WIDTH: Record<SlotRole, number> = { title: 88, subtitle: 78, details: 74, footer: 62, other: 75 };
+    const ROLE_COLOR: Record<SlotRole, string> = {
+      title: "#D6A84F", subtitle: "#F8F1E3", details: "#F8F1E3", footer: "#D6A84F", other: "#F8F1E3",
+    };
+    const ROLE_BOLD: Record<SlotRole, boolean> = { title: true, subtitle: false, details: false, footer: false, other: false };
+    const ROLE_LINE: Record<SlotRole, number> = { title: 1.2, subtitle: 1.35, details: 1.5, footer: 1.4, other: 1.35 };
+    const ROLE_SPACING: Record<SlotRole, number> = { title: 2, subtitle: 0.5, details: 0, footer: 0.5, other: 0 };
+
+    function sizeForText(role: SlotRole, text: string): number {
+      const base = ROLE_SIZE[role];
+      const len = (text || "").trim().length;
+      if (len === 0) return base;
+      if (len < 8) return Math.round(base * 1.2);
+      if (len < 20) return base;
+      if (len < 40) return Math.round(base * 0.85);
+      return Math.round(base * 0.7);
+    }
+
+    const slots = allSlots.filter(s => !SYSTEM_SLOT_IDS.has(s.id));
+    if (slots.length === 0) return;
+
+    const classified = slots.map((slot, i) => ({
+      slot,
+      role: classify(slot.label || "", i) as SlotRole,
+      text: values[slot.id] ?? slot.defaultValue ?? "",
+    }));
+    classified.sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role));
+
+    const count = classified.length;
+    const TOP_PAD = 12, BOT_PAD = 10;
+    const usable = 100 - TOP_PAD - BOT_PAD;
+
+    const newPositions: Record<string, { x: number; y: number; width: number }> = { ...slotPositions };
+    const newStyles: Record<string, SlotStyle> = { ...slotStyles };
+
+    classified.forEach(({ slot, role, text }, i) => {
+      const fraction = count === 1 ? 0.5 : i / (count - 1);
+      const y = Math.round((TOP_PAD + fraction * usable) * 10) / 10;
+      newPositions[slot.id] = { x: 50, y, width: ROLE_WIDTH[role] };
+      newStyles[slot.id] = {
+        ...(slotStyles[slot.id] || {}),
+        fontFamily: ROLE_FONT[role],
+        fontSize: sizeForText(role, text),
+        color: ROLE_COLOR[role],
+        bold: ROLE_BOLD[role],
+        lineHeight: ROLE_LINE[role],
+        letterSpacing: ROLE_SPACING[role],
+      };
+      loadGoogleFont(ROLE_FONT[role]);
+    });
+
+    setSlotPositions(newPositions);
+    setSlotStyles(newStyles);
+    setSaved(false);
+    setSmartApplied(true);
+    setTimeout(() => setSmartApplied(false), 2800);
+  }, [allSlots, values, slotPositions, slotStyles]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
   const updateValue = (id: string, val: string) => { setValues(prev => ({ ...prev, [id]: val })); setSaved(false); };
@@ -1420,6 +1503,35 @@ export default function Editor() {
                     />
                   </div>
                 )}
+
+                {/* Smart Design / Improve Design button */}
+                <div className="px-4 py-3 border-b border-primary/10">
+                  <button
+                    onClick={applySmartLayout}
+                    dir="rtl"
+                    className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-sm transition-all duration-300 relative overflow-hidden ${
+                      smartApplied
+                        ? "bg-emerald-600/20 border border-emerald-500/40 text-emerald-400"
+                        : "bg-gradient-to-l from-primary/25 to-primary/10 border border-primary/30 text-primary hover:from-primary/35 hover:to-primary/20 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10"
+                    }`}
+                  >
+                    {smartApplied ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        <span>העיצוב שופר!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="w-4 h-4 shrink-0" />
+                        <span>שפר עיצוב אוטומטית</span>
+                        <Sparkles className="w-3 h-3 opacity-60 shrink-0" />
+                      </>
+                    )}
+                  </button>
+                  <p className="text-[10px] text-muted-foreground text-center mt-1.5 leading-relaxed">
+                    מסדר אוטומטית מיקומים, גודלי גופן ועימוד
+                  </p>
+                </div>
 
                 {/* Per-layer font picker */}
                 <div className="border-b border-primary/10">
