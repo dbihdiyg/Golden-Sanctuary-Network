@@ -1283,7 +1283,7 @@ export default function Editor() {
       <div className="max-w-screen-xl mx-auto flex flex-col lg:flex-row h-[calc(100vh-56px)]">
 
         {/* ── LEFT PANEL: fields ── */}
-        <aside className="lg:w-[420px] xl:w-[460px] shrink-0 border-b lg:border-b-0 lg:border-l border-primary/10 flex flex-col bg-card/50 overflow-hidden">
+        <aside className="lg:w-[420px] xl:w-[460px] shrink-0 border-b lg:border-b-0 lg:border-l border-primary/10 flex flex-col bg-card/50">
           <div className="px-5 py-3 border-b border-primary/10 bg-card flex items-center justify-between">
             <div>
               <p className="font-semibold text-sm text-foreground">עורך העיצוב</p>

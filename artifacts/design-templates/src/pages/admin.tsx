@@ -416,7 +416,7 @@ function TemplateEditor({
         </div>
 
         {/* ── Right panel ── */}
-        <div className="w-80 border-r border-primary/10 bg-card flex flex-col overflow-hidden">
+        <div className="w-80 border-r border-primary/10 bg-card flex flex-col">
           <div className="flex-1 overflow-y-auto divide-y divide-primary/10">
 
             {/* ── Images section ── */}

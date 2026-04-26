@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Bold, Italic, Underline, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { FontEntry } from "@/lib/fonts";
 
@@ -210,10 +210,30 @@ function ColorSwatch({ value, onChange, label = "צבע" }: {
   label?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (btnRef.current && !btnRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  const handleToggle = () => {
+    if (open) { setOpen(false); return; }
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (rect) setDropPos({ top: rect.bottom + 4, left: Math.max(4, rect.right - 192) });
+    setOpen(true);
+  };
+
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={btnRef}
+        onClick={handleToggle}
         className="flex items-center gap-1.5 h-7 px-2 rounded-md border border-primary/15 hover:border-primary/40 bg-background text-xs text-foreground transition-colors"
       >
         <span className="w-4 h-4 rounded-sm border border-white/20 shrink-0"
@@ -221,8 +241,12 @@ function ColorSwatch({ value, onChange, label = "צבע" }: {
         <span className="text-xs">{label}</span>
         {open ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
       </button>
-      {open && (
-        <div className="absolute top-full right-0 mt-1 z-[60] bg-card border border-primary/20 rounded-xl shadow-2xl p-2 w-48">
+      {open && dropPos && (
+        <div
+          style={{ position: "fixed", top: dropPos.top, left: dropPos.left, zIndex: 9999 }}
+          className="bg-card border border-primary/20 rounded-xl shadow-2xl p-2 w-48"
+          onMouseDown={e => e.stopPropagation()}
+        >
           <div className="grid grid-cols-6 gap-1 mb-2">
             {PRESET_COLORS.map(c => (
               <button key={c.value} onClick={() => { onChange(c.value); setOpen(false); }} title={c.label}
@@ -310,8 +334,19 @@ interface Props {
 
 export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }: Props) {
   const [fontOpen, setFontOpen] = useState(false);
+  const [fontDropPos, setFontDropPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const fontBtnRef = useRef<HTMLButtonElement>(null);
   const [gradientCat, setGradientCat] = useState(GRADIENT_LIBRARY[0].id);
   const s = style;
+
+  useEffect(() => {
+    if (!fontOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (fontBtnRef.current && !fontBtnRef.current.contains(e.target as Node)) setFontOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [fontOpen]);
 
   const customFonts = fonts.filter(f => f.category === "custom");
   const serifFonts  = fonts.filter(f => f.category === "serif");
@@ -341,7 +376,13 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
         <div className="flex items-center gap-2">
           <div className="flex-1 relative">
             <button
-              onClick={() => setFontOpen(o => !o)}
+              ref={fontBtnRef}
+              onClick={() => {
+                if (fontOpen) { setFontOpen(false); return; }
+                const rect = fontBtnRef.current?.getBoundingClientRect();
+                if (rect) setFontDropPos({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 208) });
+                setFontOpen(true);
+              }}
               className="w-full flex items-center justify-between gap-1 h-7 px-2 rounded-md border border-primary/15 hover:border-primary/40 bg-background text-xs text-foreground transition-colors"
             >
               <span className="truncate" style={{ fontFamily: s.fontFamily ? `'${s.fontFamily}', serif` : undefined }}>
@@ -349,8 +390,12 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
               </span>
               {fontOpen ? <ChevronUp className="w-3 h-3 shrink-0 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 shrink-0 text-muted-foreground" />}
             </button>
-            {fontOpen && (
-              <div className="absolute top-full right-0 mt-1 z-50 bg-card border border-primary/20 rounded-xl shadow-2xl overflow-y-auto w-52" style={{ maxHeight: 240 }}>
+            {fontOpen && fontDropPos && (
+              <div
+                style={{ position: "fixed", top: fontDropPos.top, left: fontDropPos.left, width: fontDropPos.width, zIndex: 9999, maxHeight: 240 }}
+                className="bg-card border border-primary/20 rounded-xl shadow-2xl overflow-y-auto"
+                onMouseDown={e => e.stopPropagation()}
+              >
                 <button className="w-full text-right px-3 py-1.5 hover:bg-primary/10 text-xs text-muted-foreground border-b border-primary/10"
                   onClick={() => { onChange({ fontFamily: undefined }); setFontOpen(false); }}>
                   ברירת מחדל
