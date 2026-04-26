@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Download, Palette } from "lucide-react";
 import { Template } from "../lib/data";
+import { useEffect, useRef, useState } from "react";
 
 interface TemplateCardProps {
   template: Template;
@@ -10,58 +11,81 @@ interface TemplateCardProps {
 }
 
 export function TemplateCard({ template, index }: TemplateCardProps) {
+  const [isVisible, setIsVisible] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (cardRef.current) {
+      observer.observe(cardRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div 
-      className="group flex flex-col rounded-xl overflow-hidden bg-card/50 backdrop-blur-sm border border-card-border shadow-md hover:shadow-xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-1"
-      style={{ animationDelay: `${index * 50}ms` }}
+      ref={cardRef}
+      className={`group flex flex-col rounded-2xl overflow-hidden bg-secondary backdrop-blur-sm border border-primary/20 shadow-md hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-2 hover:border-primary/60 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+      style={{ transitionDelay: `${index * 50}ms` }}
     >
-      <div className="relative aspect-[3/4] overflow-hidden w-full">
+      <div className="relative aspect-[3/4] overflow-hidden w-full bg-background/50">
         {template.isGradient ? (
           <div 
-            className="absolute inset-0 w-full h-full transition-transform duration-700 group-hover:scale-105"
+            className="absolute inset-0 w-full h-full transition-transform duration-700 group-hover:scale-110"
             style={{ background: template.image }}
           >
             <div className="absolute inset-0 bg-noise opacity-20 mix-blend-overlay"></div>
-            <div className="absolute inset-4 border border-white/10 rounded-lg flex items-center justify-center p-6 text-center">
-              <h3 className="font-serif text-3xl font-light text-white/80">{template.title}</h3>
+            <div className="absolute inset-4 border border-white/10 rounded-xl flex items-center justify-center p-6 text-center">
+              <h3 className="font-serif text-4xl font-bold text-white/90 drop-shadow-md">{template.title}</h3>
             </div>
           </div>
         ) : (
           <img 
             src={template.image} 
             alt={template.title} 
-            className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
+            className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
           />
         )}
-        <div className="absolute top-3 right-3 flex gap-2">
-          <Badge variant="secondary" className="bg-background/80 backdrop-blur-md border-white/10 text-xs font-medium">
+        <div className="absolute top-4 right-4 flex gap-2">
+          <Badge variant="secondary" className="bg-background/90 backdrop-blur-md border-primary/30 text-primary text-xs font-medium px-3 py-1">
             {template.category}
           </Badge>
-          <Badge variant="outline" className="bg-primary/10 backdrop-blur-md border-primary/20 text-primary text-xs font-medium">
+          <Badge variant="outline" className="bg-secondary/90 backdrop-blur-md border-white/20 text-foreground text-xs font-medium px-3 py-1">
             {template.style}
           </Badge>
         </div>
-        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="absolute inset-0 bg-gradient-to-t from-secondary via-secondary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
 
-      <div className="p-5 flex flex-col flex-1 relative z-10">
-        <div className="flex justify-between items-start mb-2">
+      <div className="p-6 flex flex-col flex-1 relative z-10 bg-secondary">
+        <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="font-serif text-xl font-bold text-foreground">{template.title}</h3>
-            <p className="text-sm text-muted-foreground mt-1">{template.subtitle}</p>
+            <h3 className="font-serif text-2xl font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{template.title}</h3>
+            <p className="text-sm text-muted-foreground">{template.subtitle}</p>
           </div>
-          <span className="font-sans font-bold text-lg text-primary">₪{template.price}</span>
+          <div className="bg-primary/20 px-3 py-1 rounded-full border border-primary/30">
+            <span className="font-sans font-bold text-lg text-primary">₪{template.price}</span>
+          </div>
         </div>
 
-        <div className="mt-auto pt-4 flex gap-2 w-full">
+        <div className="mt-auto pt-4 flex gap-3 w-full">
           <Link href={`/template/${template.id}`} className="flex-1">
-            <Button variant="default" className="w-full bg-primary/90 hover:bg-primary text-primary-foreground group/btn relative overflow-hidden">
-              <span className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300 ease-out" />
-              <Palette className="w-4 h-4 ml-2 relative z-10" />
-              <span className="relative z-10">התאמה אישית</span>
+            <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary/10 transition-colors">
+              <Palette className="w-4 h-4 ml-2" />
+              התאמה אישית
             </Button>
           </Link>
-          <Button variant="outline" className="flex-1 border-white/10 hover:bg-white/5">
+          <Button variant="default" className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
             <Download className="w-4 h-4 ml-2" />
             הורדה
           </Button>

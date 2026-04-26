@@ -1,5 +1,5 @@
 import { useParams, Link } from "wouter";
-import { ArrowRight, Download, MessageCircle, Palette, CheckCircle2, Share2, Info } from "lucide-react";
+import { ArrowRight, Download, MessageCircle, Palette, CheckCircle2, Share2, Info, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { templates } from "@/lib/data";
@@ -27,15 +27,18 @@ export default function TemplateDetail() {
       
       {/* Header */}
       <header className="border-b border-white/5 bg-background/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group">
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             <span className="font-medium">חזרה לגלריה</span>
           </Link>
           
-          <div className="flex items-center gap-2 text-primary">
-            <span className="font-serif font-bold text-xl text-foreground">תבניות עיצוב</span>
-          </div>
+          <Link href="/">
+            <div className="flex flex-col items-center justify-center text-primary cursor-pointer relative">
+              <Crown className="w-5 h-5 absolute -top-4 text-primary" strokeWidth={2.5} />
+              <span className="font-serif font-bold text-3xl text-foreground tracking-wide">הדר</span>
+            </div>
+          </Link>
         </div>
       </header>
 
@@ -43,13 +46,13 @@ export default function TemplateDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
           
           {/* Image/Preview Column */}
-          <div className="lg:col-span-7 xl:col-span-8">
-            <div className="relative rounded-2xl overflow-hidden bg-card/30 border border-card-border aspect-[3/4] md:aspect-auto md:h-[800px] flex items-center justify-center group shadow-2xl">
+          <div className="lg:col-span-7 xl:col-span-8 animate-in fade-in slide-in-from-right-8 duration-700">
+            <div className="relative rounded-3xl overflow-hidden bg-secondary border border-primary/20 aspect-[3/4] md:aspect-auto md:h-[800px] flex items-center justify-center group shadow-2xl">
               {template.isGradient ? (
                 <div className="absolute inset-0 w-full h-full" style={{ background: template.image }}>
                   <div className="absolute inset-0 bg-noise opacity-20 mix-blend-overlay"></div>
-                  <div className="absolute inset-8 border-2 border-white/10 rounded-xl flex items-center justify-center p-8 text-center">
-                    <h3 className="font-serif text-5xl md:text-6xl font-light text-white/80">{template.title}</h3>
+                  <div className="absolute inset-8 border-2 border-white/10 rounded-2xl flex items-center justify-center p-8 text-center">
+                    <h3 className="font-serif text-5xl md:text-7xl font-bold text-white/90 drop-shadow-xl">{template.title}</h3>
                   </div>
                 </div>
               ) : (
@@ -60,64 +63,66 @@ export default function TemplateDetail() {
                 />
               )}
               
-              <div className="absolute inset-0 pointer-events-none border border-white/5 rounded-2xl" />
+              <div className="absolute inset-0 pointer-events-none border border-white/5 rounded-3xl" />
             </div>
           </div>
 
           {/* Details Column */}
-          <div className="lg:col-span-5 xl:col-span-4 flex flex-col">
-            <div className="sticky top-24">
-              <div className="mb-6">
-                <div className="flex gap-2 mb-4">
-                  <Badge variant="secondary" className="bg-white/5 border-white/10 text-sm">{template.category}</Badge>
-                  <Badge variant="outline" className="border-primary/30 text-primary text-sm">{template.style}</Badge>
+          <div className="lg:col-span-5 xl:col-span-4 flex flex-col animate-in fade-in slide-in-from-left-8 duration-700 delay-150 fill-mode-both">
+            <div className="sticky top-28 bg-secondary/50 p-8 rounded-3xl border border-primary/10 shadow-lg">
+              <div className="mb-8">
+                <div className="flex gap-2 mb-6">
+                  <Badge variant="secondary" className="bg-background border-primary/20 text-primary px-3 py-1 text-sm font-medium">{template.category}</Badge>
+                  <Badge variant="outline" className="border-white/10 text-foreground px-3 py-1 text-sm font-medium bg-white/5">{template.style}</Badge>
                 </div>
-                <h1 className="font-serif text-4xl font-bold mb-2">{template.title}</h1>
+                <h1 className="font-serif text-5xl font-bold mb-4 text-foreground">{template.title}</h1>
                 <p className="text-xl text-muted-foreground">{template.subtitle}</p>
               </div>
 
-              <div className="py-6 border-y border-white/5 mb-6 flex justify-between items-center">
-                <span className="text-muted-foreground">מחיר מחירון</span>
-                <span className="font-sans font-bold text-4xl text-primary">₪{template.price}</span>
+              <div className="py-6 border-y border-white/5 mb-8 flex justify-between items-center bg-primary/5 -mx-8 px-8">
+                <span className="text-lg text-foreground font-medium">מחיר מחירון</span>
+                <span className="font-sans font-bold text-5xl text-primary">₪{template.price}</span>
               </div>
 
-              <div className="mb-8">
-                <h3 className="font-medium text-lg mb-4 flex items-center gap-2">
-                  <Info className="w-5 h-5 text-primary" />
+              <div className="mb-10">
+                <h3 className="font-bold text-xl mb-6 flex items-center gap-3 text-foreground">
+                  <div className="bg-primary/20 p-2 rounded-full">
+                    <Info className="w-5 h-5 text-primary" />
+                  </div>
                   מה ניתן לערוך?
                 </h3>
-                <ul className="grid grid-cols-2 gap-3">
+                <ul className="grid grid-cols-2 gap-4">
                   {editableItems.map((item, i) => (
-                    <li key={i} className="flex items-center gap-2 text-muted-foreground">
-                      <CheckCircle2 className="w-4 h-4 text-primary/70" />
-                      <span>{item}</span>
+                    <li key={i} className="flex items-center gap-3 text-muted-foreground font-medium">
+                      <CheckCircle2 className="w-5 h-5 text-primary" />
+                      <span className="text-lg">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="flex flex-col gap-3">
-                <Button size="lg" className="w-full text-lg h-14 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 relative overflow-hidden group">
+              <div className="flex flex-col gap-4">
+                <Button size="lg" className="w-full text-lg h-16 bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl shadow-primary/20 relative overflow-hidden group font-bold">
                   <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                  <Palette className="w-5 h-5 ml-2 relative z-10" />
+                  <Palette className="w-6 h-6 ml-3 relative z-10" />
                   <span className="relative z-10">התאמה אישית באונליין</span>
                 </Button>
                 
-                <Button size="lg" variant="outline" className="w-full text-lg h-14 border-white/10 hover:bg-white/5">
-                  <Download className="w-5 h-5 ml-2" />
+                <Button size="lg" variant="outline" className="w-full text-lg h-16 border-primary/50 text-primary hover:bg-primary/10 font-bold transition-colors">
+                  <Download className="w-6 h-6 ml-3" />
                   הורד קובץ מקור
                 </Button>
 
-                <Button size="lg" variant="secondary" className="w-full text-lg h-14 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 border border-[#25D366]/20 mt-4">
-                  <MessageCircle className="w-5 h-5 ml-2" />
-                  הזמן דרך ווצאפ
+                <Button size="lg" variant="secondary" className="w-full text-lg h-16 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 border border-[#25D366]/20 mt-2 font-bold transition-colors">
+                  <MessageCircle className="w-6 h-6 ml-3" />
+                  הזמנה מהירה בוואטסאפ
                 </Button>
               </div>
 
-              <div className="mt-8 flex items-center justify-center">
-                <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  <Share2 className="w-4 h-4" />
-                  שתף תבנית זו
+              <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-center">
+                <button className="flex items-center gap-2 text-base font-medium text-muted-foreground hover:text-primary transition-colors">
+                  <Share2 className="w-5 h-5" />
+                  שתפו תבנית זו
                 </button>
               </div>
             </div>
