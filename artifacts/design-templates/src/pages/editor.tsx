@@ -761,6 +761,7 @@ export default function Editor() {
   const [payLoading, setPayLoading] = useState(false);
   const [paySuccess, setPaySuccess] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [designId, setDesignId] = useState<number | null>(designIdParam ? Number(designIdParam) : null);
   const [designName, setDesignName] = useState("עיצוב שלי");
@@ -926,6 +927,7 @@ export default function Editor() {
       const sessionId = searchParams.get("session_id");
       if (sessionId && isSignedIn) {
         const verify = async () => {
+          setVerifying(true);
           try {
             const token = await getToken();
             const res = await fetch(`${API_BASE}/api/hadar/checkout/verify?session_id=${sessionId}`, { headers: { Authorization: `Bearer ${token}` } });
@@ -935,10 +937,18 @@ export default function Editor() {
                 setPaySuccess(true);
                 setPayError(null);
                 setShowPayment(false);
+              } else {
+                setPayError("התשלום לא אושר עדיין — נסו לרענן את הדף, או פנו לתמיכה");
               }
+            } else {
+              const errData = await res.json().catch(() => ({}));
+              setPayError(`שגיאה באימות תשלום: ${errData.error || res.status}`);
             }
           } catch (err) {
             console.error("[HADAR] payment verify error:", err);
+            setPayError("שגיאת רשת — נסו לרענן את הדף");
+          } finally {
+            setVerifying(false);
           }
         };
         verify();
@@ -1331,9 +1341,14 @@ export default function Editor() {
   const handlePay = async () => {
     if (!isSignedIn || !template || template === "loading") return;
     setPayLoading(true);
+    setPayError(null);
     try {
       const savedId = await handleAutoSave();
-      if (!savedId) { setPayLoading(false); return; }
+      if (!savedId) {
+        setPayError("שגיאה בשמירת העיצוב — נסו שנית");
+        setPayLoading(false);
+        return;
+      }
       const token = await getToken();
       const fv = getFieldValuesWithElements();
       const res = await fetch(`${API_BASE}/api/hadar/checkout`, {
@@ -1351,14 +1366,23 @@ export default function Editor() {
         window.location.href = data.url;
         return;
       }
-      console.error("[HADAR] checkout error:", data.error);
-    } catch (err) { console.error("[HADAR] checkout error:", err); }
+      const errMsg = data.error || "שגיאה לא ידועה";
+      console.error("[HADAR] checkout error:", errMsg);
+      setPayError(`שגיאה בפתיחת דף התשלום: ${errMsg}`);
+    } catch (err: any) {
+      console.error("[HADAR] checkout error:", err);
+      setPayError("שגיאת רשת — בדקו את החיבור ונסו שנית");
+    }
     setPayLoading(false);
   };
 
   const handleDownload = async () => {
-    if (!previewRef.current) return;
+    if (!previewRef.current) {
+      setPayError("שגיאה: הקנבס לא נמצא — אנא רעננו את הדף");
+      return;
+    }
     setDownloading(true);
+    setPayError(null);
     try {
       // 1. Verify payment on server before generating file
       if (designId) {
@@ -1367,26 +1391,62 @@ export default function Editor() {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!authRes.ok) {
-          const err = await authRes.json().catch(() => ({}));
-          console.error("[HADAR] download not authorized:", err);
-          alert("ההורדה לא מורשית — יש לבצע תשלום תחילה");
+          const errData = await authRes.json().catch(() => ({}));
+          console.error("[HADAR] download not authorized:", errData);
+          if (authRes.status === 403) {
+            setPayError("ההורדה דורשת תשלום — יש לבצע תשלום תחילה");
+          } else {
+            setPayError(`שגיאה באימות הורדה: ${errData.error || authRes.status}`);
+          }
           setDownloading(false);
           return;
         }
       }
 
-      // 2. Generate PNG client-side
+      // 2. Generate PNG client-side (with WebGL/Three.js canvas fix)
       const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(previewRef.current, {
-        scale: 3, useCORS: true, allowTaint: true,
-        backgroundColor: null, logging: false,
+      const exportCanvas = await html2canvas(previewRef.current, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        logging: false,
+        onclone: (_clonedDoc, clonedElement) => {
+          // html2canvas cannot read WebGL (Three.js) canvas pixels — replace each
+          // canvas element with an <img> snapshot taken from the live canvas.
+          const liveCanvases = previewRef.current!.querySelectorAll("canvas");
+          const clonedCanvases = clonedElement.querySelectorAll("canvas");
+          liveCanvases.forEach((liveCanvas, i) => {
+            const clonedCanvas = clonedCanvases[i];
+            if (!clonedCanvas) return;
+            try {
+              const dataUrl = liveCanvas.toDataURL("image/png");
+              const img = document.createElement("img");
+              img.src = dataUrl;
+              img.style.cssText = window.getComputedStyle(liveCanvas).cssText;
+              img.style.position = "absolute";
+              img.style.left = (liveCanvas as HTMLElement).style.left || "0";
+              img.style.top = (liveCanvas as HTMLElement).style.top || "0";
+              img.style.width = liveCanvas.offsetWidth + "px";
+              img.style.height = liveCanvas.offsetHeight + "px";
+              clonedCanvas.parentNode?.replaceChild(img, clonedCanvas);
+            } catch (_) { /* tainted canvas — leave as-is */ }
+          });
+        },
       });
+
       const link = document.createElement("a");
       link.download = `hadar-${designName.replace(/\s+/g, "-")}.png`;
-      link.href = canvas.toDataURL("image/png");
+      link.href = exportCanvas.toDataURL("image/png");
+      document.body.appendChild(link);
       link.click();
-    } catch (err) { console.error("[HADAR] download failed:", err); }
-    finally { setDownloading(false); }
+      document.body.removeChild(link);
+    } catch (err: any) {
+      console.error("[HADAR] download failed:", err);
+      setPayError(`שגיאה ביצירת הקובץ: ${err?.message || "נסו שנית"}`);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const handleWhatsApp = () => {
@@ -1449,8 +1509,15 @@ export default function Editor() {
           <button onClick={() => setPayError(null)} className="underline hover:no-underline">סגור</button>
         </div>
       )}
+      {/* ── VERIFYING BANNER ── */}
+      {verifying && (
+        <div className="shrink-0 bg-primary/10 border-b border-primary/20 text-primary text-xs py-2 px-4 flex items-center justify-center gap-2 z-20">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <span>מאמת תשלום — אנא המתינו...</span>
+        </div>
+      )}
       {/* ── SUCCESS BANNER ── */}
-      {paySuccess && (
+      {paySuccess && !verifying && (
         <div className="shrink-0 bg-green-500/10 border-b border-green-500/20 text-green-700 dark:text-green-400 text-xs py-2 px-4 flex items-center justify-center gap-2 z-20">
           <span>✓</span>
           <span>התשלום הושלם בהצלחה — הורידו את הקובץ הסופי</span>
@@ -2048,7 +2115,11 @@ export default function Editor() {
 
           {/* Bottom action bar */}
           <div className="border-t border-primary/10 bg-card p-3 space-y-2 shrink-0">
-            {paySuccess ? (
+            {verifying ? (
+              <Button disabled className="w-full gap-2 h-10">
+                <Loader2 className="w-4 h-4 animate-spin" />מאמת תשלום...
+              </Button>
+            ) : paySuccess ? (
               <>
                 <Button onClick={handleDownload} disabled={downloading}
                   className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2 h-10 font-bold shadow-lg">
