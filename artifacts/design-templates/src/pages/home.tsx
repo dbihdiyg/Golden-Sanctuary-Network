@@ -186,65 +186,191 @@ export default function Home() {
         )}
       </motion.header>
 
-      {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden py-20">
-        {/* Background Elements */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div 
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[100px] transition-transform duration-300 ease-out" 
-            style={{ transform: `translate(calc(-50% + ${mouseX * 15}px), calc(-50% + ${mouseY * 10}px))` }}
-          />
-          <div 
-            className="absolute top-1/4 left-1/4 w-[300px] h-[300px] bg-primary/20 rounded-full blur-[80px] transition-transform duration-300 ease-out" 
-            style={{ transform: `translate(${mouseX * -30}px, ${mouseY * -20}px)` }}
-          />
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
+      {/* Hero Section — Split Screen */}
+      <section className="relative overflow-hidden" style={{ minHeight: "calc(100vh - 80px)" }}>
+
+        {/* Full-bleed background */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 80% 70% at 70% 40%, rgba(214,168,79,0.07) 0%, transparent 60%)" }} />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 60% 60% at 20% 60%, rgba(11,24,51,0.8) 0%, transparent 70%)" }} />
+          {/* Subtle grid */}
+          <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: "linear-gradient(rgba(214,168,79,1) 1px, transparent 1px), linear-gradient(90deg, rgba(214,168,79,1) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
         </div>
 
-        <div className="container mx-auto px-4 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary text-sm font-medium mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            {t("hero_badge", lang)}
-          </div>
-          
-          <motion.h1 
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-            className={`font-serif text-7xl md:text-9xl font-bold tracking-tight mb-6 text-primary ${lang === "en" ? "tracking-widest" : ""}`}
-            style={{ animation: 'goldGlow 4s infinite alternate ease-in-out' }}
-          >
-            {lang === "en" ? "HADAR" : "הדר"}
-          </motion.h1>
-          
-          <div className={`flex flex-wrap justify-center gap-x-2 gap-y-1 text-xl md:text-3xl text-foreground max-w-3xl mx-auto mb-12 font-light ${lang === "en" ? "dir-ltr" : ""}`}>
-            {t("hero_slogan", lang).split(" ").map((word, i) => (
-              <motion.span 
-                key={i}
+        <div className="relative z-10 container mx-auto px-6 h-full flex items-center" style={{ minHeight: "calc(100vh - 80px)" }}>
+          <div className="w-full grid grid-cols-1 lg:grid-cols-[55%_45%] gap-0 items-center py-16 lg:py-0">
+
+            {/* ── RIGHT TEXT PANEL (RTL: displayed first) ── */}
+            <div className="order-2 lg:order-1 flex flex-col items-start gap-6 lg:pr-12" dir="rtl">
+
+              {/* Badge */}
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-primary/25 bg-primary/5 backdrop-blur-sm"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                <span className="text-primary text-xs font-medium tracking-widest">סטודיו לעיצוב הזמנות · {new Date().getFullYear()}</span>
+              </motion.div>
+
+              {/* Tag line */}
+              <motion.p
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="text-xs tracking-[0.3em] text-muted-foreground/60 uppercase font-light"
+              >
+                INVITATION DESIGN STUDIO
+              </motion.p>
+
+              {/* Main heading */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <h1 className="font-serif font-bold leading-[0.9] text-foreground" style={{ fontSize: "clamp(72px, 10vw, 120px)", animation: "goldGlow 5s infinite alternate ease-in-out" }}>
+                  עיצוב<br />
+                  <span className="text-primary" style={{ textShadow: "0 0 60px rgba(214,168,79,0.4)" }}>מהוד</span><br />
+                  ומהדר
+                </h1>
+              </motion.div>
+
+              {/* Golden divider */}
+              <motion.div
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="h-px bg-primary/40 origin-right"
+                style={{ width: 64 }}
+              />
+
+              {/* Subtitle */}
+              <motion.p
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: i * 0.08 + 0.5, ease: "easeOut" }}
+                transition={{ duration: 0.6, delay: 0.5 }}
+                className="text-muted-foreground leading-relaxed text-base md:text-lg max-w-md"
               >
-                {word}
-              </motion.span>
-            ))}
-          </div>
+                הזמנות חרדיות ברמה גבוהה — ערכו את הטקסטים בעצמכם,<br className="hidden md:block" />
+                שלמו פעם אחת, קבלו קבצי דפוס תוך דקות.
+              </motion.p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-[2000ms] fill-mode-both">
-            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto text-lg px-10 h-14 bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_40px_-10px_rgba(214,168,79,0.5)] font-bold transition-all btn-shimmer" onClick={() => document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth' })}>
-                {t("cta_gallery", lang)}
-              </Button>
+              {/* CTAs */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.6 }}
+                className="flex flex-wrap gap-3"
+              >
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Button
+                    size="lg"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold px-8 h-12 shadow-[0_0_40px_-8px_rgba(214,168,79,0.5)] text-base"
+                    onClick={() => document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth" })}
+                  >
+                    {t("cta_gallery", lang)} ←
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Link href="/order">
+                    <Button size="lg" variant="outline" className="border-primary/30 text-primary hover:bg-primary/10 font-medium px-8 h-12 text-base">
+                      {t("cta_order", lang)}
+                    </Button>
+                  </Link>
+                </motion.div>
+              </motion.div>
+
+              {/* Stats strip */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.75 }}
+                className="flex items-center gap-6 pt-2"
+                dir="rtl"
+              >
+                {[["500+", "עיצובים"], ["₪49", "מחיר קבוע"], ["3 דק׳", "זמן עריכה"]].map(([val, lbl], i) => (
+                  <div key={i} className="flex flex-col">
+                    <span className="font-serif font-bold text-primary text-xl leading-tight">{val}</span>
+                    <span className="text-muted-foreground/60 text-xs">{lbl}</span>
+                  </div>
+                ))}
+              </motion.div>
+            </div>
+
+            {/* ── LEFT VISUAL PANEL ── */}
+            <motion.div
+              initial={{ opacity: 0, x: -40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.9, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="order-1 lg:order-2 relative flex items-center justify-center"
+              style={{ minHeight: 480 }}
+            >
+              {/* Ambient glow */}
+              <div className="absolute" style={{ width: 380, height: 380, borderRadius: "50%", background: "radial-gradient(circle, rgba(214,168,79,0.1) 0%, transparent 70%)", filter: "blur(40px)", top: "50%", left: "50%", transform: "translate(-50%,-50%)" }} />
+
+              {/* Back card */}
+              <motion.div
+                animate={{ y: [0, -8, 0] }}
+                transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 0.5 }}
+                className="absolute"
+                style={{ width: 220, height: 310, borderRadius: 12, background: "linear-gradient(145deg, #0d1520 0%, #0a1018 100%)", border: "1px solid rgba(100,150,255,0.1)", top: "50%", left: "50%", transform: "translate(-30%, -42%) rotate(7deg)", opacity: 0.55 }}
+              />
+
+              {/* Main invitation card */}
+              <motion.div
+                animate={{ y: [0, -12, 0] }}
+                transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
+                className="relative z-10 flex flex-col items-center justify-center gap-2.5"
+                style={{ width: 240, height: 340, borderRadius: 14, background: "linear-gradient(160deg, #1a1508 0%, #241c0a 50%, #1a1306 100%)", border: "1px solid rgba(214,168,79,0.3)", boxShadow: "0 40px 100px rgba(0,0,0,0.6), 0 0 80px rgba(214,168,79,0.08)", padding: "28px 20px" }}
+                dir="rtl"
+              >
+                <div style={{ width: 36, height: 1, background: "rgba(214,168,79,0.6)" }} />
+                <div style={{ color: "rgba(214,168,79,0.45)", fontSize: 8, letterSpacing: 3, fontFamily: "serif" }}>בסייעתא דשמיא</div>
+                <div style={{ fontFamily: "serif", fontSize: 22, fontWeight: 700, color: "#D6A84F", textAlign: "center", lineHeight: 1.25, marginTop: 4 }}>שמחת<br />בר המצווה</div>
+                <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 11, textAlign: "center", lineHeight: 1.9 }}>ראובן בן שמעון<br />ח׳ אדר תשפ״ו</div>
+                <div style={{ width: 36, height: 1, background: "rgba(214,168,79,0.3)", margin: "2px 0" }} />
+                <div style={{ color: "rgba(255,255,255,0.22)", fontSize: 9.5, textAlign: "center", lineHeight: 1.9 }}>יש לנו את הכבוד להזמינכם<br />לסעודת מצווה</div>
+                <div style={{ color: "rgba(255,255,255,0.18)", fontSize: 9, textAlign: "center" }}>יום שישי פרשת בשלח · אולם שמחות המלך</div>
+                <div style={{ width: 36, height: 1, background: "rgba(214,168,79,0.6)", marginTop: 4 }} />
+                {/* Hadar watermark */}
+                <div style={{ position: "absolute", bottom: 12, left: 0, right: 0, textAlign: "center", color: "rgba(214,168,79,0.2)", fontSize: 8, letterSpacing: 4, fontFamily: "serif" }}>הדר</div>
+              </motion.div>
+
+              {/* Third card — behind-left */}
+              <div style={{ position: "absolute", width: 180, height: 260, borderRadius: 10, background: "linear-gradient(145deg, #0f1a0a 0%, #0a1208 100%)", border: "1px solid rgba(80,180,80,0.06)", top: "50%", left: "50%", transform: "translate(-68%, -48%) rotate(-9deg)", opacity: 0.3 }} />
+
+              {/* Frame dots */}
+              <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }}>
+                {[1,2,3,4].map(i => (
+                  <div key={i} style={{ width: i === 1 ? 20 : 5, height: 2, borderRadius: 1, background: i === 1 ? "#D6A84F" : "rgba(255,255,255,0.15)", transition: "all 0.3s" }} />
+                ))}
+              </div>
+
+              {/* Corner label */}
+              <div style={{ position: "absolute", top: 20, right: 20, color: "rgba(255,255,255,0.15)", fontSize: 10, fontFamily: "monospace", letterSpacing: 2 }}>01 / 12</div>
             </motion.div>
-            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
-              <Link href="/order">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-10 h-14 border-primary text-primary hover:bg-primary/10 transition-all">
-                  {t("cta_order", lang)}
-                </Button>
-              </Link>
-            </motion.div>
+
           </div>
         </div>
+
+        {/* Bottom scroll hint */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2 }}
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5"
+        >
+          <span className="text-muted-foreground/30 text-xs tracking-widest">גלגלו למטה</span>
+          <motion.div
+            animate={{ y: [0, 5, 0] }}
+            transition={{ repeat: Infinity, duration: 1.5 }}
+            className="w-4 h-7 rounded-full border border-primary/20 flex items-start justify-center pt-1.5"
+          >
+            <div className="w-1 h-1.5 rounded-full bg-primary/40" />
+          </motion.div>
+        </motion.div>
       </section>
 
       {/* 24-Hour Promise Module */}
