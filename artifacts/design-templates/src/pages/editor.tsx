@@ -735,6 +735,7 @@ export default function Editor() {
   const [rightTab, setRightTab] = useState<"text" | "elements" | "design">("text");
   const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
   const [smartApplied, setSmartApplied] = useState(false);
+  const [autoFixed, setAutoFixed] = useState(false);
 
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -953,6 +954,114 @@ export default function Editor() {
     setSaved(false);
     setSmartApplied(true);
     setTimeout(() => setSmartApplied(false), 2800);
+  }, [allSlots, values, slotPositions, slotStyles]);
+
+  // ── Auto Fix Design ────────────────────────────────────────────────────────────
+  const applyAutoFix = useCallback(() => {
+    const slots = allSlots.filter(s => !SYSTEM_SLOT_IDS.has(s.id));
+    if (slots.length === 0) return;
+
+    // Known valid Hebrew font family names (local + google)
+    const VALID_FAMILIES = new Set<string>([
+      "Frank Ruhl Libre", "Noto Serif Hebrew", "Heebo", "Rubik", "Assistant",
+      "Alef", "Suez One", "Varela Round", "David Libre", "Miriam Libre",
+      "Secular One", "Arimo",
+      // local BA fonts
+      "BA-Arzey-Bold", "BA-Arzey-Light", "BA-Barkai", "BA-Casablanca",
+      "BA-Fontov-Bold", "BA-Fontov", "BA-HaYetzira-Light", "BA-HaYetzira",
+      "BA-Kiriat-Kodesh", "BA-Maim-Haim", "BA-Mesubin", "BA-Moment",
+      "BA-Niflaot", "BA-Platforma-Black", "BA-Platforma-Bold", "BA-Platforma-Light",
+      "BA-Radlheim", "BA-Rishon",
+    ]);
+
+    // Approximate canvas width for fitting calculations
+    const CANVAS_W = 820;
+
+    const newStyles: Record<string, SlotStyle> = { ...slotStyles };
+    const newPositions: Record<string, { x: number; y: number; width: number }> = { ...slotPositions };
+
+    slots.forEach(slot => {
+      const s: SlotStyle = { ...(slotStyles[slot.id] ?? {}) };
+      const text = (values[slot.id] ?? slot.defaultValue ?? "").trim();
+      const pos = slotPositions[slot.id] ?? { x: 50, y: 50, width: 80 };
+
+      // ─── 1. Fix warp issues ────────────────────────────────────────────────
+      if (s.warpType && s.warpType !== "none") {
+        const amount = s.warpAmount ?? (s.arcDegrees != null ? Math.abs(s.arcDegrees) : 0);
+
+        // Fix zero/near-zero warp amount (warp enabled but invisible → default)
+        if (amount < 5) {
+          s.warpAmount = 30;
+          s.arcDegrees = 30;
+        }
+        // Fix extreme warp distortion
+        if (amount > 78) {
+          s.warpAmount = 45;
+          s.arcDegrees = 45;
+        }
+        // Fix wave/circle/bulge at extreme amounts
+        if ((s.warpType === "wave" || s.warpType === "circle") && (s.warpAmount ?? 0) > 60) {
+          s.warpType = "arc-up";
+          s.warpAmount = 35;
+          s.arcDegrees = 35;
+        }
+        // Position-aware arc direction: top slots → arc-up, bottom → arc-down
+        if (pos.y < 28 && s.warpType === "arc-down") s.warpType = "arc-up";
+        if (pos.y > 72 && s.warpType === "arc-up")   s.warpType = "arc-down";
+      }
+
+      // ─── 2. Remove bad distortions ────────────────────────────────────────
+      if (Math.abs(s.skewX ?? 0) > 25) s.skewX = 0;
+      if (Math.abs(s.skewY ?? 0) > 25) s.skewY = 0;
+
+      // ─── 3. Fix letter spacing ────────────────────────────────────────────
+      const ls = s.letterSpacing ?? 0;
+      if (ls < -5)  s.letterSpacing = 0;
+      if (ls > 20)  s.letterSpacing = 2;
+
+      // ─── 4. Fix line height ───────────────────────────────────────────────
+      const lh = s.lineHeight ?? 1.35;
+      if (lh < 0.85) s.lineHeight = 1.2;
+      if (lh > 3.5)  s.lineHeight = 1.5;
+
+      // ─── 5. Fix invisible color on dark canvas ────────────────────────────
+      const c = s.color ?? "";
+      if (!c || c === "#000000" || c === "#000" || c.toLowerCase() === "black") {
+        s.color = "#F8F1E3"; // cream visible on navy
+      }
+
+      // ─── 6. Ensure Hebrew font family ────────────────────────────────────
+      if (s.fontFamily && !VALID_FAMILIES.has(s.fontFamily) && !s.fontFamily.startsWith("BA-")) {
+        s.fontFamily = DEFAULT_FONT;
+        loadGoogleFont(DEFAULT_FONT);
+      }
+
+      // ─── 7. Fit font size to slot width (single-line overflow) ─────────────
+      if (text.length > 0 && s.fontSize) {
+        const slotPxW = (pos.width / 100) * CANVAS_W;
+        const charPx   = (s.fontSize) * 0.62; // avg Hebrew char width ratio
+        const charsPerLine = Math.max(1, Math.floor(slotPxW / charPx));
+        // Only shrink if clearly overflowing AND slot is not multiline
+        if (!slot.multiline && text.length > charsPerLine * 1.15) {
+          const scale = Math.min(1, (charsPerLine / text.length) * 1.1);
+          s.fontSize = Math.max(11, Math.round(s.fontSize * scale));
+        }
+      }
+
+      // ─── 8. Fix opacity (0 = invisible) ──────────────────────────────────
+      if ((s.opacity ?? 1) < 0.08) s.opacity = 1;
+
+      // ─── 9. Center horizontally ───────────────────────────────────────────
+      newPositions[slot.id] = { ...pos, x: 50 };
+
+      newStyles[slot.id] = s;
+    });
+
+    setSlotPositions(newPositions);
+    setSlotStyles(newStyles);
+    setSaved(false);
+    setAutoFixed(true);
+    setTimeout(() => setAutoFixed(false), 2800);
   }, [allSlots, values, slotPositions, slotStyles]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
@@ -1504,32 +1613,49 @@ export default function Editor() {
                   </div>
                 )}
 
-                {/* Smart Design / Improve Design button */}
-                <div className="px-4 py-3 border-b border-primary/10">
+                {/* ── Smart Design Tools ─────────────────────────── */}
+                <div className="px-4 py-3 border-b border-primary/10 space-y-2" dir="rtl">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Sparkles className="w-3 h-3 text-primary opacity-70" />
+                    <span className="text-[10px] font-semibold text-primary/70 uppercase tracking-wider">כלי עיצוב חכם</span>
+                  </div>
+
+                  {/* Improve Layout */}
                   <button
                     onClick={applySmartLayout}
-                    dir="rtl"
-                    className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-sm transition-all duration-300 relative overflow-hidden ${
+                    className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-sm transition-all duration-300 ${
                       smartApplied
                         ? "bg-emerald-600/20 border border-emerald-500/40 text-emerald-400"
-                        : "bg-gradient-to-l from-primary/25 to-primary/10 border border-primary/30 text-primary hover:from-primary/35 hover:to-primary/20 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10"
+                        : "bg-gradient-to-l from-primary/25 to-primary/10 border border-primary/30 text-primary hover:from-primary/35 hover:to-primary/18 hover:border-primary/50 hover:shadow-md hover:shadow-primary/10"
                     }`}
                   >
                     {smartApplied ? (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 shrink-0" />
-                        <span>העיצוב שופר!</span>
-                      </>
+                      <><CheckCircle2 className="w-4 h-4 shrink-0" /><span>פריסה שופרה!</span></>
                     ) : (
-                      <>
-                        <Wand2 className="w-4 h-4 shrink-0" />
-                        <span>שפר עיצוב אוטומטית</span>
-                        <Sparkles className="w-3 h-3 opacity-60 shrink-0" />
-                      </>
+                      <><Wand2 className="w-4 h-4 shrink-0" /><span>שפר פריסה ועיצוב</span></>
                     )}
                   </button>
-                  <p className="text-[10px] text-muted-foreground text-center mt-1.5 leading-relaxed">
-                    מסדר אוטומטית מיקומים, גודלי גופן ועימוד
+                  <p className="text-[10px] text-muted-foreground leading-snug pr-0.5">
+                    מסדר מיקומים, גודלי גופן, צבעים וזוגות גופנים
+                  </p>
+
+                  {/* Auto Fix Design */}
+                  <button
+                    onClick={applyAutoFix}
+                    className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-sm transition-all duration-300 ${
+                      autoFixed
+                        ? "bg-emerald-600/20 border border-emerald-500/40 text-emerald-400"
+                        : "bg-gradient-to-l from-amber-500/15 to-amber-500/5 border border-amber-500/25 text-amber-400 hover:from-amber-500/25 hover:to-amber-500/10 hover:border-amber-500/40 hover:shadow-md hover:shadow-amber-500/10"
+                    }`}
+                  >
+                    {autoFixed ? (
+                      <><CheckCircle2 className="w-4 h-4 shrink-0" /><span>תוקן בהצלחה!</span></>
+                    ) : (
+                      <><Settings2 className="w-4 h-4 shrink-0" /><span>תקן עיצוב אוטומטית</span></>
+                    )}
+                  </button>
+                  <p className="text-[10px] text-muted-foreground leading-snug pr-0.5">
+                    מתקן עיקומים שבורים, מרווחים, הטיות, גדלי גופן וצבעים
                   </p>
                 </div>
 
