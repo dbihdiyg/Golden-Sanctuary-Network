@@ -149,14 +149,20 @@ const previewFontSizePx: Record<string, number> = {
 };
 
 function resolveColor(color?: string): string {
-  if (color === "gold") return "#D6A84F";
-  if (color === "dark") return "#0B1833";
+  if (!color) return "#F8F1E3";
+  if (color.startsWith("#") || color.startsWith("rgb")) return color; // hex / rgb direct
+  if (color === "gold")  return "#D6A84F";
+  if (color === "dark")  return "#0B1833";
   if (color === "cream") return "#F8F1E3";
+  if (color === "white") return "#FFFFFF";
   return "#F8F1E3";
 }
 
 function resolveFont(slotFamily: string | undefined, fontOverride: string): string {
-  return `'${fontOverride}', ${slotFamily === "serif" ? "serif" : "sans-serif"}`;
+  if (!slotFamily || slotFamily === "serif") return `'${fontOverride}', serif`;
+  if (slotFamily === "sans") return `'${fontOverride}', sans-serif`;
+  // Full font name (e.g. "Frank Ruhl Libre") — use directly, no fontOverride
+  return `'${slotFamily}', serif`;
 }
 
 function buildSlotCSS(
@@ -164,10 +170,11 @@ function buildSlotCSS(
   fontOverride: string,
   ss?: SlotStyle
 ): React.CSSProperties {
-  const baseSz = previewFontSizePx[slot.fontSize || "sm"];
+  // Font size: explicit px wins over enum
+  const baseSz = slot.fontSizePx ?? previewFontSizePx[slot.fontSize || "sm"];
   const color = ss?.color || resolveColor(slot.color);
   const shadows: string[] = [];
-  if (ss?.shadow) shadows.push("2px 2px 6px rgba(0,0,0,0.7)");
+  if (ss?.shadow || slot.textShadow) shadows.push("2px 2px 6px rgba(0,0,0,0.7)");
   if (ss?.glow) shadows.push(`0 0 10px ${color}, 0 0 20px ${color}80`);
   const fontFamily = ss?.fontFamily
     ? `'${ss.fontFamily}', serif`
@@ -180,7 +187,9 @@ function buildSlotCSS(
     textDecoration: ss?.underline ? "underline" : undefined,
     color,
     lineHeight: slot.lineHeight ?? 1.35,
-    letterSpacing: ss?.letterSpacing ? `${ss.letterSpacing * 0.05}px` : undefined,
+    letterSpacing: slot.letterSpacing != null
+      ? `${slot.letterSpacing}px`
+      : ss?.letterSpacing ? `${ss.letterSpacing * 0.05}px` : undefined,
     textShadow: shadows.length ? shadows.join(", ") : undefined,
     WebkitTextStroke: ss?.outline ? `1px ${color}` : undefined,
   };
@@ -264,6 +273,8 @@ function AbsoluteSlot({ slot, value, fontOverride, slotStyle }: {
       position: "absolute", left: `${slot.x}%`, top: `${slot.y}%`, width: `${w}%`,
       transform: "translateX(-50%)", textAlign: slot.align ?? "center",
       whiteSpace: "pre-line", direction: "rtl", pointerEvents: "none",
+      opacity: slot.opacity ?? 1,
+      zIndex: slot.zIndex ?? undefined,
     }}>
       {arcDeg !== 0 ? (
         <SvgArcText text={plainText} arcDeg={arcDeg} cssStyle={css} />
@@ -1119,28 +1130,38 @@ export default function Editor() {
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <div className="flex items-center gap-2">
                               <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
-                                {index + 1}
+                                {slot.fixed ? <Lock className="w-2.5 h-2.5" /> : index + 1}
                               </div>
                               <span className="text-[11px] font-semibold text-foreground">{slot.label}</span>
-                              {hasStyle && <span className="text-[9px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">מעוצב</span>}
+                              {slot.fixed && <span className="text-[9px] bg-amber-500/15 text-amber-600 px-1.5 py-0.5 rounded-full">קבוע</span>}
+                              {!slot.fixed && hasStyle && <span className="text-[9px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">מעוצב</span>}
                             </div>
-                            <button
-                              onClick={() => setActiveSlotId(isActive ? null : slot.id)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"}`}
-                              title="עיצוב שדה"
-                            >
-                              <Settings2 className="w-3 h-3" />
-                              {isActive ? "סגור" : "עיצוב"}
-                            </button>
+                            {!slot.fixed && (
+                              <button
+                                onClick={() => setActiveSlotId(isActive ? null : slot.id)}
+                                className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-primary/10 hover:text-foreground"}`}
+                                title="עיצוב שדה"
+                              >
+                                <Settings2 className="w-3 h-3" />
+                                {isActive ? "סגור" : "עיצוב"}
+                              </button>
+                            )}
                           </div>
-                          <RichTextSlot
-                            label=""
-                            value={values[slot.id] ?? slot.defaultValue}
-                            placeholder={slot.placeholder}
-                            multiline={slot.multiline}
-                            onChange={html => { updateValue(slot.id, html); setSaved(false); }}
-                          />
-                          {isActive && (
+                          {slot.fixed ? (
+                            <div className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 border border-primary/5 flex items-center gap-2">
+                              <Lock className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+                              <span className="truncate">{slot.defaultValue || slot.placeholder}</span>
+                            </div>
+                          ) : (
+                            <RichTextSlot
+                              label=""
+                              value={values[slot.id] ?? slot.defaultValue}
+                              placeholder={slot.placeholder}
+                              multiline={slot.multiline}
+                              onChange={html => { updateValue(slot.id, html); setSaved(false); }}
+                            />
+                          )}
+                          {isActive && !slot.fixed && (
                             <SlotStylePanel
                               slotId={slot.id}
                               style={slotStyles[slot.id] || {}}

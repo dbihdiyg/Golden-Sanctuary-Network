@@ -83,8 +83,8 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 
 - Separate React + Vite artifact at `/design-templates/`
 - Hebrew RTL, navy/gold/cream aesthetic (#0B1833, #D6A84F, #F8F1E3)
-- Fonts: Noto Serif Hebrew + Heebo
-- No backend; pure frontend with Framer Motion animations
+- Fonts: HEBREW_FONTS array in `src/lib/fonts.ts` (16 fonts incl. Frank Ruhl Libre, Noto Serif Hebrew, etc.)
+- Full-stack: React/Vite frontend + Express API server
 
 ### Pages
 - `/` — Home: hero, template gallery (12 cards), process steps, 24h promise module, testimonials
@@ -142,6 +142,22 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - `POST /api/hadar/designs` — create new design draft
 - `PATCH /api/hadar/designs/:id` — update design fields
 - `DELETE /api/hadar/designs/:id` — delete design
+
+### Admin Template Editor (Rich Design Tools)
+- `/admin` — password-protected admin panel (ADMIN_PASSWORD env var → ADMIN_SECRET token)
+- Full visual slot editor with live text preview on canvas
+- **Typography**: full Hebrew font picker (16 fonts via HEBREW_FONTS), exact px font size slider (6–120px), bold/italic/text-shadow toggles
+- **Color**: hex color picker + presets (gold, cream, white, navy), opacity slider (0–100%)
+- **Spacing**: letter-spacing slider (-3–20px), line-height slider (0.8–3.0)
+- **Layout**: x/y/width/z-index number inputs, align buttons (RTL-aware)
+- **Behavior**: multiline toggle, `fixed` toggle (locks slot for customers — shows 🔒, customer sees but cannot edit)
+- Google Fonts loaded dynamically when font family changes in admin
+
+### TextSlot / AdminSlot Architecture
+- `TextSlot` (in `src/lib/data.ts`): shared interface used by editor renderer
+- Key fields: `fontSizePx` (px, overrides old `fontSize` enum), `fontFamily` (full font name or "serif"/"sans"), `color` (hex or named), `opacity`, `letterSpacing`, `lineHeight`, `textShadow`, `zIndex`, `fixed`
+- Backward compatible: old `fontSize` enum + named colors still work
+- Slots stored as JSON in `hadar_templates.slots` column
 
 ### Database Tables (הדר)
 - `hadar_designs` — id, clerk_user_id, template_id, design_name, field_values (jsonb), status (draft/paid/submitted), stripe_session_id, created_at, updated_at

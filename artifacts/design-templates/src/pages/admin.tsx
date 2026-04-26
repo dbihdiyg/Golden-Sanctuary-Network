@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import hadarLogo from "@/assets/logo-hadar.png";
+import { HEBREW_FONTS, loadGoogleFont } from "@/lib/fonts";
 import {
   Lock, Plus, Trash2, Edit2, Eye, Package, ShoppingBag,
   BarChart3, LogOut, Check, X, ImagePlus, GripVertical,
   RefreshCw, ArrowRight, ChevronDown, ChevronUp, Loader2,
   AlertCircle, Users, DollarSign, Clock, ToggleLeft, ToggleRight, Upload,
+  AlignCenter, AlignRight, AlignLeft, Type, Palette, Sliders, Layers, Move,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,15 +52,28 @@ interface AdminSlot {
   label: string;
   placeholder: string;
   defaultValue: string;
+  // Layout
   x: number;
   y: number;
   width: number;
-  fontSize: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
-  fontFamily: "serif" | "sans";
+  height?: number;
+  zIndex?: number;
+  // Typography
+  fontSizePx: number;       // explicit px size
+  fontFamily: string;       // full font name from HEBREW_FONTS or "serif"/"sans"
   bold: boolean;
-  color: "gold" | "white" | "dark" | "cream";
+  italic?: boolean;
+  // Color & Visibility
+  color: string;            // hex color
+  opacity?: number;         // 0–1
+  textShadow?: boolean;
+  // Spacing
+  letterSpacing?: number;   // px
+  lineHeight?: number;      // multiplier
+  // Layout
   align: "center" | "right" | "left";
   multiline: boolean;
+  fixed?: boolean;          // customers cannot edit
 }
 
 interface DBTemplate {
@@ -79,16 +94,22 @@ const emptySlot = (): AdminSlot => ({
   id: `slot_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
   label: "שדה חדש",
   placeholder: "",
-  defaultValue: "",
+  defaultValue: "טקסט לדוגמה",
   x: 10,
   y: 10,
   width: 80,
-  fontSize: "md",
-  fontFamily: "serif",
+  fontSizePx: 18,
+  fontFamily: "Frank Ruhl Libre",
   bold: false,
-  color: "gold",
+  italic: false,
+  color: "#D6A84F",
+  opacity: 1,
+  textShadow: false,
+  letterSpacing: 0,
+  lineHeight: 1.35,
   align: "center",
   multiline: false,
+  fixed: false,
 });
 
 const ORDER_STATUS_LABELS: Record<string, { label: string; cls: string }> = {
@@ -134,6 +155,11 @@ function TemplateEditor({
 
   const updateSlot = useCallback((id: string, patch: Partial<AdminSlot>) =>
     setForm(p => ({ ...p, slots: p.slots.map(s => s.id === id ? { ...s, ...patch } : s) })), []);
+
+  // Load Google Fonts whenever any slot's fontFamily changes
+  useEffect(() => {
+    form.slots.forEach(s => { if (s.fontFamily) loadGoogleFont(s.fontFamily); });
+  }, [form.slots]);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -253,31 +279,61 @@ function TemplateEditor({
                 style={{ maxHeight: "75vh", objectFit: "contain" }}
                 draggable={false}
               />
-              {form.slots.map(slot => (
-                <div
-                  key={slot.id}
-                  data-slot={slot.id}
-                  onPointerDown={e => onSlotPointerDown(e, slot.id)}
-                  onClick={e => { e.stopPropagation(); setSelectedSlotId(slot.id); }}
-                  style={{
-                    position: "absolute",
-                    left: `${slot.x}%`,
-                    top: `${slot.y}%`,
-                    width: `${slot.width}%`,
-                    border: `2px ${selectedSlotId === slot.id ? "solid #D6A84F" : "dashed rgba(214,168,79,0.55)"}`,
-                    background: selectedSlotId === slot.id ? "rgba(214,168,79,0.18)" : "rgba(214,168,79,0.06)",
-                    cursor: "move",
-                    padding: "3px 8px",
-                    borderRadius: 4,
-                    minHeight: 22,
-                    touchAction: "none",
-                  }}
-                >
-                  <span style={{ fontSize: 11, color: "#D6A84F", direction: "rtl", display: "block", userSelect: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {slot.label}
-                  </span>
-                </div>
-              ))}
+              {form.slots.map(slot => {
+                const isSelected = selectedSlotId === slot.id;
+                const fontFamily = slot.fontFamily && slot.fontFamily !== "serif" && slot.fontFamily !== "sans"
+                  ? `'${slot.fontFamily}', serif`
+                  : slot.fontFamily === "sans" ? "sans-serif" : "serif";
+                return (
+                  <div
+                    key={slot.id}
+                    data-slot={slot.id}
+                    onPointerDown={e => onSlotPointerDown(e, slot.id)}
+                    onClick={e => { e.stopPropagation(); setSelectedSlotId(slot.id); }}
+                    style={{
+                      position: "absolute",
+                      left: `${slot.x}%`,
+                      top: `${slot.y}%`,
+                      width: `${slot.width}%`,
+                      outline: isSelected ? "2px solid #D6A84F" : "1.5px dashed rgba(214,168,79,0.5)",
+                      background: isSelected ? "rgba(214,168,79,0.1)" : "transparent",
+                      cursor: "move",
+                      padding: "2px 4px",
+                      borderRadius: 3,
+                      minHeight: 18,
+                      touchAction: "none",
+                      opacity: slot.opacity ?? 1,
+                      zIndex: slot.zIndex ?? undefined,
+                      textAlign: slot.align ?? "center",
+                      direction: "rtl",
+                    }}
+                  >
+                    {/* Live text preview */}
+                    <span style={{
+                      fontSize: slot.fontSizePx ?? 14,
+                      fontFamily,
+                      fontWeight: slot.bold ? 700 : 400,
+                      fontStyle: slot.italic ? "italic" : "normal",
+                      color: slot.color || "#D6A84F",
+                      letterSpacing: slot.letterSpacing ? `${slot.letterSpacing}px` : undefined,
+                      lineHeight: slot.lineHeight ?? 1.35,
+                      textShadow: slot.textShadow ? "1px 1px 4px rgba(0,0,0,0.7)" : undefined,
+                      userSelect: "none",
+                      display: "block",
+                      whiteSpace: "pre-line",
+                      pointerEvents: "none",
+                    }}>
+                      {slot.defaultValue || slot.label}
+                    </span>
+                    {/* Label tooltip on selected */}
+                    {isSelected && (
+                      <span style={{ position: "absolute", top: -18, right: 0, fontSize: 9, color: "#D6A84F", background: "rgba(0,0,0,0.7)", padding: "1px 5px", borderRadius: 3, whiteSpace: "nowrap", pointerEvents: "none" }}>
+                        {slot.label}{slot.fixed ? " 🔒" : ""}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <label className="cursor-pointer">
@@ -392,110 +448,297 @@ function TemplateEditor({
               </div>
             </section>
 
-            {/* Selected slot properties */}
+            {/* ── Selected slot properties ─────────────────────────────── */}
             {selectedSlot && (
-              <section className="p-4 space-y-3">
-                <p className="text-xs font-semibold text-muted-foreground">הגדרות שדה: {selectedSlot.label}</p>
-                {[
-                  { key: "label", label: "תווית" },
-                  { key: "placeholder", label: "טקסט עזר" },
-                  { key: "defaultValue", label: "ערך ברירת מחדל" },
-                ].map(({ key, label }) => (
-                  <div key={key}>
-                    <Label className="text-xs text-muted-foreground">{label}</Label>
-                    <Input
-                      className="mt-1 h-8 text-sm bg-background border-primary/20"
-                      value={(selectedSlot as any)[key] ?? ""}
-                      onChange={e => updateSlot(selectedSlot.id, { [key]: e.target.value })}
-                    />
-                  </div>
-                ))}
+              <section className="p-4 space-y-5" dir="rtl">
+                <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Edit2 className="w-3.5 h-3.5 text-primary" />
+                  עריכת שדה: <span className="text-primary">{selectedSlot.label}</span>
+                </p>
 
-                <div className="grid grid-cols-3 gap-2">
+                {/* ── Content ── */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Type className="w-3 h-3" /> תוכן</p>
                   {[
-                    { key: "x", label: "X%" },
-                    { key: "y", label: "Y%" },
-                    { key: "width", label: "רוחב%" },
+                    { key: "label", label: "תווית (לניהול)" },
+                    { key: "placeholder", label: "טקסט עזר ללקוח" },
+                    { key: "defaultValue", label: "ערך ברירת מחדל" },
                   ].map(({ key, label }) => (
                     <div key={key}>
                       <Label className="text-[10px] text-muted-foreground">{label}</Label>
                       <Input
-                        type="number"
-                        dir="ltr"
-                        className="mt-1 h-7 text-xs bg-background border-primary/20 px-2"
-                        value={Math.round((selectedSlot as any)[key])}
-                        onChange={e => updateSlot(selectedSlot.id, { [key]: Number(e.target.value) })}
+                        className="mt-0.5 h-7 text-xs bg-background border-primary/20"
+                        value={(selectedSlot as any)[key] ?? ""}
+                        onChange={e => updateSlot(selectedSlot.id, { [key]: e.target.value })}
                       />
                     </div>
                   ))}
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <hr className="border-primary/10" />
+
+                {/* ── Typography ── */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Type className="w-3 h-3" /> טיפוגרפיה</p>
+
+                  {/* Font family */}
                   <div>
-                    <Label className="text-xs text-muted-foreground">גודל</Label>
+                    <Label className="text-[10px] text-muted-foreground">פונט</Label>
                     <select
-                      className="mt-1 w-full h-8 px-2 bg-background border border-primary/20 rounded-md text-sm text-foreground"
-                      value={selectedSlot.fontSize}
-                      onChange={e => updateSlot(selectedSlot.id, { fontSize: e.target.value as any })}
-                    >
-                      {["xs", "sm", "md", "lg", "xl", "2xl"].map(s => <option key={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">צבע</Label>
-                    <select
-                      className="mt-1 w-full h-8 px-2 bg-background border border-primary/20 rounded-md text-sm text-foreground"
-                      value={selectedSlot.color}
-                      onChange={e => updateSlot(selectedSlot.id, { color: e.target.value as any })}
-                    >
-                      {["gold", "cream", "white", "dark"].map(c => <option key={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">יישור</Label>
-                    <select
-                      className="mt-1 w-full h-8 px-2 bg-background border border-primary/20 rounded-md text-sm text-foreground"
-                      value={selectedSlot.align}
-                      onChange={e => updateSlot(selectedSlot.id, { align: e.target.value as any })}
-                    >
-                      {[["center", "מרכז"], ["right", "ימין"], ["left", "שמאל"]].map(([v, l]) => (
-                        <option key={v} value={v}>{l}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">פונט</Label>
-                    <select
-                      className="mt-1 w-full h-8 px-2 bg-background border border-primary/20 rounded-md text-sm text-foreground"
+                      className="mt-0.5 w-full h-8 px-2 bg-background border border-primary/20 rounded-md text-sm text-foreground"
                       value={selectedSlot.fontFamily}
-                      onChange={e => updateSlot(selectedSlot.id, { fontFamily: e.target.value as any })}
+                      onChange={e => {
+                        loadGoogleFont(e.target.value);
+                        updateSlot(selectedSlot.id, { fontFamily: e.target.value });
+                      }}
                     >
-                      <option value="serif">סריף</option>
-                      <option value="sans">סאנס</option>
+                      <optgroup label="── סריף ──">
+                        {HEBREW_FONTS.filter(f => f.category === "serif").map(f => (
+                          <option key={f.family} value={f.family}>{f.name}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="── סאנס-סריף ──">
+                        {HEBREW_FONTS.filter(f => f.category === "sans").map(f => (
+                          <option key={f.family} value={f.family}>{f.name}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="── מיוחד ──">
+                        {HEBREW_FONTS.filter(f => f.category === "local").map(f => (
+                          <option key={f.family} value={f.family}>{f.name}</option>
+                        ))}
+                      </optgroup>
                     </select>
+                    {/* Font preview */}
+                    <div className="mt-1.5 px-3 py-1.5 bg-background/60 border border-primary/10 rounded-md text-center text-sm"
+                      style={{ fontFamily: `'${selectedSlot.fontFamily}', serif`, direction: "rtl", color: selectedSlot.color || "#D6A84F", fontSize: Math.min(selectedSlot.fontSizePx ?? 18, 22) }}>
+                      {selectedSlot.defaultValue || "תצוגה מקדימה של הפונט"}
+                    </div>
+                  </div>
+
+                  {/* Font size */}
+                  <div>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <Label className="text-[10px] text-muted-foreground">גודל פונט</Label>
+                      <span className="text-[10px] font-mono text-primary">{selectedSlot.fontSizePx ?? 18}px</span>
+                    </div>
+                    <input
+                      type="range" min={6} max={120} step={1}
+                      value={selectedSlot.fontSizePx ?? 18}
+                      onChange={e => updateSlot(selectedSlot.id, { fontSizePx: Number(e.target.value) })}
+                      className="w-full accent-primary h-1.5 rounded"
+                    />
+                    <div className="flex justify-between text-[9px] text-muted-foreground/50 mt-0.5">
+                      <span>6px</span><span>120px</span>
+                    </div>
+                  </div>
+
+                  {/* Style toggles: Bold / Italic / Shadow */}
+                  <div className="flex gap-2">
+                    {[
+                      { key: "bold",       label: "B",  title: "מודגש",      style: { fontWeight: 700 } },
+                      { key: "italic",     label: "I",  title: "נטוי",       style: { fontStyle: "italic" } },
+                      { key: "textShadow", label: "S",  title: "צל טקסט",   style: {} },
+                    ].map(({ key, label, title, style }) => (
+                      <button
+                        key={key}
+                        title={title}
+                        onClick={() => updateSlot(selectedSlot.id, { [key]: !(selectedSlot as any)[key] })}
+                        className={`flex-1 h-8 rounded-md border text-sm transition-all ${(selectedSlot as any)[key] ? "border-primary bg-primary/20 text-primary" : "border-primary/20 text-muted-foreground hover:border-primary/40"}`}
+                        style={style as any}
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                <hr className="border-primary/10" />
+
+                {/* ── Color & Opacity ── */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Palette className="w-3 h-3" /> צבע ושקיפות</p>
+
+                  {/* Color picker */}
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground mb-1 block">צבע טקסט</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={selectedSlot.color?.startsWith("#") ? selectedSlot.color : "#D6A84F"}
+                        onChange={e => updateSlot(selectedSlot.id, { color: e.target.value })}
+                        className="w-9 h-8 rounded border border-primary/20 cursor-pointer bg-transparent p-0.5"
+                      />
+                      <Input
+                        dir="ltr"
+                        className="flex-1 h-8 text-xs bg-background border-primary/20 font-mono"
+                        value={selectedSlot.color || "#D6A84F"}
+                        onChange={e => updateSlot(selectedSlot.id, { color: e.target.value })}
+                        placeholder="#D6A84F"
+                      />
+                    </div>
+                    {/* Color presets */}
+                    <div className="flex gap-1.5 mt-2">
+                      {[
+                        { hex: "#D6A84F", name: "זהב" },
+                        { hex: "#F8F1E3", name: "קרם" },
+                        { hex: "#FFFFFF", name: "לבן" },
+                        { hex: "#0B1833", name: "נייבי" },
+                        { hex: "#B8860B", name: "זהב כהה" },
+                        { hex: "#E8D5A3", name: "זהב בהיר" },
+                      ].map(({ hex, name }) => (
+                        <button
+                          key={hex}
+                          title={name}
+                          onClick={() => updateSlot(selectedSlot.id, { color: hex })}
+                          className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${selectedSlot.color === hex ? "border-primary scale-110" : "border-white/20"}`}
+                          style={{ background: hex }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Opacity */}
+                  <div>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <Label className="text-[10px] text-muted-foreground">אטימות</Label>
+                      <span className="text-[10px] font-mono text-primary">{Math.round((selectedSlot.opacity ?? 1) * 100)}%</span>
+                    </div>
                     <input
-                      type="checkbox"
-                      checked={selectedSlot.bold}
-                      onChange={e => updateSlot(selectedSlot.id, { bold: e.target.checked })}
-                      className="accent-primary"
+                      type="range" min={0} max={1} step={0.01}
+                      value={selectedSlot.opacity ?? 1}
+                      onChange={e => updateSlot(selectedSlot.id, { opacity: Number(e.target.value) })}
+                      className="w-full accent-primary h-1.5 rounded"
                     />
-                    מודגש
-                  </label>
-                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedSlot.multiline}
-                      onChange={e => updateSlot(selectedSlot.id, { multiline: e.target.checked })}
-                      className="accent-primary"
-                    />
-                    מספר שורות
-                  </label>
+                  </div>
                 </div>
+
+                <hr className="border-primary/10" />
+
+                {/* ── Spacing ── */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Sliders className="w-3 h-3" /> ריווח</p>
+
+                  {/* Letter spacing */}
+                  <div>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <Label className="text-[10px] text-muted-foreground">ריווח אותיות</Label>
+                      <span className="text-[10px] font-mono text-primary">{selectedSlot.letterSpacing ?? 0}px</span>
+                    </div>
+                    <input
+                      type="range" min={-3} max={20} step={0.5}
+                      value={selectedSlot.letterSpacing ?? 0}
+                      onChange={e => updateSlot(selectedSlot.id, { letterSpacing: Number(e.target.value) })}
+                      className="w-full accent-primary h-1.5 rounded"
+                    />
+                    <div className="flex justify-between text-[9px] text-muted-foreground/50 mt-0.5">
+                      <span>-3px</span><span>20px</span>
+                    </div>
+                  </div>
+
+                  {/* Line height */}
+                  <div>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <Label className="text-[10px] text-muted-foreground">גובה שורה</Label>
+                      <span className="text-[10px] font-mono text-primary">{(selectedSlot.lineHeight ?? 1.35).toFixed(2)}</span>
+                    </div>
+                    <input
+                      type="range" min={0.8} max={3.0} step={0.05}
+                      value={selectedSlot.lineHeight ?? 1.35}
+                      onChange={e => updateSlot(selectedSlot.id, { lineHeight: Number(e.target.value) })}
+                      className="w-full accent-primary h-1.5 rounded"
+                    />
+                    <div className="flex justify-between text-[9px] text-muted-foreground/50 mt-0.5">
+                      <span>0.8</span><span>3.0</span>
+                    </div>
+                  </div>
+                </div>
+
+                <hr className="border-primary/10" />
+
+                {/* ── Layout ── */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Move className="w-3 h-3" /> פריסה</p>
+
+                  {/* Position & size grid */}
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[
+                      { key: "x",      label: "X%",      min: 0,  max: 100 },
+                      { key: "y",      label: "Y%",      min: 0,  max: 100 },
+                      { key: "width",  label: "רוחב%",   min: 1,  max: 100 },
+                      { key: "zIndex", label: "שכבה",    min: 0,  max: 99  },
+                    ].map(({ key, label, min, max }) => (
+                      <div key={key}>
+                        <Label className="text-[9px] text-muted-foreground">{label}</Label>
+                        <Input
+                          type="number" dir="ltr" min={min} max={max}
+                          className="mt-0.5 h-7 text-xs bg-background border-primary/20 px-1.5"
+                          value={Math.round((selectedSlot as any)[key] ?? 0)}
+                          onChange={e => updateSlot(selectedSlot.id, { [key]: Number(e.target.value) })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Align */}
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground mb-1 block">יישור</Label>
+                    <div className="flex gap-1">
+                      {[
+                        { v: "right",  Icon: AlignRight,  title: "ימין" },
+                        { v: "center", Icon: AlignCenter, title: "מרכז" },
+                        { v: "left",   Icon: AlignLeft,   title: "שמאל" },
+                      ].map(({ v, Icon, title }) => (
+                        <button
+                          key={v}
+                          title={title}
+                          onClick={() => updateSlot(selectedSlot.id, { align: v as any })}
+                          className={`flex-1 h-8 flex items-center justify-center rounded-md border transition-all ${selectedSlot.align === v ? "border-primary bg-primary/20 text-primary" : "border-primary/20 text-muted-foreground hover:border-primary/40"}`}
+                        >
+                          <Icon className="w-4 h-4" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <hr className="border-primary/10" />
+
+                {/* ── Behavior ── */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Layers className="w-3 h-3" /> התנהגות</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { key: "multiline", label: "מספר שורות", desc: "ללקוח" },
+                      { key: "fixed",     label: "🔒 קבוע",    desc: "לקוח לא יכול לערוך" },
+                    ].map(({ key, label, desc }) => (
+                      <label key={key} className={`flex flex-col gap-0.5 p-2 rounded-lg border cursor-pointer transition-all ${(selectedSlot as any)[key] ? "border-primary/50 bg-primary/10" : "border-primary/10 hover:border-primary/30"}`}>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="checkbox"
+                            checked={(selectedSlot as any)[key] ?? false}
+                            onChange={e => updateSlot(selectedSlot.id, { [key]: e.target.checked })}
+                            className="accent-primary"
+                          />
+                          <span className="text-xs font-medium text-foreground">{label}</span>
+                        </div>
+                        <span className="text-[9px] text-muted-foreground mr-4">{desc}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Delete */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-destructive/70 hover:text-destructive hover:bg-destructive/10 gap-1 h-8"
+                  onClick={() => {
+                    setForm(p => ({ ...p, slots: p.slots.filter(s => s.id !== selectedSlot.id) }));
+                    setSelectedSlotId(null);
+                  }}
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> מחק שדה זה
+                </Button>
               </section>
             )}
           </div>

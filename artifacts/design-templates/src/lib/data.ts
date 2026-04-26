@@ -10,17 +10,45 @@ export interface TextSlot {
   placeholder: string;
   defaultValue: string;
   multiline?: boolean;
+  // ─── Size ────────────────────────────────────────────────────────────────────
+  /** Legacy enum size — kept for backward compat */
   fontSize?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
-  fontFamily?: "serif" | "sans";
+  /** Explicit pixel size — overrides fontSize enum when set */
+  fontSizePx?: number;
+  // ─── Font ─────────────────────────────────────────────────────────────────
+  /**
+   * "serif" | "sans" for legacy, or a full Google-font name e.g. "Frank Ruhl Libre"
+   * The renderer checks if the value is exactly "serif"/"sans" before treating
+   * it as a full family name.
+   */
+  fontFamily?: string;
   bold?: boolean;
   italic?: boolean;
-  color?: "gold" | "white" | "dark" | "cream" | "inherit";
-  // Absolute positioning (in % of image dimensions) — for custom Photoshop templates
+  // ─── Color / Visibility ───────────────────────────────────────────────────
+  /**
+   * Named color ("gold" | "white" | "dark" | "cream") OR any hex string (#D6A84F).
+   * Hex takes precedence.
+   */
+  color?: string;
+  opacity?: number;  // 0–1, default 1
+  // ─── Spacing ─────────────────────────────────────────────────────────────
+  letterSpacing?: number; // in px
+  lineHeight?: number;    // multiplier e.g. 1.2
+  // ─── Shadow / Decoration ─────────────────────────────────────────────────
+  textShadow?: boolean;
+  // ─── Absolute positioning (in % of image dimensions) ─────────────────────
   x?: number;       // % from left edge
   y?: number;       // % from top edge
   width?: number;   // % width of the text box
+  height?: number;  // % height (optional, free-flow if omitted)
   align?: "center" | "right" | "left";
-  lineHeight?: number; // multiplier e.g. 1.2
+  zIndex?: number;  // stacking order among slots
+  // ─── Behaviour ───────────────────────────────────────────────────────────
+  /**
+   * fixed = true means the slot is a designer-only element.
+   * Customers see the text but CANNOT edit it; only the admin can change defaultValue.
+   */
+  fixed?: boolean;
 }
 
 export interface Template {
