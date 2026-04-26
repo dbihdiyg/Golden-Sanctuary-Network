@@ -168,6 +168,8 @@ export default function VideoDetail() {
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [submittedOnce, setSubmittedOnce] = useState(false);
+  const fieldRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Initialize defaults
   useEffect(() => {
@@ -187,12 +189,18 @@ export default function VideoDetail() {
     }
     if (!template) return;
 
+    setSubmittedOnce(true);
+
     // Validate required fields
     const missing = (template.fields ?? []).filter(
       (f) => f.required && !fieldValues[f.id]?.trim()
     );
     if (missing.length > 0) {
       setError(`נא למלא את השדות הבאים: ${missing.map((f) => f.label).join(", ")}`);
+      // Scroll to first missing field
+      const firstId = missing[0].id;
+      const el = fieldRefs.current[firstId];
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
@@ -288,44 +296,102 @@ export default function VideoDetail() {
                 <p className="text-gray-400 text-sm text-center py-4">אין שדות להזנה לתבנית זו.</p>
               )}
 
-              {template.fields.map((field) => (
-                <div key={field.id} className="space-y-1.5">
-                  <Label className="text-[#0B1833] font-semibold text-sm">
-                    {field.label}
-                    {field.required && <span className="text-red-500 mr-1">*</span>}
-                  </Label>
-                  {field.type === "textarea" ? (
-                    <Textarea
-                      dir="rtl"
-                      placeholder={field.placeholder ?? ""}
-                      maxLength={field.maxLength}
-                      value={fieldValues[field.id] ?? ""}
-                      onChange={(e) =>
-                        setFieldValues((prev) => ({ ...prev, [field.id]: e.target.value }))
-                      }
-                      rows={3}
-                      className="border-[#D6A84F]/30 focus-visible:ring-[#D6A84F] text-right resize-none"
-                    />
-                  ) : (
-                    <Input
-                      dir="rtl"
-                      type="text"
-                      placeholder={field.placeholder ?? ""}
-                      maxLength={field.maxLength}
-                      value={fieldValues[field.id] ?? ""}
-                      onChange={(e) =>
-                        setFieldValues((prev) => ({ ...prev, [field.id]: e.target.value }))
-                      }
-                      className="border-[#D6A84F]/30 focus-visible:ring-[#D6A84F] text-right"
-                    />
-                  )}
-                  {field.maxLength && (
-                    <p className="text-xs text-gray-400 text-left">
-                      {(fieldValues[field.id] ?? "").length}/{field.maxLength}
-                    </p>
-                  )}
-                </div>
-              ))}
+              {template.fields.map((field) => {
+                const val = fieldValues[field.id] ?? "";
+                const charCount = val.length;
+                const maxLen = field.maxLength ?? 0;
+                const pct = maxLen > 0 ? charCount / maxLen : 0;
+                const hasFieldError = submittedOnce && field.required && !val.trim();
+                const isNearLimit = maxLen > 0 && pct >= 0.8;
+                const isAtLimit = maxLen > 0 && pct >= 0.95;
+
+                const counterColor = isAtLimit
+                  ? "text-red-500 font-semibold"
+                  : isNearLimit
+                  ? "text-amber-500"
+                  : "text-gray-400";
+
+                const borderClass = hasFieldError
+                  ? "border-red-400 focus-visible:ring-red-400"
+                  : "border-[#D6A84F]/30 focus-visible:ring-[#D6A84F]";
+
+                return (
+                  <div
+                    key={field.id}
+                    className="space-y-1.5"
+                    ref={(el) => { fieldRefs.current[field.id] = el; }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <Label className={`font-semibold text-sm ${hasFieldError ? "text-red-500" : "text-[#0B1833]"}`}>
+                        {field.label}
+                        {field.required && (
+                          <span className={`mr-1 ${hasFieldError ? "text-red-500" : "text-red-400"}`}>*</span>
+                        )}
+                      </Label>
+                      {maxLen > 0 && (
+                        <motion.span
+                          key={charCount}
+                          className={`text-xs tabular-nums transition-colors ${counterColor}`}
+                          animate={isAtLimit ? { scale: [1, 1.1, 1] } : {}}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {charCount}/{maxLen}
+                        </motion.span>
+                      )}
+                    </div>
+
+                    {field.type === "textarea" ? (
+                      <Textarea
+                        dir="rtl"
+                        placeholder={field.placeholder ?? ""}
+                        maxLength={maxLen || undefined}
+                        value={val}
+                        onChange={(e) => {
+                          setFieldValues((prev) => ({ ...prev, [field.id]: e.target.value }));
+                        }}
+                        rows={3}
+                        className={`text-right resize-none transition-colors ${borderClass}`}
+                      />
+                    ) : (
+                      <Input
+                        dir="rtl"
+                        type="text"
+                        placeholder={field.placeholder ?? ""}
+                        maxLength={maxLen || undefined}
+                        value={val}
+                        onChange={(e) => {
+                          setFieldValues((prev) => ({ ...prev, [field.id]: e.target.value }));
+                        }}
+                        className={`text-right transition-colors ${borderClass}`}
+                      />
+                    )}
+
+                    <AnimatePresence>
+                      {hasFieldError && (
+                        <motion.p
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="text-xs text-red-500 flex items-center gap-1"
+                        >
+                          <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                          שדה חובה — נא להזין {field.label}
+                        </motion.p>
+                      )}
+                      {isAtLimit && !hasFieldError && (
+                        <motion.p
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="text-xs text-red-500"
+                        >
+                          הגעתם למגבלת התווים ({maxLen} תווים)
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
 
               <AnimatePresence>
                 {error && (
