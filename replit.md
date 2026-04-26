@@ -113,16 +113,26 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - Sign-up: `/design-templates/sign-up` — same branding
 - Home page nav: "כניסה" button for guests, UserButton + "העיצובים שלי" for signed-in users
 
-### User Flow (Login → Edit → Pay → Files)
-1. User browses gallery → clicks "ערוך" on a template
-2. Editor page opens with auth wall overlay on preview — "נדרשת כניסה לחשבון"
-3. User signs in/up → returns to editor (auth wall disappears)
-4. User edits text fields and can save drafts
-5. Clicks "קבלת העיצוב הסופי — ₪49" → Payment modal (PaymentWall component)
-6. Modal describes what they get, confirms price → Redirects to Stripe Checkout
-7. After payment → returns to editor with success banner
-8. Editor verifies payment via `/api/hadar/checkout/verify`
-9. WhatsApp link to get the final design files
+### Template Loading (editor.tsx)
+- Editor fetches all templates from `/api/hadar/public-templates` API on mount (no static data)
+- Finds template by matching numeric DB ID (`String(t.id) === id`) OR by slug (for backward compat)
+- Maps DB fields: `displayImageUrl || imageUrl` → `image` (editor background), `isGradient` computed from URL pattern
+- Shows loading spinner while fetching, "not found" page if template missing
+- Template type: `Template | null | "loading"` state guards prevent premature renders
+- Slot default values are re-initialized when template loads (fresh sessions without a designId)
+
+### User Flow (Login → Edit → Pay → Download)
+1. User browses gallery → clicks "ערוך" on a template card (sends numeric DB id as URL param)
+2. Editor fetches template from API, shows loading spinner, then renders with correct background image and slots
+3. Editor shows auth wall overlay on preview — "נדרשת כניסה לחשבון"
+4. User signs in/up → returns to editor (auth wall disappears)
+5. User edits text fields and can save drafts
+6. Clicks "קבלת העיצוב הסופי — ₪49" → PaymentWall modal opens; console log `[HADAR] opening payment wall`
+7. Modal confirms price → calls `handlePay` → creates Stripe Checkout session; console log `[HADAR] starting checkout`
+8. After Stripe payment → returns to editor with `?payment=success&session_id=...`
+9. Editor calls `/api/hadar/checkout/verify` → sets `paySuccess=true`
+10. Download button appears: "הורדת העיצוב (PNG איכות גבוהה)" — calls `handleDownload`; console log `[HADAR] starting download`
+11. WhatsApp link also shown for studio contact
 
 ### My Designs Portal
 - `/design-templates/my-designs` — shows all saved designs for signed-in users

@@ -53,6 +53,7 @@ export interface TextSlot {
 
 export interface Template {
   id: string;
+  slug?: string;
   title: string;
   subtitle: string;
   category: string;

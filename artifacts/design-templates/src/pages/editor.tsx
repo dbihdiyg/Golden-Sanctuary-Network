@@ -5,7 +5,7 @@ import hadarLogo from "@/assets/logo-hadar.png";
 import { ArrowRight, Crown, MessageCircle, Download, RotateCcw, CheckCircle2, ZoomIn, ZoomOut, Sun, Moon, Lock, Loader2, User, CreditCard, LogIn, Type, ChevronDown, ChevronUp, ImagePlus, X as XIcon, Upload, Layers, AlignLeft, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { templates, TextSlot } from "@/lib/data";
+import { TextSlot, Template } from "@/lib/data";
 import { HEBREW_FONTS, loadGoogleFont, useCombinedFonts, injectCustomFont } from "@/lib/fonts";
 import { useTheme } from "@/hooks/useTheme";
 import { motion, AnimatePresence } from "framer-motion";
@@ -555,7 +555,7 @@ function LogoUploader({ logoUrl, onChange }: { logoUrl: string | null; onChange:
 }
 
 interface InvitationPreviewProps {
-  template: typeof templates[0];
+  template: Template;
   values: Record<string, string>;
   zoom: number;
   fontOverride: string;
@@ -877,7 +877,52 @@ function PaymentWall({ onPay, onClose, loading, designName }: { onPay: () => voi
 export default function Editor() {
   const params = useParams();
   const id = params.id;
-  const template = templates.find(t => t.id === id);
+
+  const [template, setTemplate] = useState<Template | null | "loading">("loading");
+  const [templateLoadError, setTemplateLoadError] = useState(false);
+
+  useEffect(() => {
+    if (!id) { setTemplate(null); return; }
+    console.log("[HADAR] fetching template", id);
+    setTemplate("loading");
+    fetch(`${API_BASE}/api/hadar/public-templates`)
+      .then(r => r.json())
+      .then((data: any[]) => {
+        if (!Array.isArray(data)) throw new Error("bad response");
+        const found = data.find(t => String(t.id) === id || t.slug === id);
+        if (!found) {
+          console.warn("[HADAR] template not found, id=", id, "available:", data.map(t => t.id));
+          setTemplate(null);
+          setTemplateLoadError(true);
+          return;
+        }
+        const bgImg = found.displayImageUrl || found.imageUrl;
+        const isGrad = !bgImg || /gradient|linear|radial/i.test(bgImg);
+        const mapped: Template = {
+          id: String(found.id),
+          slug: found.slug,
+          title: found.title,
+          subtitle: found.subtitle,
+          category: found.category,
+          style: found.style,
+          price: Math.round((found.price || 0) / 100),
+          image: bgImg || "linear-gradient(135deg, #0B1833 0%, #1a2d54 100%)",
+          isGradient: isGrad,
+          slots: Array.isArray(found.slots) ? found.slots : [],
+          galleryImageUrl: found.galleryImageUrl,
+          displayImageUrl: found.displayImageUrl,
+          dimensions: found.dimensions,
+        };
+        console.log("[HADAR] template loaded:", mapped.id, "title:", mapped.title, "baseImage:", bgImg || "(gradient)", "slots:", mapped.slots?.length);
+        setTemplate(mapped);
+      })
+      .catch(err => {
+        console.error("[HADAR] template load failed:", err);
+        setTemplate(null);
+        setTemplateLoadError(true);
+      });
+  }, [id]);
+
   const { theme, toggle } = useTheme();
   const { isSignedIn, isLoaded, getToken } = useAuth();
   const { user } = useUser();
@@ -911,12 +956,20 @@ export default function Editor() {
   useEffect(() => { loadGoogleFont(DEFAULT_FONT); }, []);
 
   const initValues = useCallback(() => {
+    const tmpl = template && template !== "loading" ? template : null;
     const init: Record<string, string> = {};
-    (template?.slots || []).forEach(s => { init[s.id] = s.defaultValue; });
+    (tmpl?.slots || []).forEach(s => { init[s.id] = s.defaultValue; });
     return init;
   }, [template]);
 
-  const [values, setValues] = useState<Record<string, string>>(initValues);
+  const [values, setValues] = useState<Record<string, string>>({});
+
+  // Re-initialize slot values when template loads (only if no design loaded from server)
+  useEffect(() => {
+    if (!template || template === "loading") return;
+    if (designId) return; // design will be loaded from server
+    setValues(initValues());
+  }, [template]);
 
   // Load existing design if designId is in URL
   useEffect(() => {
@@ -1019,7 +1072,7 @@ export default function Editor() {
   }, [selectedElementUid]);
 
   const handleAutoSave = async (): Promise<number | null> => {
-    if (!isSignedIn || !template) return null;
+    if (!isSignedIn || !template || template === "loading") return null;
     setSaving(true);
     const fv = getFieldValuesWithElements();
     try {
@@ -1056,18 +1109,19 @@ export default function Editor() {
   };
 
   const handleDownloadClick = () => {
-    if (!isLoaded) return;
-    if (!isSignedIn) return; // Auth wall shown in preview
+    if (!isLoaded || !isSignedIn) return;
     if (paySuccess) {
-      window.open(`https://wa.me/972500000000?text=${encodeURIComponent("שלום, שילמתי עבור העיצוב שלי ואני רוצה לקבל את הקבצים הסופיים")}`, "_blank");
+      handleDownload(); // already paid — go straight to download
       return;
     }
+    console.log("[HADAR] opening payment wall for template", typeof template === "object" && template !== null ? template.id : "loading");
     setShowPayment(true);
   };
 
   const handlePay = async () => {
-    if (!isSignedIn || !template) return;
+    if (!isSignedIn || !template || template === "loading") return;
     setPayLoading(true);
+    console.log("[HADAR] starting checkout for template", template.id, "designId", designId);
     try {
       const savedDesignId = await handleAutoSave();
       const token = await getToken();
@@ -1082,6 +1136,7 @@ export default function Editor() {
         }),
       });
       const data = await res.json();
+      console.log("[HADAR] checkout response:", data);
       if (data.url) {
         if (data.designId) setDesignId(data.designId);
         window.location.href = data.url;
@@ -1089,6 +1144,7 @@ export default function Editor() {
         alert("שגיאה בפתיחת עמוד התשלום");
       }
     } catch (err) {
+      console.error("[HADAR] checkout error:", err);
       alert("שגיאה, נסו שוב");
     } finally {
       setPayLoading(false);
@@ -1097,14 +1153,13 @@ export default function Editor() {
 
   const handleDownload = async () => {
     if (!previewRef.current || downloading) return;
+    console.log("[HADAR] starting download for template", typeof template === "object" && template !== null ? template.id : null);
     setDownloading(true);
     try {
       const html2canvas = (await import("html2canvas")).default;
-      // Target the inner invitation div (first child = the scaled element)
       const target = previewRef.current.children[0] as HTMLElement;
       const savedTransform = target.style.transform;
       const savedTransition = target.style.transition;
-      // Temporarily reset zoom so we capture at natural size
       target.style.transform = "scale(1)";
       target.style.transition = "none";
       const canvas = await html2canvas(target, {
@@ -1121,7 +1176,9 @@ export default function Editor() {
       link.download = `${designName || "הזמנה"}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
-    } catch {
+      console.log("[HADAR] download complete");
+    } catch (err) {
+      console.error("[HADAR] download error:", err);
       alert("שגיאה בהורדה, נסו שוב");
     } finally {
       setDownloading(false);
@@ -1129,15 +1186,28 @@ export default function Editor() {
   };
 
   const handleWhatsApp = () => {
-    const msg = encodeURIComponent(`שלום, אני מעוניין לבצע הזמנה לתבנית "${template?.title}". כבר ערכתי את הפרטים באונליין.`);
+    const tmplTitle = typeof template === "object" && template !== null ? template.title : "";
+    const msg = encodeURIComponent(`שלום, אני מעוניין לבצע הזמנה לתבנית "${tmplTitle}". כבר ערכתי את הפרטים באונליין.`);
     window.open(`https://wa.me/972500000000?text=${msg}`, "_blank");
   };
+
+  if (template === "loading") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground text-sm">טוען תבנית...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!template) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4" dir="rtl">
         <div className="text-center">
           <h1 className="font-serif text-3xl mb-4 text-foreground">התבנית לא נמצאה</h1>
+          {templateLoadError && <p className="text-muted-foreground text-sm mb-4">לא הצלחנו למצוא את התבנית המבוקשת</p>}
           <Link href="/"><Button variant="outline" className="border-primary text-primary">חזרה לגלריה</Button></Link>
         </div>
       </div>
