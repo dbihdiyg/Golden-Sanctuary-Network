@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "@clerk/express";
+import { requireAuth, getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { hadarDesigns } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
@@ -8,7 +8,8 @@ const router = Router();
 
 router.get("/hadar/designs", requireAuth(), async (req: any, res) => {
   try {
-    const userId = req.auth.userId;
+    const { userId } = getAuth(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
     const designs = await db
       .select()
       .from(hadarDesigns)
@@ -22,7 +23,8 @@ router.get("/hadar/designs", requireAuth(), async (req: any, res) => {
 
 router.get("/hadar/designs/:id", requireAuth(), async (req: any, res) => {
   try {
-    const userId = req.auth.userId;
+    const { userId } = getAuth(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
     const id = Number(req.params.id);
     const [design] = await db
       .select()
@@ -37,7 +39,8 @@ router.get("/hadar/designs/:id", requireAuth(), async (req: any, res) => {
 
 router.post("/hadar/designs", requireAuth(), async (req: any, res) => {
   try {
-    const userId = req.auth.userId;
+    const { userId } = getAuth(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
     const { templateId, fieldValues, designName } = req.body;
     if (!templateId) return res.status(400).json({ error: "templateId required" });
 
@@ -59,7 +62,8 @@ router.post("/hadar/designs", requireAuth(), async (req: any, res) => {
 
 router.patch("/hadar/designs/:id", requireAuth(), async (req: any, res) => {
   try {
-    const userId = req.auth.userId;
+    const { userId } = getAuth(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
     const id = Number(req.params.id);
     const { fieldValues, designName } = req.body;
 
@@ -78,7 +82,8 @@ router.patch("/hadar/designs/:id", requireAuth(), async (req: any, res) => {
 
 router.delete("/hadar/designs/:id", requireAuth(), async (req: any, res) => {
   try {
-    const userId = req.auth.userId;
+    const { userId } = getAuth(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
     const id = Number(req.params.id);
     await db
       .delete(hadarDesigns)

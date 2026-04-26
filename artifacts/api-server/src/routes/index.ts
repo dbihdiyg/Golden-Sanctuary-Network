@@ -13,6 +13,7 @@ import analyticsRouter from "./analytics";
 import hadarAiRouter from "./hadar-ai";
 import hadarStripeRouter from "./hadar-stripe";
 import hadarDesignsRouter from "./hadar-designs";
+import hadarAdminRouter from "./hadar-admin";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(analyticsRouter);
 router.use(hadarAiRouter);
 router.use(hadarStripeRouter);
 router.use(hadarDesignsRouter);
+router.use(hadarAdminRouter);
 
 export default router;

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "@clerk/express";
+import { requireAuth, getAuth } from "@clerk/express";
 import { getUncachableStripeClient, getStripePublishableKey } from "../stripeClient";
 import { db } from "@workspace/db";
 import { hadarDesigns, hadarOrders } from "@workspace/db/schema";
@@ -21,7 +21,8 @@ router.get("/hadar/stripe/publishable-key", async (_req, res) => {
 
 router.post("/hadar/checkout", requireAuth(), async (req: any, res) => {
   try {
-    const userId = req.auth.userId;
+    const { userId } = getAuth(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
     const { templateId, fieldValues, designName, designId } = req.body;
 
     if (!templateId) {
@@ -109,7 +110,8 @@ router.post("/hadar/checkout", requireAuth(), async (req: any, res) => {
 
 router.get("/hadar/checkout/verify", requireAuth(), async (req: any, res) => {
   try {
-    const userId = req.auth.userId;
+    const { userId } = getAuth(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
     const { session_id } = req.query as { session_id: string };
 
     if (!session_id) return res.status(400).json({ error: "session_id required" });
