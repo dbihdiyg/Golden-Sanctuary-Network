@@ -1,0 +1,32 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "Ln7tCVrrCZuZFt5_Ykj1h"
+uri = "file://artifacts/design-templates/src/assets/images/wedding.png"
+type = "image"
+title = "wedding invitation gold navy"
+
+[[generated]]
+id = "P2O5lspXJ9_dvs9OvStL-"
+uri = "file://artifacts/design-templates/src/assets/images/bar-mitzvah.png"
+type = "image"
+title = "bar mitzvah poster classic"
+
+[[generated]]
+id = "EMRanmr1H-OLQgqjqbWVv"
+uri = "file://artifacts/design-templates/src/assets/images/torah-class.png"
+type = "image"
+title = "torah class modern minimalist"
+
+[[generated]]
+id = "PwLd2XeuKV8TgFZtOpcIU"
+uri = "file://artifacts/design-templates/src/assets/images/charity.png"
+type = "image"
+title = "charity poster chassidic"
+
+[[generated]]
+id = "Dj_zPJidN5q85A3msN38g"
+uri = "file://artifacts/design-templates/src/assets/images/video.png"
+type = "image"
+title = "video clip template placeholder"

@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/design-templates/"
+title = "תבניות עיצוב חרדי"
+version = "1.0.0"
+id = "artifacts/design-templates"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/design-templates/" ]
+localPort = 24186
+
+[services.development]
+run = "pnpm --filter @workspace/design-templates run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/design-templates", "run", "build" ]
+publicDir = "artifacts/design-templates/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24186"
+BASE_PATH = "/design-templates/"
