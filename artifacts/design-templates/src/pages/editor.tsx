@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useAuth, useUser, SignInButton } from "@clerk/react";
-import { ArrowRight, Crown, MessageCircle, Download, RotateCcw, CheckCircle2, ZoomIn, ZoomOut, Sun, Moon, Lock, Loader2, User, CreditCard, LogIn, Type, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowRight, Crown, MessageCircle, Download, RotateCcw, CheckCircle2, ZoomIn, ZoomOut, Sun, Moon, Lock, Loader2, User, CreditCard, LogIn, Type, ChevronDown, ChevronUp, ImagePlus, X as XIcon, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -153,8 +153,91 @@ function AbsoluteSlot({ slot, value, fontOverride }: { slot: TextSlot; value: st
   );
 }
 
-function InvitationPreview({ template, values, zoom, fontOverride }: {
-  template: typeof templates[0]; values: Record<string, string>; zoom: number; fontOverride: string;
+function LogoUploader({ logoUrl, onChange }: { logoUrl: string | null; onChange: (url: string | null) => void }) {
+  const [open, setOpen] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = e => onChange(e.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="border-b border-primary/10">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-5 py-2.5 hover:bg-primary/5 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <ImagePlus className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs font-semibold text-foreground">לוגו</span>
+          {logoUrl
+            ? <span className="text-xs text-green-500 font-medium">הועלה ✓</span>
+            : <span className="text-xs text-muted-foreground">אין לוגו</span>
+          }
+        </div>
+        {open ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 bg-card/30">
+          {logoUrl ? (
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative w-full rounded-xl border border-primary/20 bg-background/60 p-3 flex items-center justify-center overflow-hidden" style={{ minHeight: 80 }}>
+                <img src={logoUrl} alt="לוגו" className="max-h-16 max-w-full object-contain" />
+                <button
+                  onClick={() => onChange(null)}
+                  className="absolute top-2 left-2 w-5 h-5 rounded-full bg-red-500/80 hover:bg-red-500 text-white flex items-center justify-center transition-colors"
+                  title="הסר לוגו"
+                >
+                  <XIcon className="w-3 h-3" />
+                </button>
+              </div>
+              <button
+                onClick={() => inputRef.current?.click()}
+                className="text-xs text-primary hover:text-primary/80 transition-colors underline underline-offset-2"
+              >
+                החלף לוגו
+              </button>
+            </div>
+          ) : (
+            <div
+              onClick={() => inputRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={e => {
+                e.preventDefault(); setDragging(false);
+                const file = e.dataTransfer.files[0];
+                if (file) handleFile(file);
+              }}
+              className={`w-full rounded-xl border-2 border-dashed p-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${
+                dragging ? "border-primary bg-primary/10 scale-[1.01]" : "border-primary/20 hover:border-primary/50 hover:bg-primary/5"
+              }`}
+            >
+              <Upload className="w-6 h-6 text-primary/60" />
+              <p className="text-xs font-medium text-foreground text-center">גרירה או לחיצה להעלאה</p>
+              <p className="text-[10px] text-muted-foreground text-center">PNG, JPG, SVG · עד 5MB</p>
+            </div>
+          )}
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+          />
+          <p className="text-[10px] text-muted-foreground mt-2 text-center">הלוגו יופיע בראש ההזמנה</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InvitationPreview({ template, values, zoom, fontOverride, logoUrl }: {
+  template: typeof templates[0]; values: Record<string, string>; zoom: number; fontOverride: string; logoUrl: string | null;
 }) {
   const slots = template.slots || [];
   const hasCoords = slots.some(s => s.x != null && s.y != null);
@@ -184,10 +267,18 @@ function InvitationPreview({ template, values, zoom, fontOverride }: {
       {!template.isGradient && !hasCoords && <div className="absolute inset-0 bg-black/45" />}
       {hasCoords ? (
         <div className="absolute inset-0">
+          {logoUrl && (
+            <div style={{ position: "absolute", top: "5%", left: "50%", transform: "translateX(-50%)", zIndex: 10 }}>
+              <img src={logoUrl} alt="לוגו" style={{ maxHeight: 32, maxWidth: "40%", objectFit: "contain", filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.4))" }} />
+            </div>
+          )}
           {slots.map(slot => <AbsoluteSlot key={slot.id} slot={slot} value={values[slot.id] ?? slot.defaultValue} fontOverride={fontOverride} />)}
         </div>
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center px-8 py-10 gap-0.5 overflow-hidden" dir="rtl">
+          {logoUrl && (
+            <img src={logoUrl} alt="לוגו" className="mb-2 object-contain" style={{ maxHeight: 36, maxWidth: "45%", filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.5))" }} />
+          )}
           <div className="w-24 h-px bg-[#D6A84F]/50 mb-2" />
           {slots.map(slot => <StackedLine key={slot.id} slot={slot} value={values[slot.id] ?? slot.defaultValue} fontOverride={fontOverride} />)}
           <div className="w-24 h-px bg-[#D6A84F]/50 mt-2" />
@@ -326,6 +417,7 @@ export default function Editor() {
   const [designId, setDesignId] = useState<number | null>(designIdParam ? Number(designIdParam) : null);
   const [designName, setDesignName] = useState("עיצוב שלי");
   const [selectedFont, setSelectedFont] = useState(DEFAULT_FONT);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Load default font on mount
@@ -604,6 +696,9 @@ export default function Editor() {
           {/* Font selector */}
           <FontSelector selected={selectedFont} onChange={setSelectedFont} />
 
+          {/* Logo uploader */}
+          <LogoUploader logoUrl={logoUrl} onChange={setLogoUrl} />
+
           {/* Fields list */}
           <div className="flex-1 overflow-y-auto">
             <div className="px-4 py-3 space-y-2">
@@ -690,7 +785,7 @@ export default function Editor() {
           </div>
 
           <div ref={previewRef} className="w-full max-w-xs sm:max-w-sm md:max-w-md relative" style={{ transformOrigin: "top center" }}>
-            <InvitationPreview template={template} values={values} zoom={zoom} fontOverride={selectedFont} />
+            <InvitationPreview template={template} values={values} zoom={zoom} fontOverride={selectedFont} logoUrl={logoUrl} />
             {isLoaded && !isSignedIn && <AuthWall templateId={template.id} />}
           </div>
 
