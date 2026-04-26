@@ -102,6 +102,38 @@ function AuthNavButton() {
   );
 }
 
+// ─── Load custom BA Hebrew fonts via FontFace API ─────────────────────────
+const BA_FONTS = [
+  { name: "BA-Arzey-Bold",      file: "BAArzeyHalevanon-Bold.ttf" },
+  { name: "BA-Arzey-Light",     file: "BAArzeyHalevanon-Light.ttf" },
+  { name: "BA-Fontov-Bold",     file: "BA-Fontov-Bold.otf" },
+  { name: "BA-Fontov",          file: "BA-Fontov-Regular.otf" },
+  { name: "BA-HaYetzira",       file: "BA-HaYetzira-Regular.otf" },
+  { name: "BA-HaYetzira-Light", file: "BA-HaYetzira-Light.otf" },
+  { name: "BA-Kiriat-Kodesh",   file: "BA-Kiriat-Kodesh-Bold.otf" },
+  { name: "BA-Moment",          file: "BA-Moment-Original.otf" },
+  { name: "BA-Platforma-Black", file: "BAPlatforma-Black.otf" },
+  { name: "BA-Platforma-Bold",  file: "BAPlatforma-Bold.otf" },
+  { name: "BA-Platforma-Light", file: "BAPlatforma-Light.otf" },
+  { name: "BA-Niflaot",         file: "BANiflaot-Black.ttf" },
+  { name: "BA-Barkai",          file: "BABarkai-Regular.otf" },
+  { name: "BA-Mesubin",         file: "BA-Mesubin-Rolltext.otf" },
+  { name: "BA-Casablanca",      file: "BA-Casablanca-Light.otf" },
+  { name: "BA-Radlheim",        file: "BARadlheim-Bold.otf" },
+  { name: "BA-Rishon",          file: "BARishonLezion-Regular.ttf" },
+  { name: "BA-Maim-Haim",       file: "BA-Maim-Haim-Regular.otf" },
+];
+
+function useBAFonts() {
+  useEffect(() => {
+    const base = import.meta.env.BASE_URL || "/design-templates/";
+    BA_FONTS.forEach(({ name, file }) => {
+      const ff = new FontFace(name, `url('${base}fonts/${file}')`);
+      ff.load().then(f => document.fonts.add(f)).catch(() => {});
+    });
+  }, []);
+}
+
 // ─── Invitation card data for the fan carousel ────────────────────────────
 const HERO_CARDS = [
   { title: "שמחת הבר מצווה", sub: "ראובן בן שמעון · ח׳ אדר תשפ״ו", bg: "linear-gradient(155deg,#0f1e3a 0%,#1a2d54 60%,#0d1830 100%)" },
@@ -142,16 +174,15 @@ function InvitationMiniCard({ title, sub, bg, style }: { title: string; sub: str
 }
 
 function HeroSection() {
+  useBAFonts();
   const [activeIdx, setActiveIdx] = useState(0);
   const total = HERO_CARDS.length;
 
-  // Auto-rotate every 3s
   useEffect(() => {
     const id = setInterval(() => setActiveIdx(i => (i + 1) % total), 3000);
     return () => clearInterval(id);
   }, [total]);
 
-  // Fan positions: active card center, others spread behind
   const getCardStyle = (i: number): React.CSSProperties => {
     const offset = ((i - activeIdx) % total + total) % total;
     const isFront = offset === 0;
@@ -160,11 +191,9 @@ function HeroSection() {
     const depth = [5, 3, 3, 1, 1][offset] ?? 0;
     const op = [1, 0.65, 0.65, 0.3, 0.3][offset] ?? 0;
     const sc = [1, 0.88, 0.88, 0.76, 0.76][offset] ?? 0.7;
-
     return {
       transform: `translateX(${spread}px) rotate(${rot}deg) scale(${sc})`,
-      zIndex: depth,
-      opacity: op,
+      zIndex: depth, opacity: op,
       transition: "all 0.7s cubic-bezier(0.34,1.2,0.64,1)",
       filter: isFront ? "none" : "blur(0.5px)",
       cursor: isFront ? "default" : "pointer",
@@ -172,98 +201,123 @@ function HeroSection() {
   };
 
   return (
-    <section style={{ height: "100vh", background: "#0B1833", position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+    <section style={{ minHeight: "100vh", background: "linear-gradient(180deg,#060e1f 0%,#0B1833 40%,#0d1c38 100%)", position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingTop: 80, paddingBottom: 40 }}>
 
-      {/* Background atmosphere */}
+      {/* ── Background atmosphere ── */}
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-        {/* Central glow that shifts with active card */}
         <motion.div
           key={activeIdx}
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.2 }}
-          style={{ position: "absolute", top: "45%", left: "50%", transform: "translate(-50%,-50%)", width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(214,168,79,0.08) 0%, transparent 65%)", filter: "blur(30px)" }}
+          transition={{ duration: 1.4 }}
+          style={{ position: "absolute", top: "35%", left: "50%", transform: "translate(-50%,-50%)", width: 900, height: 900, borderRadius: "50%", background: "radial-gradient(circle, rgba(214,168,79,0.07) 0%, transparent 60%)", filter: "blur(40px)" }}
         />
-        {/* Static ambient */}
-        <div style={{ position: "absolute", bottom: "10%", right: "5%", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(214,168,79,0.04) 0%, transparent 70%)", filter: "blur(40px)" }} />
-        <div style={{ position: "absolute", top: "10%", left: "10%", width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, rgba(100,140,255,0.03) 0%, transparent 70%)", filter: "blur(30px)" }} />
-        {/* Subtle horizontal line */}
-        <div style={{ position: "absolute", top: "58%", left: "5%", right: "5%", height: 1, background: "linear-gradient(90deg, transparent, rgba(214,168,79,0.06), transparent)" }} />
+        <div style={{ position: "absolute", bottom: "5%", right: "8%", width: 350, height: 350, borderRadius: "50%", background: "radial-gradient(circle, rgba(214,168,79,0.04) 0%, transparent 70%)", filter: "blur(50px)" }} />
+        <div style={{ position: "absolute", top: "15%", left: "8%", width: 250, height: 250, borderRadius: "50%", background: "radial-gradient(circle, rgba(80,120,220,0.04) 0%, transparent 70%)", filter: "blur(40px)" }} />
+        {/* Thin gold horizontal divider */}
+        <div style={{ position: "absolute", top: "62%", left: "10%", right: "10%", height: 1, background: "linear-gradient(90deg, transparent, rgba(214,168,79,0.07), transparent)" }} />
+        {/* Starfield dots */}
+        {[...Array(18)].map((_, i) => (
+          <motion.div key={i}
+            animate={{ opacity: [0.15, 0.5, 0.15] }}
+            transition={{ repeat: Infinity, duration: 2.5 + (i % 5) * 0.7, delay: i * 0.3 }}
+            style={{ position: "absolute", width: i % 4 === 0 ? 2 : 1, height: i % 4 === 0 ? 2 : 1, borderRadius: "50%", background: "#D6A84F",
+              top: `${10 + (i * 23 % 78)}%`, left: `${5 + (i * 37 % 90)}%` }} />
+        ))}
       </div>
 
-      {/* TOP — badge */}
+      {/* ── LOGO — Large, glowing, centered ── */}
       <motion.div
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.1 }}
-        style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}
+        initial={{ opacity: 0, scale: 0.8, y: -20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
+        style={{ position: "relative", zIndex: 10, marginBottom: 24 }}
       >
-        <div style={{ width: 28, height: 1, background: "rgba(214,168,79,0.4)" }} />
-        <span style={{ color: "rgba(214,168,79,0.5)", fontSize: 10, letterSpacing: 5, fontFamily: "monospace" }}>סטודיו לעיצוב הזמנות · {new Date().getFullYear()}</span>
-        <div style={{ width: 28, height: 1, background: "rgba(214,168,79,0.4)" }} />
+        {/* Glow halo behind logo */}
+        <div style={{ position: "absolute", inset: -80, background: "radial-gradient(circle, rgba(214,168,79,0.22) 0%, transparent 65%)", filter: "blur(24px)", pointerEvents: "none" }} />
+        <img
+          src={hadarLogo}
+          alt="הדר — סטודיו לעיצוב הזמנות"
+          style={{
+            height: "clamp(90px, 14vw, 148px)", width: "auto",
+            objectFit: "contain", position: "relative",
+            filter: "drop-shadow(0 0 24px rgba(214,168,79,0.55)) drop-shadow(0 0 60px rgba(214,168,79,0.22)) drop-shadow(0 8px 32px rgba(0,0,0,0.6))",
+          }}
+        />
       </motion.div>
 
-      {/* MAIN TITLE */}
-      <motion.h1
-        initial={{ opacity: 0, y: 40 }}
+      {/* ── Studio identity badge ── */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.9, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-        style={{ position: "relative", zIndex: 10, fontFamily: "serif", fontWeight: 700, textAlign: "center", lineHeight: 1, margin: "0 0 10px", direction: "rtl", fontSize: "clamp(52px, 7vw, 96px)" }}
+        transition={{ duration: 0.7, delay: 0.25 }}
+        style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", gap: 12, marginBottom: 22 }}
+      >
+        <div style={{ width: 36, height: 1, background: "linear-gradient(90deg, transparent, rgba(214,168,79,0.5))" }} />
+        <span style={{ color: "rgba(214,168,79,0.65)", fontSize: 11, letterSpacing: 5, fontFamily: "'BA-Platforma-Light', monospace", textTransform: "uppercase" }}>
+          סטודיו לעיצוב הזמנות חרדיות
+        </span>
+        <div style={{ width: 36, height: 1, background: "linear-gradient(270deg, transparent, rgba(214,168,79,0.5))" }} />
+      </motion.div>
+
+      {/* ── MAIN HEADLINE in BA-Arzey-Bold ── */}
+      <motion.h1
+        initial={{ opacity: 0, y: 36 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        style={{ position: "relative", zIndex: 10, fontFamily: "'BA-Arzey-Bold', 'Frank Ruhl Libre', serif", fontWeight: 400, textAlign: "center", lineHeight: 1.05, margin: "0 0 8px", direction: "rtl", fontSize: "clamp(48px, 7.5vw, 104px)", letterSpacing: -1 }}
       >
         <span style={{ color: "#F8F1E3" }}>הזמנות </span>
-        <span style={{ color: "#D6A84F", textShadow: "0 0 100px rgba(214,168,79,0.4), 0 0 40px rgba(214,168,79,0.2)" }}>מהוד</span>
+        <span style={{ color: "#D6A84F", textShadow: "0 0 80px rgba(214,168,79,0.45), 0 0 30px rgba(214,168,79,0.25)" }}>מהוד</span>
         <span style={{ color: "#F8F1E3" }}> ומהדר</span>
       </motion.h1>
 
-      {/* Subtitle */}
+      {/* ── Tagline in BA-Moment ── */}
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.8, delay: 0.45 }}
-        style={{ position: "relative", zIndex: 10, color: "rgba(248,241,227,0.38)", fontSize: 15, textAlign: "center", marginBottom: 48, fontWeight: 300, letterSpacing: 0.3 }}
+        transition={{ duration: 0.9, delay: 0.5 }}
+        style={{ position: "relative", zIndex: 10, fontFamily: "'BA-Moment', 'Noto Serif Hebrew', serif", color: "rgba(248,241,227,0.42)", fontSize: "clamp(16px, 2.5vw, 22px)", textAlign: "center", marginBottom: 44, letterSpacing: 0.5, direction: "rtl" }}
       >
         ערכו · שלמו · קבלו — בדקות
       </motion.p>
 
-      {/* 3D FAN CAROUSEL */}
+      {/* ── 3D FAN CAROUSEL ── */}
       <motion.div
         initial={{ opacity: 0, y: 60, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 1, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        style={{ position: "relative", zIndex: 10, width: 200, height: 280, marginBottom: 52 }}
+        transition={{ duration: 1.1, delay: 0.38, ease: [0.16, 1, 0.3, 1] }}
+        style={{ position: "relative", zIndex: 10, width: 200, height: 280, marginBottom: 48 }}
       >
         {HERO_CARDS.map((card, i) => (
-          <InvitationMiniCard
-            key={i} title={card.title} sub={card.sub} bg={card.bg}
+          <InvitationMiniCard key={i} title={card.title} sub={card.sub} bg={card.bg}
             style={{ ...getCardStyle(i), top: 0, left: 0 }}
           />
         ))}
       </motion.div>
 
-      {/* Dots indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.8 }}
-        style={{ position: "relative", zIndex: 10, display: "flex", gap: 6, marginBottom: 36 }}
+      {/* ── Dots indicator ── */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.85 }}
+        style={{ position: "relative", zIndex: 10, display: "flex", gap: 6, marginBottom: 34 }}
       >
         {HERO_CARDS.map((_, i) => (
-          <button key={i} onClick={() => setActiveIdx(i)} style={{ width: i === activeIdx ? 24 : 6, height: 3, borderRadius: 2, background: i === activeIdx ? "#D6A84F" : "rgba(214,168,79,0.2)", border: "none", cursor: "pointer", padding: 0, transition: "all 0.4s" }} />
+          <button key={i} onClick={() => setActiveIdx(i)}
+            style={{ width: i === activeIdx ? 24 : 6, height: 3, borderRadius: 2, background: i === activeIdx ? "#D6A84F" : "rgba(214,168,79,0.2)", border: "none", cursor: "pointer", padding: 0, transition: "all 0.4s" }} />
         ))}
       </motion.div>
 
-      {/* CTA BUTTONS */}
+      {/* ── CTA BUTTONS ── */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.6 }}
+        transition={{ duration: 0.7, delay: 0.65 }}
         style={{ position: "relative", zIndex: 10, display: "flex", gap: 14, alignItems: "center" }}
       >
         <motion.button
-          whileHover={{ scale: 1.04, boxShadow: "0 0 50px rgba(214,168,79,0.4)" }}
+          whileHover={{ scale: 1.04, boxShadow: "0 0 50px rgba(214,168,79,0.45)" }}
           whileTap={{ scale: 0.96 }}
           onClick={() => document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth" })}
-          style={{ padding: "15px 40px", border: "none", borderRadius: 8, background: "#D6A84F", color: "#0B1833", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", letterSpacing: 0.3 }}
+          style={{ padding: "14px 38px", border: "none", borderRadius: 8, background: "#D6A84F", color: "#0B1833", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'BA-Platforma-Bold', inherit", letterSpacing: 0.5 }}
         >
           לגלריה ←
         </motion.button>
@@ -271,28 +325,187 @@ function HeroSection() {
           <motion.button
             whileHover={{ background: "rgba(214,168,79,0.1)", borderColor: "rgba(214,168,79,0.5)" }}
             whileTap={{ scale: 0.96 }}
-            style={{ padding: "15px 36px", border: "1px solid rgba(214,168,79,0.22)", borderRadius: 8, background: "transparent", color: "rgba(248,241,227,0.55)", fontSize: 15, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}
+            style={{ padding: "14px 34px", border: "1px solid rgba(214,168,79,0.22)", borderRadius: 8, background: "transparent", color: "rgba(248,241,227,0.55)", fontSize: 15, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}
           >
             הזמינו עכשיו
           </motion.button>
         </Link>
       </motion.div>
 
-      {/* Scroll hint */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.2 }}
+      {/* ── Scroll hint ── */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3 }}
         style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}
       >
-        <span style={{ color: "rgba(214,168,79,0.25)", fontSize: 10, letterSpacing: 4 }}>גלגלו</span>
-        <motion.div
-          animate={{ y: [0, 6, 0] }}
-          transition={{ repeat: Infinity, duration: 1.6 }}
-          style={{ width: 18, height: 28, borderRadius: 10, border: "1px solid rgba(214,168,79,0.18)", display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: 5 }}
+        <span style={{ color: "rgba(214,168,79,0.22)", fontSize: 9, letterSpacing: 4, fontFamily: "monospace" }}>גלגלו</span>
+        <motion.div animate={{ y: [0, 7, 0] }} transition={{ repeat: Infinity, duration: 1.7 }}
+          style={{ width: 18, height: 28, borderRadius: 10, border: "1px solid rgba(214,168,79,0.16)", display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: 5 }}
         >
-          <div style={{ width: 3, height: 6, borderRadius: 2, background: "rgba(214,168,79,0.4)" }} />
+          <div style={{ width: 3, height: 6, borderRadius: 2, background: "rgba(214,168,79,0.35)" }} />
         </motion.div>
+      </motion.div>
+
+    </section>
+  );
+}
+
+// ─── "למה הדר?" — Typographic showcase section ────────────────────────────
+const WHY_ITEMS = [
+  {
+    num: "א",
+    title: "עיצוב ברמת סטודיו",
+    body: "כל תבנית עוצבה בידי מעצבים מקצועיים עם שנים של ניסיון בעיצוב חרדי. קבלו תוצאה שנראית כמו הוצאה אלפי שקלים — במחיר של תבנית.",
+    font: "BA-Arzey-Bold",
+    numFont: "BA-Platforma-Black",
+    accent: "#D6A84F",
+  },
+  {
+    num: "ב",
+    title: "כשרות עיצובית אמיתית",
+    body: "סגנון חרדי מהדרין: ללא תמונות מעורבות, כתב מסורתי, ניסוחים הלכתיים נכונים — הכול מוכן לשימוש ישיר בלי לבדוק פעמיים.",
+    font: "BA-Kiriat-Kodesh",
+    numFont: "BA-Niflaot",
+    accent: "#B8973E",
+  },
+  {
+    num: "ג",
+    title: "מהיר כמו ברק",
+    body: "ממלאים פרטים, שולמים ₪49 — מקבלים קובץ מוכן לשיתוף בוואטסאפ ולהדפסה. כל התהליך לוקח פחות מעשר דקות.",
+    font: "BA-Fontov-Bold",
+    numFont: "BA-Radlheim",
+    accent: "#C8A048",
+  },
+  {
+    num: "ד",
+    title: "גופנים עבריים בלעדיים",
+    body: "אוסף ייחודי של גופנים עבריים מקצועיים שלא תמצאו בשום מקום אחר — מהמסורתי למודרני, מהאלגנטי לחגיגי.",
+    font: "BA-Moment",
+    numFont: "BA-Barkai",
+    accent: "#D6A84F",
+  },
+];
+
+function WhyHadarSection() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
+
+  return (
+    <section
+      ref={sectionRef}
+      style={{ background: "linear-gradient(180deg, #060e1f 0%, #0a1428 50%, #060e1f 100%)", padding: "100px 0 80px", position: "relative", overflow: "hidden", direction: "rtl" }}
+    >
+      {/* Background ornament */}
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 700, height: 700, borderRadius: "50%", border: "1px solid rgba(214,168,79,0.04)" }} />
+        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 500, height: 500, borderRadius: "50%", border: "1px solid rgba(214,168,79,0.06)" }} />
+        <div style={{ position: "absolute", top: 0, left: "10%", right: "10%", height: 1, background: "linear-gradient(90deg, transparent, rgba(214,168,79,0.15), transparent)" }} />
+        <div style={{ position: "absolute", bottom: 0, left: "10%", right: "10%", height: 1, background: "linear-gradient(90deg, transparent, rgba(214,168,79,0.15), transparent)" }} />
+      </div>
+
+      {/* Section header */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={isInView ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.8 }}
+        style={{ textAlign: "center", marginBottom: 72, position: "relative" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 18 }}>
+          <div style={{ width: 60, height: 1, background: "linear-gradient(90deg, transparent, rgba(214,168,79,0.4))" }} />
+          <span style={{ color: "rgba(214,168,79,0.5)", fontSize: 10, letterSpacing: 6, fontFamily: "'BA-Platforma-Light', monospace" }}>למה לבחור בהדר</span>
+          <div style={{ width: 60, height: 1, background: "linear-gradient(270deg, transparent, rgba(214,168,79,0.4))" }} />
+        </div>
+        <h2 style={{ fontFamily: "'BA-Arzey-Bold', 'Frank Ruhl Libre', serif", fontWeight: 400, fontSize: "clamp(32px, 5vw, 58px)", color: "#F8F1E3", lineHeight: 1.1, margin: 0 }}>
+          הזמנה טובה מספרת<br />
+          <span style={{ color: "#D6A84F", textShadow: "0 0 60px rgba(214,168,79,0.3)" }}>את הסיפור שלכם</span>
+        </h2>
+      </motion.div>
+
+      {/* 4 value-prop cards */}
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 32 }}>
+        {WHY_ITEMS.map((item, idx) => (
+          <motion.div
+            key={idx}
+            initial={{ opacity: 0, y: 50 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.8, delay: idx * 0.15 }}
+            style={{
+              background: "linear-gradient(160deg, rgba(214,168,79,0.05) 0%, rgba(11,24,51,0.6) 100%)",
+              border: "1px solid rgba(214,168,79,0.1)",
+              borderRadius: 16,
+              padding: "40px 32px",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            {/* Corner decoration */}
+            <div style={{ position: "absolute", top: 12, right: 12, width: 16, height: 16, borderTop: "1px solid rgba(214,168,79,0.3)", borderRight: "1px solid rgba(214,168,79,0.3)" }} />
+            <div style={{ position: "absolute", bottom: 12, left: 12, width: 16, height: 16, borderBottom: "1px solid rgba(214,168,79,0.3)", borderLeft: "1px solid rgba(214,168,79,0.3)" }} />
+
+            {/* Large decorative Hebrew letter */}
+            <div style={{
+              fontFamily: `'${item.numFont}', serif`,
+              fontSize: 96, lineHeight: 1, color: "rgba(214,168,79,0.07)",
+              position: "absolute", top: -8, left: 16,
+              userSelect: "none", pointerEvents: "none",
+            }}>
+              {item.num}
+            </div>
+
+            {/* Accent line */}
+            <div style={{ width: 40, height: 3, background: `linear-gradient(90deg, ${item.accent}, transparent)`, borderRadius: 2, marginBottom: 24 }} />
+
+            {/* Title in custom font */}
+            <h3 style={{
+              fontFamily: `'${item.font}', 'Frank Ruhl Libre', serif`,
+              fontSize: 26, fontWeight: 400, color: "#F8F1E3",
+              margin: "0 0 16px", lineHeight: 1.2, position: "relative",
+            }}>
+              {item.title}
+            </h3>
+
+            {/* Body in BA-HaYetzira */}
+            <p style={{
+              fontFamily: "'BA-HaYetzira', 'Noto Serif Hebrew', serif",
+              fontSize: 15, lineHeight: 1.85, color: "rgba(248,241,227,0.5)",
+              margin: 0, position: "relative",
+            }}>
+              {item.body}
+            </p>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Floating font showcase strip */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={isInView ? { opacity: 1 } : {}}
+        transition={{ duration: 1, delay: 0.6 }}
+        style={{ maxWidth: 1200, margin: "64px auto 0", padding: "0 32px" }}
+      >
+        <div style={{ border: "1px solid rgba(214,168,79,0.08)", borderRadius: 12, padding: "32px 40px", background: "rgba(214,168,79,0.02)", textAlign: "center" }}>
+          <div style={{ color: "rgba(214,168,79,0.35)", fontSize: 10, letterSpacing: 5, marginBottom: 28, fontFamily: "monospace" }}>
+            — גופנים עבריים ייחודיים זמינים בעורך —
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "12px 40px", justifyContent: "center", alignItems: "center" }}>
+            {[
+              { text: "אלגנטי ועדין", font: "BA-Casablanca", size: 28 },
+              { text: "חגיגי ומרשים", font: "BA-Arzey-Bold", size: 32 },
+              { text: "מודרני ונקי", font: "BA-Platforma-Bold", size: 22 },
+              { text: "רגשי ומיוחד", font: "BA-Moment", size: 28 },
+              { text: "כשר ומסורתי", font: "BA-Kiriat-Kodesh", size: 26 },
+              { text: "עוצמה ויוקרה", font: "BA-Fontov-Bold", size: 24 },
+            ].map((s, i) => (
+              <motion.span
+                key={i}
+                initial={{ opacity: 0 }}
+                animate={isInView ? { opacity: 1 } : {}}
+                transition={{ delay: 0.7 + i * 0.1 }}
+                style={{ fontFamily: `'${s.font}', serif`, fontSize: s.size, color: i % 2 === 0 ? "#D6A84F" : "rgba(248,241,227,0.75)", lineHeight: 1.4 }}
+              >
+                {s.text}
+              </motion.span>
+            ))}
+          </div>
+        </div>
       </motion.div>
 
     </section>
@@ -441,9 +654,14 @@ export default function Home() {
       </header>
 
       {/* ══════════════════════════════════════════════
-           WOW HERO — 3D Fan Carousel + Centered Title
+           WOW HERO — Logo + Custom Fonts + Fan Carousel
           ══════════════════════════════════════════════ */}
       <HeroSection />
+
+      {/* ══════════════════════════════════════════════
+           WHY HADAR — Typographic value proposition
+          ══════════════════════════════════════════════ */}
+      <WhyHadarSection />
 
       {/* 24-Hour Promise Module */}
       <section className="py-20 bg-secondary relative overflow-hidden">
