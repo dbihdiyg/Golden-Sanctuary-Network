@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { HEBREW_FONTS, loadGoogleFont, injectCustomFont } from "@/lib/fonts";
 import hadarLogo from "@/assets/logo-hadar.png";
 import { Template } from "@/lib/data";
+import { AIImageSection } from "@/components/ai-image-section";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/[^/]*\/?$/, "");
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -508,7 +509,7 @@ export default function PolotnoEditor() {
             <SidePanelWrap>
               <SidePanel
                 store={store}
-                sections={[TextSection, ElementsSection, BackgroundSection, LayersSection]}
+                sections={[TextSection, ElementsSection, BackgroundSection, LayersSection, AIImageSection]}
                 defaultSection="text"
               />
             </SidePanelWrap>
