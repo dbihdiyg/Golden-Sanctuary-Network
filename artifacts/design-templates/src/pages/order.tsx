@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,13 +6,44 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Crown, ArrowRight, Sun, Moon } from "lucide-react";
+import { CheckCircle2, Crown, ArrowRight, Sun, Moon, Sparkles, Loader2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { motion } from "framer-motion";
 
+const API_BASE = import.meta.env.BASE_URL.replace(/\/[^/]*\/?$/, "");
+
 export default function Order() {
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [nusach, setNusach] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [selectedStyle, setSelectedStyle] = useState("classic");
+  const [selectedType, setSelectedType] = useState("");
+  const namesRef = useRef<HTMLInputElement>(null);
+  const dateRef = useRef<HTMLInputElement>(null);
   const { theme, toggle } = useTheme();
+
+  const generateAiText = async () => {
+    const names = namesRef.current?.value || "";
+    const date = dateRef.current?.value || "";
+    if (!names || !selectedType) {
+      alert("נא למלא שמות וסוג פרויקט תחילה");
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/hadar/ai-text`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ names, eventType: selectedType, date, style: selectedStyle }),
+      });
+      const data = await res.json();
+      if (data.text) setNusach(data.text);
+    } catch {
+      alert("שגיאה ביצירת הנוסח, נסו שוב");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +88,7 @@ export default function Order() {
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               <span className="font-medium hidden sm:inline">חזרה לגלריה</span>
             </Link>
+            <Link href="/help" className="text-muted-foreground hover:text-foreground transition-colors font-medium">מדריכים</Link>
             <button onClick={toggle} className="rounded-full p-2 border border-primary/30 text-primary hover:bg-primary/10 transition-colors">
               {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
@@ -80,33 +112,33 @@ export default function Order() {
           
           <div className="space-y-3">
             <Label htmlFor="projectType" className="text-base text-foreground">סוג פרויקט</Label>
-            <Select required>
+            <Select required onValueChange={setSelectedType}>
               <SelectTrigger id="projectType" className="h-12 bg-white text-secondary-foreground border-none">
                 <SelectValue placeholder="בחרו סוג פרויקט" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="wedding">הזמנה לחתונה</SelectItem>
-                <SelectItem value="kiddush">הזמנה לקידוש</SelectItem>
-                <SelectItem value="event">מודעה לאירוע</SelectItem>
-                <SelectItem value="video">קליפ וידאו</SelectItem>
-                <SelectItem value="other">אחר</SelectItem>
+                <SelectItem value="חתונה">הזמנה לחתונה</SelectItem>
+                <SelectItem value="קידוש">הזמנה לקידוש</SelectItem>
+                <SelectItem value="אירוע">מודעה לאירוע</SelectItem>
+                <SelectItem value="קליפ וידאו">קליפ וידאו</SelectItem>
+                <SelectItem value="אחר">אחר</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-3">
             <Label htmlFor="names" className="text-base text-foreground">שמות מרכזיים</Label>
-            <Input id="names" required placeholder="לדוגמה: משה ורחל" className="h-12 bg-white text-secondary-foreground border-none placeholder:text-muted-foreground/60" />
+            <Input ref={namesRef} id="names" required placeholder="לדוגמה: משה ורחל" className="h-12 bg-white text-secondary-foreground border-none placeholder:text-muted-foreground/60" />
           </div>
 
           <div className="space-y-3">
             <Label htmlFor="date" className="text-base text-foreground">תאריך האירוע</Label>
-            <Input id="date" type="date" required className="h-12 bg-white text-secondary-foreground border-none block w-full" />
+            <Input ref={dateRef} id="date" type="date" required className="h-12 bg-white text-secondary-foreground border-none block w-full" />
           </div>
 
           <div className="space-y-4">
             <Label className="text-base text-foreground">סגנון מבוקש</Label>
-            <RadioGroup defaultValue="classic" className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <RadioGroup value={selectedStyle} onValueChange={setSelectedStyle} className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[
                 { value: "luxury", label: "יוקרתי" },
                 { value: "chasidi", label: "חסידי" },
@@ -124,8 +156,33 @@ export default function Order() {
           </div>
 
           <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="nusach" className="text-base text-foreground">נוסח ההזמנה</Label>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={generateAiText}
+                disabled={aiLoading}
+                className="gap-1.5 border-primary/30 text-primary hover:bg-primary/10 text-xs h-8"
+              >
+                {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                {aiLoading ? "מייצר..." : "כתיבה עם AI"}
+              </Button>
+            </div>
+            <Textarea
+              id="nusach"
+              value={nusach}
+              onChange={(e) => setNusach(e.target.value)}
+              placeholder="כתבו את נוסח ההזמנה, או לחצו 'כתיבה עם AI' לנוסח אוטומטי..."
+              className="min-h-[130px] bg-white text-secondary-foreground border-none resize-none placeholder:text-muted-foreground/60"
+            />
+            <p className="text-xs text-muted-foreground">מלאו שמות וסוג פרויקט לפני הפעלת ה-AI</p>
+          </div>
+
+          <div className="space-y-3">
             <Label htmlFor="notes" className="text-base text-foreground">הערות נוספות</Label>
-            <Textarea id="notes" placeholder="פרטים נוספים, רעיונות, או בקשות מיוחדות..." className="min-h-[120px] bg-white text-secondary-foreground border-none resize-none placeholder:text-muted-foreground/60" />
+            <Textarea id="notes" placeholder="פרטים נוספים, רעיונות, או בקשות מיוחדות..." className="min-h-[100px] bg-white text-secondary-foreground border-none resize-none placeholder:text-muted-foreground/60" />
           </div>
 
           <div className="space-y-3">

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { TemplateCard } from "@/components/TemplateCard";
 import { templates, categories, styles } from "@/lib/data";
 import { useTheme } from "@/hooks/useTheme";
+import { useLang } from "@/contexts/LangContext";
+import { t } from "@/lib/i18n";
 import { motion, AnimatePresence, useInView, useAnimation } from "framer-motion";
 
 function useIntersectionObserver(options = {}) {
@@ -37,6 +39,10 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { theme, toggle } = useTheme();
+  const { lang, toggleLang } = useLang();
+  
+  const [mouseX, setMouseX] = useState(0);
+  const [mouseY, setMouseY] = useState(0);
 
   const [clockRef, clockIntersecting] = useIntersectionObserver({ threshold: 0.5 });
   const [stepsRef, stepsIntersecting] = useIntersectionObserver({ threshold: 0.2 });
@@ -49,6 +55,15 @@ export default function Home() {
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMouseX((e.clientX / window.innerWidth) * 2 - 1);
+      setMouseY((e.clientY / window.innerHeight) * 2 - 1);
+    };
+    document.addEventListener("mousemove", handleMouseMove);
+    return () => document.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
   const [count, setCount] = useState(0);
@@ -108,14 +123,18 @@ export default function Home() {
           </div>
           
           <nav className="hidden md:flex items-center gap-8 text-base font-medium">
-            <Link href="/"><span className="text-primary transition-colors cursor-pointer">ראשי</span></Link>
-            <a href="#services" className="text-muted-foreground hover:text-foreground transition-colors">שירותים</a>
-            <a href="#gallery" className="text-muted-foreground hover:text-foreground transition-colors">גלריה</a>
-            <Link href="/order"><span className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer">הזמנה</span></Link>
-            <a href="#contact" className="text-muted-foreground hover:text-foreground transition-colors">צור קשר</a>
+            <Link href="/"><span className="text-primary transition-colors cursor-pointer">{t("nav_home", lang)}</span></Link>
+            <a href="#services" className="text-muted-foreground hover:text-foreground transition-colors">{t("nav_services", lang)}</a>
+            <a href="#gallery" className="text-muted-foreground hover:text-foreground transition-colors">{t("nav_gallery", lang)}</a>
+            <Link href="/order"><span className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer">{t("nav_order", lang)}</span></Link>
+            <Link href="/help"><span className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer">{t("nav_help", lang)}</span></Link>
+            <a href="#contact" className="text-muted-foreground hover:text-foreground transition-colors">{t("nav_contact", lang)}</a>
           </nav>
 
           <div className="flex items-center gap-2">
+            <button onClick={toggleLang} className="rounded border border-primary/30 text-primary px-2 py-1 text-xs font-bold hover:bg-primary/10 transition-colors">
+              {lang === "he" ? "EN" : "עב"}
+            </button>
             <button onClick={toggle} className="rounded-full p-2 border border-primary/30 text-primary hover:bg-primary/10 transition-colors">
               {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
@@ -130,11 +149,12 @@ export default function Home() {
         {/* Mobile menu */}
         {isMenuOpen && (
           <div className="md:hidden absolute top-20 left-0 w-full bg-background border-b border-white/5 py-4 px-4 flex flex-col gap-4 shadow-xl">
-            <Link href="/"><span className="text-primary font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>ראשי</span></Link>
-            <a href="#services" className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>שירותים</a>
-            <a href="#gallery" className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>גלריה</a>
-            <Link href="/order"><span className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>הזמנה</span></Link>
-            <a href="#contact" className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>צור קשר</a>
+            <Link href="/"><span className="text-primary font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>{t("nav_home", lang)}</span></Link>
+            <a href="#services" className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>{t("nav_services", lang)}</a>
+            <a href="#gallery" className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>{t("nav_gallery", lang)}</a>
+            <Link href="/order"><span className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>{t("nav_order", lang)}</span></Link>
+            <Link href="/help"><span className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>{t("nav_help", lang)}</span></Link>
+            <a href="#contact" className="text-foreground font-medium p-2 block" onClick={() => setIsMenuOpen(false)}>{t("nav_contact", lang)}</a>
           </div>
         )}
       </motion.header>
@@ -142,29 +162,36 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden py-20">
         {/* Background Elements */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[100px]" />
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div 
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[100px] transition-transform duration-300 ease-out" 
+            style={{ transform: `translate(calc(-50% + ${mouseX * 15}px), calc(-50% + ${mouseY * 10}px))` }}
+          />
+          <div 
+            className="absolute top-1/4 left-1/4 w-[300px] h-[300px] bg-primary/20 rounded-full blur-[80px] transition-transform duration-300 ease-out" 
+            style={{ transform: `translate(${mouseX * -30}px, ${mouseY * -20}px)` }}
+          />
           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
         </div>
 
         <div className="container mx-auto px-4 relative z-10 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary text-sm font-medium mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            סטודיו לעיצוב דיגיטלי
+            {t("hero_badge", lang)}
           </div>
           
           <motion.h1 
             initial={{ opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-            className="font-serif text-7xl md:text-9xl font-bold tracking-tight mb-6 text-primary"
+            className={`font-serif text-7xl md:text-9xl font-bold tracking-tight mb-6 text-primary ${lang === "en" ? "tracking-widest" : ""}`}
             style={{ animation: 'goldGlow 4s infinite alternate ease-in-out' }}
           >
-            הדר
+            {lang === "en" ? "HADAR" : "הדר"}
           </motion.h1>
           
-          <div className="flex flex-wrap justify-center gap-x-2 gap-y-1 text-xl md:text-3xl text-foreground max-w-3xl mx-auto mb-12 font-light">
-            {sloganWords.map((word, i) => (
+          <div className={`flex flex-wrap justify-center gap-x-2 gap-y-1 text-xl md:text-3xl text-foreground max-w-3xl mx-auto mb-12 font-light ${lang === "en" ? "dir-ltr" : ""}`}>
+            {t("hero_slogan", lang).split(" ").map((word, i) => (
               <motion.span 
                 key={i}
                 initial={{ opacity: 0, y: 10 }}
@@ -179,13 +206,13 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-[2000ms] fill-mode-both">
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
               <Button size="lg" className="w-full sm:w-auto text-lg px-10 h-14 bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_40px_-10px_rgba(214,168,79,0.5)] font-bold transition-all btn-shimmer" onClick={() => document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth' })}>
-                צפו בדוגמאות
+                {t("cta_gallery", lang)}
               </Button>
             </motion.div>
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
               <Link href="/order">
                 <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-10 h-14 border-primary text-primary hover:bg-primary/10 transition-all">
-                  הזמינו עכשיו
+                  {t("cta_order", lang)}
                 </Button>
               </Link>
             </motion.div>
@@ -221,14 +248,14 @@ export default function Home() {
               </motion.svg>
               
               <div className="text-center z-10 relative">
-                <span className="block text-primary/80 font-medium mb-1 text-sm md:text-base">סקיצה ראשונה תוך</span>
+                <span className="block text-primary/80 font-medium mb-1 text-sm md:text-base">{t("promise_hours", lang)}</span>
                 <div className="font-serif text-6xl md:text-8xl font-bold text-primary tabular-nums leading-none bg-background/60 rounded-full px-2 py-1 backdrop-blur-sm shadow-[0_0_15px_rgba(214,168,79,0.2)]">{count}</div>
-                <span className="block text-primary/80 font-medium mt-1 text-sm md:text-base">שעות</span>
+                <span className="block text-primary/80 font-medium mt-1 text-sm md:text-base">{t("promise_hours_suffix", lang as any) || "שעות"}</span>
               </div>
             </div>
 
             <div className={`space-y-6 max-w-md text-center md:text-right transition-all duration-1000 delay-300 ${clockIntersecting ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>
-              <h2 className="font-serif text-4xl font-bold text-foreground">ההבטחה שלנו אליכם</h2>
+              <h2 className="font-serif text-4xl font-bold text-foreground">{t("promise_title", lang)}</h2>
               <p className="text-lg text-muted-foreground leading-relaxed">
                 אתם צריכים את העיצוב מהר, אבל לא רוצים להתפשר על האיכות. אנחנו מספקים סקיצה ראשונית ברמה הגבוהה ביותר תוך יממה אחת בלבד.
               </p>

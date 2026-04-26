@@ -10,6 +10,7 @@ import mediaSubmissionsRouter from "./media-submissions";
 import newsletterRouter from "./newsletter";
 import chatbotRouter from "./chatbot";
 import analyticsRouter from "./analytics";
+import hadarAiRouter from "./hadar-ai";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(mediaSubmissionsRouter);
 router.use("/newsletter", newsletterRouter);
 router.use("/chatbot", chatbotRouter);
 router.use(analyticsRouter);
+router.use(hadarAiRouter);
 
 export default router;

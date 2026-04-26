@@ -7,6 +7,10 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import TemplateDetail from "@/pages/TemplateDetail";
 import Order from "@/pages/order";
+import Help from "@/pages/help";
+import Admin from "@/pages/admin";
+import { ChatWidget } from "@/components/ChatWidget";
+import { LangProvider } from "@/contexts/LangContext";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +21,8 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/template/:id" component={TemplateDetail} />
         <Route path="/order" component={Order} />
+        <Route path="/help" component={Help} />
+        <Route path="/admin" component={Admin} />
         <Route component={NotFound} />
       </Switch>
     </AnimatePresence>
@@ -26,12 +32,15 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
+      <LangProvider>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+            <ChatWidget />
+          </WouterRouter>
+          <Toaster />
+        </TooltipProvider>
+      </LangProvider>
     </QueryClientProvider>
   );
 }

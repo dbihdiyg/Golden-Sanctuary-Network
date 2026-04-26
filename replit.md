@@ -76,3 +76,33 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+
+---
+
+## הדר — Design Template Marketplace (`artifacts/design-templates`)
+
+- Separate React + Vite artifact at `/design-templates/`
+- Hebrew RTL, navy/gold/cream aesthetic (#0B1833, #D6A84F, #F8F1E3)
+- Fonts: Noto Serif Hebrew + Heebo
+- No backend; pure frontend with Framer Motion animations
+
+### Pages
+- `/` — Home: hero, template gallery (12 cards), process steps, 24h promise module, testimonials
+- `/template/:id` — Template detail page
+- `/order` — Order form with AI-powered text generation (calls `/hadar/ai-text` on API server)
+- `/help` — Static guide page with 6 guide cards
+- `/admin` — Password-protected admin panel (password: `hadar2026`); shows orders, templates, stats
+
+### Features
+- Dark/light mode (useTheme hook, localStorage)
+- Multi-language Hebrew/English toggle (LangContext + i18n.ts)
+- Social sharing on template cards (WhatsApp + copy link)
+- Parallax mouse effect in hero section
+- Floating chat widget with FAQ chips and WhatsApp redirect
+- SEO meta tags in index.html
+
+### AI Text Generation
+- API route: `POST /hadar/ai-text` in api-server
+- Requires: `OPENAI_API_KEY` env var
+- Generates Hebrew ceremonial invitation text via GPT-4o-mini
+- Used in order form with one-click generation

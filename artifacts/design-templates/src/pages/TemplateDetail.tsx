@@ -48,6 +48,7 @@ export default function TemplateDetail() {
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               <span className="font-medium hidden sm:inline">חזרה לגלריה</span>
             </Link>
+            <Link href="/help" className="text-muted-foreground hover:text-foreground transition-colors font-medium">מדריכים</Link>
             <button onClick={toggle} className="rounded-full p-2 border border-primary/30 text-primary hover:bg-primary/10 transition-colors">
               {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>

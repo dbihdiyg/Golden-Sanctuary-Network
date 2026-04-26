@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download, Palette } from "lucide-react";
+import { Download, Palette, MessageCircle, Copy } from "lucide-react";
 import { Template } from "../lib/data";
 import { motion } from "framer-motion";
 
@@ -11,6 +12,19 @@ interface TemplateCardProps {
 }
 
 export function TemplateCard({ template, index }: TemplateCardProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(`${window.location.origin}/template/${template.id}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleWhatsAppShare = () => {
+    const text = encodeURIComponent(`ראיתי את התבנית "${template.title}" באתר הדר ואשמח לפרטים!`);
+    window.open(`https://wa.me/?text=${text}`, "_blank");
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 40, scale: 0.97 }}
@@ -59,17 +73,29 @@ export function TemplateCard({ template, index }: TemplateCardProps) {
           </div>
         </div>
 
-        <div className="mt-auto pt-4 flex gap-3 w-full">
-          <Link href={`/template/${template.id}`} className="flex-1">
-            <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary/10 transition-colors">
-              <Palette className="w-4 h-4 ml-2" />
-              התאמה אישית
+        <div className="mt-auto pt-4 flex flex-col gap-3 w-full">
+          <div className="flex gap-3 w-full">
+            <Link href={`/template/${template.id}`} className="flex-1">
+              <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary/10 transition-colors">
+                <Palette className="w-4 h-4 ml-2" />
+                התאמה אישית
+              </Button>
+            </Link>
+            <Button variant="default" className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
+              <Download className="w-4 h-4 ml-2" />
+              הורדה
             </Button>
-          </Link>
-          <Button variant="default" className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
-            <Download className="w-4 h-4 ml-2" />
-            הורדה
-          </Button>
+          </div>
+          <div className="flex gap-3 items-center justify-end text-xs text-muted-foreground mt-2">
+            <button onClick={handleWhatsAppShare} className="flex items-center gap-1 hover:text-[#25D366] transition-colors">
+              <MessageCircle className="w-3.5 h-3.5 text-[#25D366]" />
+              שיתוף
+            </button>
+            <button onClick={handleCopyLink} className="flex items-center gap-1 hover:text-foreground transition-colors">
+              <Copy className="w-3.5 h-3.5" />
+              {copied ? "הועתק!" : "העתק קישור"}
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>
