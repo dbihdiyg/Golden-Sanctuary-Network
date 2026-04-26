@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ElementsPanel, PlacedElement, colorToFilter } from "@/components/ElementsPanel";
 import { RichTextSlot } from "@/components/RichTextSlot";
 import { SlotStylePanel, SlotStyle } from "@/components/SlotStylePanel";
+import { build3DShadows, PRESETS_3D } from "@/lib/3d-presets";
 import { SvgWarpText, WarpType } from "@/components/SvgWarpText";
 
 export interface LogoPos { x: number; y: number; width: number; }
@@ -94,12 +95,32 @@ function resolveFont(slotFamily: string | undefined, fontOverride: string): stri
 
 function buildTextShadows(ss: SlotStyle | undefined, baseColor: string): string {
   const parts: string[] = [];
+
+  // ── Premium 3D preset (takes priority over classic extrude) ──────────────
+  if (ss?.preset3D && ss.preset3D !== "none") {
+    const preset = PRESETS_3D.find(p => p.id === ss.preset3D);
+    const glowCol = ss.glowColor || preset?.glowColor || baseColor;
+    const shadows = build3DShadows(
+      ss.preset3D,
+      ss.lightAngle3D ?? preset?.defaultAngle ?? 45,
+      ss.depth3D     ?? preset?.defaultDepth     ?? 6,
+      ss.shadowStr3D ?? preset?.defaultShadowStr ?? 70,
+      ss.highlight3D ?? preset?.defaultHighlight ?? 60,
+      ss.glow3D      ?? preset?.defaultGlow      ?? 0,
+      glowCol,
+    );
+    parts.push(...shadows);
+  }
+
+  // ── Basic drop shadow ─────────────────────────────────────────────────────
   if (ss?.shadow || ss?.shadowX != null || ss?.shadowY != null || ss?.shadowColor) {
     const x = ss?.shadowX ?? 2, y = ss?.shadowY ?? 2;
     const blur = ss?.shadowBlur ?? 6;
     const col = ss?.shadowColor || "rgba(0,0,0,0.7)";
     parts.push(`${x}px ${y}px ${blur}px ${col}`);
   }
+
+  // ── Classic glow ──────────────────────────────────────────────────────────
   if (ss?.glow || ss?.glowColor || ss?.glowRadius) {
     const gc = ss?.glowColor || baseColor;
     const gr = ss?.glowRadius ?? 12;
@@ -107,18 +128,23 @@ function buildTextShadows(ss: SlotStyle | undefined, baseColor: string): string 
     for (let i = 0; i < intensity; i++) parts.push(`0 0 ${gr * (i + 1)}px ${gc}`);
     if (gc.startsWith("#") && gc.length <= 7) parts.push(`0 0 ${Math.ceil(gr * 0.4)}px ${gc}cc`);
   }
-  if (ss?.extrudeEnabled) {
+
+  // ── Classic extrude (legacy / not active when preset3D is set) ───────────
+  if (ss?.extrudeEnabled && !ss?.preset3D) {
     const depth = ss.extrudeDepth ?? 5;
     const angle = (ss.extrudeAngle ?? 225) * Math.PI / 180;
     const col = ss.extrudeColor || "rgba(0,0,0,0.6)";
     for (let i = 1; i <= depth; i++) parts.push(`${(Math.cos(angle) * i).toFixed(1)}px ${(Math.sin(angle) * i).toFixed(1)}px 0 ${col}`);
   }
-  if (ss?.longShadowEnabled) {
+
+  // ── Long shadow ───────────────────────────────────────────────────────────
+  if (ss?.longShadowEnabled && !ss?.preset3D) {
     const len = ss.longShadowLength ?? 40;
     const angle = (ss.longShadowAngle ?? 135) * Math.PI / 180;
     const col = ss.longShadowColor || "rgba(0,0,0,0.15)";
     for (let i = 1; i <= len; i++) parts.push(`${(Math.cos(angle) * i).toFixed(1)}px ${(Math.sin(angle) * i).toFixed(1)}px 0 ${col}`);
   }
+
   return parts.join(", ");
 }
 

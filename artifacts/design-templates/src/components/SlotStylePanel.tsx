@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Bold, Italic, Underline, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { FontEntry } from "@/lib/fonts";
 import { SvgWarpText } from "./SvgWarpText";
+import { PRESETS_3D, build3DShadows, type Preset3DConfig } from "@/lib/3d-presets";
 
 export interface SlotStyle {
   fontFamily?: string;
@@ -62,6 +63,13 @@ export interface SlotStyle {
 
   outline?: boolean;
   zIndex?: number;
+
+  preset3D?: string;
+  depth3D?: number;
+  lightAngle3D?: number;
+  shadowStr3D?: number;
+  highlight3D?: number;
+  glow3D?: number;
 }
 
 const PRESET_COLORS = [
@@ -361,6 +369,45 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
   const hasShadow = !!(s.shadow || s.shadowX || s.shadowY || s.shadowColor);
   const hasExtrude = !!s.extrudeEnabled;
   const hasLongShadow = !!s.longShadowEnabled;
+  const has3D = !!(s.preset3D && s.preset3D !== "none");
+
+  const applyPreset3D = (preset: Preset3DConfig) => {
+    onChange({
+      preset3D: preset.id,
+      depth3D: preset.defaultDepth,
+      lightAngle3D: preset.defaultAngle,
+      shadowStr3D: preset.defaultShadowStr,
+      highlight3D: preset.defaultHighlight,
+      glow3D: preset.defaultGlow,
+      color: preset.color,
+      gradientEnabled: preset.gradientEnabled,
+      gradientFrom: preset.gradientFrom,
+      gradientTo: preset.gradientTo,
+      gradientAngle: preset.gradientAngle,
+      strokeColor: preset.strokeColor,
+      strokeWidth: preset.strokeWidth,
+      glowColor: preset.glowColor,
+      extrudeEnabled: false,
+      longShadowEnabled: false,
+    });
+  };
+
+  const clear3D = () => {
+    onChange({
+      preset3D: undefined,
+      depth3D: undefined,
+      lightAngle3D: undefined,
+      shadowStr3D: undefined,
+      highlight3D: undefined,
+      glow3D: undefined,
+      glowColor: undefined,
+      gradientEnabled: false,
+      gradientFrom: undefined,
+      gradientTo: undefined,
+      strokeColor: undefined,
+      strokeWidth: undefined,
+    });
+  };
   const hasGlow = !!(s.glow || s.glowColor || s.glowRadius);
   const hasGradient = !!s.gradientEnabled;
   const hasTexture = !!(s.textureType && s.textureType !== "none");
@@ -500,15 +547,112 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
         <SliderRow label="הטיה Y" min={-45} max={45} step={1} value={s.skewY} defaultValue={0} onChange={v => onChange({ skewY: v })} unit="°" />
       </Section>
 
+      {/* ── תלת-מימד פרמיום ────────────────────────────────────────── */}
+      <Section title="✦ תלת-מימד פרמיום" active={has3D} defaultOpen={has3D}
+        badge={has3D ? (PRESETS_3D.find(p => p.id === s.preset3D)?.name ?? "פעיל") : undefined}>
+
+        {/* Preset grid */}
+        <div className="grid grid-cols-3 gap-1.5">
+          {PRESETS_3D.map(preset => {
+            const active = s.preset3D === preset.id;
+            const shadows = build3DShadows(
+              preset.id, preset.defaultAngle,
+              Math.min(preset.defaultDepth, 4),
+              preset.defaultShadowStr, preset.defaultHighlight,
+              preset.defaultGlow, preset.glowColor || preset.color,
+            ).join(", ");
+            const isGrad = !!(preset.gradientEnabled && preset.gradientFrom && preset.gradientTo);
+            const thumbTextStyle: React.CSSProperties = isGrad ? {
+              fontFamily: "'Frank Ruhl Libre', 'David Libre', serif",
+              fontSize: "26px",
+              fontWeight: 900,
+              lineHeight: 1,
+              textShadow: shadows,
+              userSelect: "none",
+              color: "transparent",
+              backgroundImage: `linear-gradient(${preset.gradientAngle ?? 160}deg, ${preset.gradientFrom}, ${preset.gradientTo})`,
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            } : {
+              fontFamily: "'Frank Ruhl Libre', 'David Libre', serif",
+              fontSize: "26px",
+              fontWeight: 900,
+              lineHeight: 1,
+              textShadow: shadows,
+              color: preset.color,
+              userSelect: "none",
+            };
+            return (
+              <button key={preset.id} onClick={() => applyPreset3D(preset)}
+                className={`relative flex flex-col items-center rounded-xl border p-1.5 transition-all duration-200
+                  ${active
+                    ? "border-primary bg-primary/15 shadow-md shadow-primary/20"
+                    : "border-primary/15 hover:border-primary/40 bg-background/40 hover:bg-primary/5"}`}
+              >
+                <div
+                  className="w-full rounded-lg flex items-center justify-center overflow-hidden mb-1"
+                  style={{ height: 44, background: preset.thumbnailBg ?? "#0B1833" }}
+                >
+                  <span style={thumbTextStyle}>הדר</span>
+                </div>
+                <span className="text-[9px] font-semibold text-center leading-tight text-muted-foreground">{preset.name}</span>
+                {active && (
+                  <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-primary rounded-full flex items-center justify-center">
+                    <span className="text-[8px] text-white font-bold leading-none">✓</span>
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Clear button */}
+        {has3D && (
+          <button onClick={clear3D}
+            className="w-full text-[10px] text-muted-foreground hover:text-foreground border border-primary/15 hover:border-primary/30 rounded-lg py-1.5 transition-colors flex items-center justify-center gap-1.5">
+            <RotateCcw className="w-3 h-3" /> הסר תלת-מימד
+          </button>
+        )}
+
+        {/* Fine-tune sliders */}
+        {has3D && (
+          <div className="space-y-1.5 pr-2 border-r-2 border-primary/30 pt-1">
+            <p className="text-[9px] font-semibold text-primary/70 uppercase tracking-wider">כוונון עדין</p>
+            <SliderRow label="עומק" min={1} max={20} step={1}
+              value={s.depth3D} defaultValue={PRESETS_3D.find(p => p.id === s.preset3D)?.defaultDepth ?? 6}
+              onChange={v => onChange({ depth3D: v })} unit="px" />
+            <SliderRow label="זווית אור" min={0} max={345} step={15}
+              value={s.lightAngle3D} defaultValue={PRESETS_3D.find(p => p.id === s.preset3D)?.defaultAngle ?? 45}
+              onChange={v => onChange({ lightAngle3D: v })} unit="°" />
+            <SliderRow label="חוזק צל" min={0} max={100} step={5}
+              value={s.shadowStr3D} defaultValue={PRESETS_3D.find(p => p.id === s.preset3D)?.defaultShadowStr ?? 70}
+              onChange={v => onChange({ shadowStr3D: v })} />
+            <SliderRow label="הברקה" min={0} max={100} step={5}
+              value={s.highlight3D} defaultValue={PRESETS_3D.find(p => p.id === s.preset3D)?.defaultHighlight ?? 60}
+              onChange={v => onChange({ highlight3D: v })} />
+            <SliderRow label="זוהר" min={0} max={100} step={5}
+              value={s.glow3D} defaultValue={PRESETS_3D.find(p => p.id === s.preset3D)?.defaultGlow ?? 0}
+              onChange={v => onChange({ glow3D: v })} />
+          </div>
+        )}
+
+        {!has3D && (
+          <p className="text-[10px] text-muted-foreground text-center py-1">
+            בחר סגנון כדי להפוך את הטקסט לתלת-מימד
+          </p>
+        )}
+      </Section>
+
       {/* ── צל ועומק ───────────────────────────────────────────────── */}
       <Section title="צל ועומק" active={hasShadow || hasExtrude || hasLongShadow}
-        badge={[hasShadow && "צל", hasExtrude && "3D", hasLongShadow && "ארוך"].filter(Boolean).join(" + ") || undefined}>
+        badge={[hasShadow && "צל", hasExtrude && "3D קלאסי", hasLongShadow && "ארוך"].filter(Boolean).join(" + ") || undefined}>
 
         {/* Basic shadow toggle */}
         <div className="flex items-center gap-2 flex-wrap">
           <ToggleChip label="צל" active={!!s.shadow} onClick={() => onChange({ shadow: !s.shadow })} />
-          <ToggleChip label="3D Extrude" active={hasExtrude} onClick={() => onChange({ extrudeEnabled: !s.extrudeEnabled })} />
-          <ToggleChip label="Long Shadow" active={hasLongShadow} onClick={() => onChange({ longShadowEnabled: !s.longShadowEnabled })} />
+          <ToggleChip label="3D קלאסי" active={hasExtrude} onClick={() => onChange({ extrudeEnabled: !s.extrudeEnabled })} />
+          <ToggleChip label="צל ארוך" active={hasLongShadow} onClick={() => onChange({ longShadowEnabled: !s.longShadowEnabled })} />
         </div>
 
         {/* Advanced shadow controls */}
