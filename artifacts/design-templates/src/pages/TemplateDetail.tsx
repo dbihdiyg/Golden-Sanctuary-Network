@@ -1,6 +1,6 @@
 import { useParams, Link } from "wouter";
 import hadarLogo from "@/assets/logo-hadar.png";
-import { ArrowRight, Download, MessageCircle, Palette, CheckCircle2, Share2, Info, Crown, Sun, Moon } from "lucide-react";
+import { ArrowRight, MessageCircle, Palette, CheckCircle2, Share2, Info, Crown, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { templates } from "@/lib/data";
@@ -129,11 +129,6 @@ export default function TemplateDetail() {
                   </Button>
                 </Link>
                 
-                <Button size="lg" variant="outline" className="w-full text-lg h-16 border-primary/50 text-primary hover:bg-primary/10 font-bold transition-colors">
-                  <Download className="w-6 h-6 ml-3" />
-                  הורד קובץ מקור
-                </Button>
-
                 <Button size="lg" variant="secondary" className="w-full text-lg h-16 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 border border-[#25D366]/20 mt-2 font-bold transition-colors">
                   <MessageCircle className="w-6 h-6 ml-3" />
                   הזמנה מהירה בוואטסאפ
