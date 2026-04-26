@@ -5,7 +5,7 @@ import {
   Lock, Plus, Trash2, Edit2, Eye, Package, ShoppingBag,
   BarChart3, LogOut, Check, X, ImagePlus, GripVertical,
   RefreshCw, ArrowRight, ChevronDown, ChevronUp, Loader2,
-  AlertCircle, Users, DollarSign, Clock, ToggleLeft, ToggleRight,
+  AlertCircle, Users, DollarSign, Clock, ToggleLeft, ToggleRight, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -543,8 +543,144 @@ function PriceCell({ tmpl, token, onUpdate }: { tmpl: DBTemplate; token: string;
   );
 }
 
+// ─── Elements manager component ──────────────────────────────────────────────
+interface LibEl { id: number; name: string; category: string; fileContent: string; mimeType: string; isActive: boolean; }
+
+function ElementsManager({ token }: { token: string }) {
+  const [elements, setElements] = useState<LibEl[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("קישוטים");
+  const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const load = async () => {
+    try {
+      const d = await adminFetch("/hadar/admin/elements", token);
+      setElements(d);
+    } catch { setError("שגיאה בטעינה"); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const upload = async (file: File) => {
+    if (!name.trim()) { setError("הכניסו שם לאלמנט"); return; }
+    setUploading(true); setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("name", name);
+      fd.append("category", category);
+      const res = await fetch(`${API_BASE}/api/hadar/admin/elements`, {
+        method: "POST",
+        headers: { "x-admin-secret": token },
+        body: fd,
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "שגיאה");
+      setElements(prev => [d, ...prev]);
+      setName(""); setError(null);
+      if (fileRef.current) fileRef.current.value = "";
+    } catch (e: any) {
+      setError(e.message);
+    } finally { setUploading(false); }
+  };
+
+  const toggleActive = async (el: LibEl) => {
+    const updated = await adminFetch(`/hadar/admin/elements/${el.id}`, token, {
+      method: "PATCH",
+      body: JSON.stringify({ isActive: !el.isActive }),
+    });
+    setElements(prev => prev.map(e => e.id === el.id ? updated : e));
+  };
+
+  const deleteEl = async (id: number) => {
+    if (!confirm("למחוק?")) return;
+    await adminFetch(`/hadar/admin/elements/${id}`, token, { method: "DELETE" });
+    setElements(prev => prev.filter(e => e.id !== id));
+  };
+
+  const CATEGORIES = ["קישוטים", "מסגרות", "כוכבים", "פרחים", "אותיות", "אחר"];
+
+  return (
+    <motion.div key="elements" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+      {/* Upload form */}
+      <div className="bg-card border border-primary/10 rounded-xl p-5 mb-6">
+        <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
+          <ImagePlus className="w-4 h-4 text-primary" /> העלאת אלמנט חדש
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div>
+            <Label className="text-xs mb-1 block">שם האלמנט</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="כוכב זהב" className="h-8 text-sm" dir="rtl" />
+          </div>
+          <div>
+            <Label className="text-xs mb-1 block">קטגוריה</Label>
+            <select
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+              className="w-full h-8 text-sm rounded-md border border-input bg-background px-2 text-foreground"
+            >
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+        <div
+          onClick={() => fileRef.current?.click()}
+          className="border-2 border-dashed border-primary/20 hover:border-primary/50 rounded-xl p-5 flex flex-col items-center gap-2 cursor-pointer transition-all hover:bg-primary/5"
+        >
+          <Upload className="w-6 h-6 text-primary/50" />
+          <p className="text-xs text-muted-foreground">גרור או לחץ להעלאת SVG / PNG / JPG</p>
+          {uploading && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+        </div>
+        <input
+          ref={fileRef} type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp"
+          className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); }}
+        />
+        {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+      </div>
+
+      {/* Elements grid */}
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+      ) : elements.length === 0 ? (
+        <p className="text-center text-muted-foreground py-10 text-sm">אין אלמנטים עדיין</p>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {elements.map(el => (
+            <div key={el.id} className={`bg-card border rounded-xl p-3 flex flex-col gap-2 transition-all ${el.isActive ? "border-primary/20" : "border-primary/5 opacity-50"}`}>
+              <div className="aspect-square bg-background/60 rounded-lg flex items-center justify-center p-3 border border-primary/10">
+                <img src={el.fileContent} alt={el.name} className="w-full h-full object-contain" />
+              </div>
+              <p className="text-xs font-medium text-foreground truncate text-center">{el.name}</p>
+              <p className="text-[10px] text-muted-foreground text-center">{el.category}</p>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => toggleActive(el)}
+                  className={`flex-1 text-[10px] py-1 rounded-md font-medium transition-colors ${el.isActive ? "bg-green-500/10 text-green-400 hover:bg-green-500/20" : "bg-primary/10 text-primary hover:bg-primary/20"}`}
+                >
+                  {el.isActive ? "פעיל" : "לא פעיל"}
+                </button>
+                <button
+                  onClick={() => deleteEl(el.id)}
+                  className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 // ─── Main Admin Panel ─────────────────────────────────────────────────────────
-type Tab = "orders" | "templates" | "stats";
+type Tab = "orders" | "templates" | "elements" | "stats";
 
 export default function Admin() {
   const [pw, setPw] = useState("");
@@ -745,10 +881,10 @@ export default function Admin() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-0 mb-6 border-b border-primary/10">
-          {([["orders", "הזמנות"], ["templates", "ניהול תבניות"], ["stats", "סטטיסטיקות"]] as [Tab, string][]).map(([t, l]) => (
+        <div className="flex gap-0 mb-6 border-b border-primary/10 overflow-x-auto">
+          {([["orders", "הזמנות"], ["templates", "תבניות"], ["elements", "אלמנטים"], ["stats", "סטטיסטיקות"]] as [Tab, string][]).map(([t, l]) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap ${tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               {l}
             </button>
           ))}
@@ -922,6 +1058,9 @@ export default function Admin() {
               </div>
             </motion.div>
           )}
+
+          {/* ── Elements ── */}
+          {tab === "elements" && token && <ElementsManager token={token} />}
 
           {/* ── Stats ── */}
           {tab === "stats" && stats && (

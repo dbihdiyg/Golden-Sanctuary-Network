@@ -43,6 +43,18 @@ export const hadarTemplates = pgTable("hadar_templates", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const hadarElements = pgTable("hadar_elements", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  category: text("category").notNull().default("general"),
+  fileContent: text("file_content").notNull(),
+  mimeType: text("mime_type").notNull().default("image/svg+xml"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type HadarElement = typeof hadarElements.$inferSelect;
+
 export const insertHadarDesignSchema = createInsertSchema(hadarDesigns).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertHadarDesign = z.infer<typeof insertHadarDesignSchema>;
 export type HadarDesign = typeof hadarDesigns.$inferSelect;

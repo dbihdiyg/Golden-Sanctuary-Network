@@ -2,13 +2,15 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useAuth, useUser, SignInButton } from "@clerk/react";
 import hadarLogo from "@/assets/logo-hadar.png";
-import { ArrowRight, Crown, MessageCircle, Download, RotateCcw, CheckCircle2, ZoomIn, ZoomOut, Sun, Moon, Lock, Loader2, User, CreditCard, LogIn, Type, ChevronDown, ChevronUp, ImagePlus, X as XIcon, Upload } from "lucide-react";
+import { ArrowRight, Crown, MessageCircle, Download, RotateCcw, CheckCircle2, ZoomIn, ZoomOut, Sun, Moon, Lock, Loader2, User, CreditCard, LogIn, Type, ChevronDown, ChevronUp, ImagePlus, X as XIcon, Upload, Layers, AlignLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { templates, TextSlot } from "@/lib/data";
 import { useTheme } from "@/hooks/useTheme";
 import { motion, AnimatePresence } from "framer-motion";
+import { ElementsPanel, PlacedElement, colorToFilter } from "@/components/ElementsPanel";
+import { RichTextSlot } from "@/components/RichTextSlot";
 
 // ─── Hebrew fonts — Google Fonts (free / OFL) ────────────────────────────────
 export const HEBREW_FONTS: { name: string; family: string; category: "serif" | "sans" | "local" }[] = [
@@ -300,10 +302,11 @@ function LogoUploader({ logoUrl, onChange }: { logoUrl: string | null; onChange:
   );
 }
 
-function InvitationPreview({ template, values, zoom, fontOverride, logoUrl }: {
+function InvitationPreview({ template, values, zoom, fontOverride, logoUrl, placedElements, selectedElementUid, onSelectElement }: {
   template: typeof templates[0]; values: Record<string, string>; zoom: number; fontOverride: string; logoUrl: string | null;
+  placedElements?: PlacedElement[]; selectedElementUid?: string | null; onSelectElement?: (uid: string | null) => void;
 }) {
-  const slots = template.slots || [];
+  const slots = (template.slots || []).filter(s => s.id !== "__elements");
   const hasCoords = slots.some(s => s.x != null && s.y != null);
   return (
     <div className="relative w-full overflow-hidden rounded-xl shadow-2xl border border-primary/20" style={{
@@ -344,11 +347,58 @@ function InvitationPreview({ template, values, zoom, fontOverride, logoUrl }: {
             <img src={logoUrl} alt="לוגו" className="mb-2 object-contain" style={{ maxHeight: 36, maxWidth: "45%", filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.5))" }} />
           )}
           <div className="w-24 h-px bg-[#D6A84F]/50 mb-2" />
-          {slots.map(slot => <StackedLine key={slot.id} slot={slot} value={values[slot.id] ?? slot.defaultValue} fontOverride={fontOverride} />)}
+          {slots.map(slot => {
+            const val = values[slot.id] ?? slot.defaultValue;
+            const isHtml = val.includes("<");
+            const sz = previewFontSizePx[slot.fontSize || "sm"];
+            if (!val.trim()) return null;
+            return isHtml ? (
+              <div key={slot.id} className="text-center leading-snug my-0.5" style={{
+                fontSize: sz, fontFamily: resolveFont(slot.fontFamily, fontOverride),
+                fontWeight: slot.bold ? 700 : 400, fontStyle: slot.italic ? "italic" : "normal",
+                color: resolveColor(slot.color), lineHeight: slot.lineHeight ?? 1.35, direction: "rtl",
+              }} dangerouslySetInnerHTML={{ __html: val }} />
+            ) : (
+              <StackedLine key={slot.id} slot={slot} value={val} fontOverride={fontOverride} />
+            );
+          })}
           <div className="w-24 h-px bg-[#D6A84F]/50 mt-2" />
         </div>
       )}
-      <div className="absolute bottom-2.5 left-0 right-0 flex items-center justify-center pointer-events-none" style={{ opacity: 0.28 }}>
+
+      {/* ── Placed elements layer ── */}
+      {(placedElements ?? []).map(pe => (
+        <div
+          key={pe.uid}
+          onClick={() => onSelectElement?.(pe.uid === selectedElementUid ? null : pe.uid)}
+          style={{
+            position: "absolute",
+            left: `${pe.x}%`,
+            top: `${pe.y}%`,
+            width: `${pe.width}%`,
+            opacity: pe.opacity,
+            cursor: "pointer",
+            zIndex: 20,
+            outline: pe.uid === selectedElementUid ? "2px solid #D6A84F" : "none",
+            outlineOffset: 2,
+            borderRadius: 4,
+          }}
+        >
+          <img
+            src={pe.src}
+            alt=""
+            style={{
+              width: "100%",
+              height: "auto",
+              display: "block",
+              filter: pe.tintColor ? colorToFilter(pe.tintColor) : "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",
+            }}
+            draggable={false}
+          />
+        </div>
+      ))}
+
+      <div className="absolute bottom-2.5 left-0 right-0 flex items-center justify-center pointer-events-none" style={{ opacity: 0.28, zIndex: 30 }}>
         <img src={hadarLogo} alt="הדר" style={{ height: 18, width: "auto", objectFit: "contain" }} />
       </div>
     </div>
@@ -481,6 +531,9 @@ export default function Editor() {
   const [designName, setDesignName] = useState("עיצוב שלי");
   const [selectedFont, setSelectedFont] = useState(DEFAULT_FONT);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [sidebarTab, setSidebarTab] = useState<"text" | "elements">("text");
+  const [placedElements, setPlacedElements] = useState<PlacedElement[]>([]);
+  const [selectedElementUid, setSelectedElementUid] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Load default font on mount
@@ -505,9 +558,14 @@ export default function Editor() {
         });
         if (res.ok) {
           const data = await res.json();
-          setValues(data.fieldValues || initValues());
+          const fv = data.fieldValues || initValues();
+          setValues(fv);
           setDesignName(data.designName || "עיצוב שלי");
           if (data.status === "paid") setPaySuccess(true);
+          try {
+            const els = JSON.parse(fv["__elements"] || "[]");
+            if (Array.isArray(els)) setPlacedElements(els);
+          } catch {}
         }
       } catch (err) {
         console.error(err);
@@ -548,23 +606,50 @@ export default function Editor() {
     setSaved(false);
   };
 
+  const getFieldValuesWithElements = useCallback(() => {
+    return { ...values, "__elements": JSON.stringify(placedElements) };
+  }, [values, placedElements]);
+
+  const handleAddElement = useCallback((el: { id: number; fileContent: string }) => {
+    const uid = `el_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    setPlacedElements(prev => [...prev, {
+      uid, elementId: el.id, src: el.fileContent,
+      x: 40, y: 40, width: 20, tintColor: "", opacity: 1,
+    }]);
+    setSelectedElementUid(uid);
+    setSidebarTab("elements");
+    setSaved(false);
+  }, []);
+
+  const handleUpdateElement = useCallback((uid: string, patch: Partial<PlacedElement>) => {
+    setPlacedElements(prev => prev.map(e => e.uid === uid ? { ...e, ...patch } : e));
+    setSaved(false);
+  }, []);
+
+  const handleDeleteElement = useCallback((uid: string) => {
+    setPlacedElements(prev => prev.filter(e => e.uid !== uid));
+    if (selectedElementUid === uid) setSelectedElementUid(null);
+    setSaved(false);
+  }, [selectedElementUid]);
+
   const handleAutoSave = async (): Promise<number | null> => {
     if (!isSignedIn || !template) return null;
     setSaving(true);
+    const fv = getFieldValuesWithElements();
     try {
       const token = await getToken();
       if (designId) {
         await fetch(`${API_BASE}/api/hadar/designs/${designId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ fieldValues: values, designName }),
+          body: JSON.stringify({ fieldValues: fv, designName }),
         });
         return designId;
       } else {
         const res = await fetch(`${API_BASE}/api/hadar/designs`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ templateId: template.id, fieldValues: values, designName }),
+          body: JSON.stringify({ templateId: template.id, fieldValues: fv, designName }),
         });
         const data = await res.json();
         setDesignId(data.id);
@@ -712,8 +797,8 @@ export default function Editor() {
         <aside className="lg:w-[420px] xl:w-[460px] shrink-0 border-b lg:border-b-0 lg:border-l border-primary/10 flex flex-col bg-card/50 overflow-hidden">
           <div className="px-5 py-3 border-b border-primary/10 bg-card flex items-center justify-between">
             <div>
-              <p className="font-semibold text-sm text-foreground">עריכת טקסטים</p>
-              <p className="text-xs text-muted-foreground">{slots.length} שדות לעריכה</p>
+              <p className="font-semibold text-sm text-foreground">עורך העיצוב</p>
+              <p className="text-xs text-muted-foreground">{slots.length} שדות טקסט</p>
             </div>
             <span className="text-xs bg-primary/10 text-primary border border-primary/20 rounded-full px-2.5 py-0.5 font-medium">
               ₪{template.price}
@@ -721,13 +806,13 @@ export default function Editor() {
           </div>
 
           {/* Steps guide */}
-          <div className="px-5 py-3 border-b border-primary/10 bg-primary/5">
-            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+          <div className="px-5 py-2.5 border-b border-primary/10 bg-primary/5">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
               {[
-                { n: "1", label: "ערכו טקסטים", done: true },
+                { n: "1", label: "ערכו", done: true },
                 { n: "2", label: "שמרו", done: isSignedIn && saved },
                 { n: "3", label: "תשלום", done: paySuccess },
-                { n: "4", label: "קבצי עיצוב", done: false },
+                { n: "4", label: "קבצים", done: false },
               ].map((step, i) => (
                 <div key={step.n} className="flex items-center gap-1">
                   {i > 0 && <span className="text-primary/30">←</span>}
@@ -742,68 +827,106 @@ export default function Editor() {
             </div>
           </div>
 
-          {/* Design name input */}
-          {isSignedIn && (
-            <div className="px-5 py-2 border-b border-primary/10 bg-card/30">
-              <Input
-                value={designName}
-                onChange={e => setDesignName(e.target.value)}
-                placeholder="שם העיצוב שלכם..."
-                className="h-8 text-xs bg-transparent border-0 border-b border-primary/10 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary/40 text-foreground placeholder:text-muted-foreground/40"
-                dir="rtl"
-              />
-            </div>
+          {/* Sidebar Tabs */}
+          <div className="flex border-b border-primary/10 bg-card">
+            <button
+              onClick={() => setSidebarTab("text")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-all ${
+                sidebarTab === "text"
+                  ? "text-primary border-b-2 border-primary"
+                  : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
+              }`}
+            >
+              <AlignLeft className="w-3.5 h-3.5" />
+              טקסטים
+            </button>
+            <button
+              onClick={() => setSidebarTab("elements")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-all ${
+                sidebarTab === "elements"
+                  ? "text-primary border-b-2 border-primary"
+                  : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              אלמנטים
+              {placedElements.length > 0 && (
+                <span className="bg-primary text-primary-foreground text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                  {placedElements.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* ── TAB: Text ── */}
+          {sidebarTab === "text" && (
+            <>
+              {/* Design name input */}
+              {isSignedIn && (
+                <div className="px-5 py-2 border-b border-primary/10 bg-card/30">
+                  <Input
+                    value={designName}
+                    onChange={e => setDesignName(e.target.value)}
+                    placeholder="שם העיצוב שלכם..."
+                    className="h-8 text-xs bg-transparent border-0 border-b border-primary/10 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary/40 text-foreground placeholder:text-muted-foreground/40"
+                    dir="rtl"
+                  />
+                </div>
+              )}
+
+              {/* Font selector */}
+              <FontSelector selected={selectedFont} onChange={setSelectedFont} />
+
+              {/* Logo uploader */}
+              <LogoUploader logoUrl={logoUrl} onChange={setLogoUrl} />
+
+              {/* Fields list with rich text */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="px-4 py-3 space-y-3">
+                  <p className="text-[10px] text-muted-foreground">
+                    בחרו חלק מהטקסט לשינוי גודל או גופן ספציפי
+                  </p>
+                  {slots.filter(s => s.id !== "__elements").map((slot, index) => (
+                    <motion.div
+                      key={slot.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.03 }}
+                    >
+                      <div className="bg-background border border-primary/10 rounded-xl px-3 py-2.5 hover:border-primary/30 transition-colors focus-within:border-primary/50 focus-within:shadow-sm focus-within:shadow-primary/10">
+                        <div className="flex items-start gap-2">
+                          <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <RichTextSlot
+                              label={slot.label}
+                              value={values[slot.id] ?? slot.defaultValue}
+                              placeholder={slot.placeholder}
+                              multiline={slot.multiline}
+                              onChange={html => updateValue(slot.id, html)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
 
-          {/* Font selector */}
-          <FontSelector selected={selectedFont} onChange={setSelectedFont} />
-
-          {/* Logo uploader */}
-          <LogoUploader logoUrl={logoUrl} onChange={setLogoUrl} />
-
-          {/* Fields list */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="px-4 py-3 space-y-2">
-              {slots.map((slot, index) => (
-                <motion.div
-                  key={slot.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.03 }}
-                  className="group"
-                >
-                  <div className="flex items-start gap-3 bg-background border border-primary/10 rounded-xl px-3 py-2.5 hover:border-primary/30 transition-colors focus-within:border-primary/50 focus-within:shadow-sm focus-within:shadow-primary/10">
-                    <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0 mt-1.5">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <label className="block text-[11px] font-medium text-muted-foreground mb-1 leading-none">
-                        {slot.label}
-                      </label>
-                      {slot.multiline ? (
-                        <Textarea
-                          value={values[slot.id] ?? slot.defaultValue}
-                          onChange={e => updateValue(slot.id, e.target.value)}
-                          placeholder={slot.placeholder}
-                          rows={2}
-                          className="resize-none text-sm bg-transparent border-0 border-b border-primary/10 focus-visible:ring-0 focus-visible:border-primary/40 rounded-none px-0 py-0.5 min-h-0 h-auto text-foreground placeholder:text-muted-foreground/40"
-                          dir="rtl"
-                        />
-                      ) : (
-                        <Input
-                          value={values[slot.id] ?? slot.defaultValue}
-                          onChange={e => updateValue(slot.id, e.target.value)}
-                          placeholder={slot.placeholder}
-                          className="text-sm bg-transparent border-0 border-b border-primary/10 focus-visible:ring-0 focus-visible:border-primary/40 rounded-none px-0 py-0.5 h-7 text-foreground placeholder:text-muted-foreground/40"
-                          dir="rtl"
-                        />
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
+          {/* ── TAB: Elements ── */}
+          {sidebarTab === "elements" && (
+            <ElementsPanel
+              placedElements={placedElements}
+              selectedUid={selectedElementUid}
+              onSelect={setSelectedElementUid}
+              onAdd={handleAddElement}
+              onUpdate={handleUpdateElement}
+              onDelete={handleDeleteElement}
+            />
+          )}
 
           {/* Bottom action bar */}
           <div className="border-t border-primary/10 bg-card p-4 space-y-2">
@@ -847,7 +970,16 @@ export default function Editor() {
           </div>
 
           <div ref={previewRef} className="w-full max-w-xs sm:max-w-sm md:max-w-md relative" style={{ transformOrigin: "top center" }}>
-            <InvitationPreview template={template} values={values} zoom={zoom} fontOverride={selectedFont} logoUrl={logoUrl} />
+            <InvitationPreview
+              template={template}
+              values={values}
+              zoom={zoom}
+              fontOverride={selectedFont}
+              logoUrl={logoUrl}
+              placedElements={placedElements}
+              selectedElementUid={selectedElementUid}
+              onSelectElement={uid => { setSelectedElementUid(uid); if (uid) setSidebarTab("elements"); }}
+            />
             {isLoaded && !isSignedIn && <AuthWall templateId={template.id} />}
           </div>
 

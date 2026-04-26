@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { db } from "@workspace/db";
-import { hadarDesigns, hadarOrders, hadarTemplates } from "@workspace/db/schema";
+import { hadarDesigns, hadarOrders, hadarTemplates, hadarElements } from "@workspace/db/schema";
 import { eq, desc, sql, count, sum } from "drizzle-orm";
 import { objectStorageClient } from "../lib/objectStorage";
 import { randomUUID } from "crypto";
@@ -249,6 +249,89 @@ router.patch("/hadar/admin/templates/:id", adminAuth, async (req, res) => {
       .returning();
     if (!updated) return res.status(404).json({ error: "Not found" });
     res.json(updated);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Elements library (public read) ──────────────────────────────────────────
+router.get("/hadar/public-elements", async (_req, res) => {
+  try {
+    const els = await db
+      .select()
+      .from(hadarElements)
+      .where(eq(hadarElements.isActive, true))
+      .orderBy(hadarElements.createdAt);
+    res.json(els);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Admin: upload element ─────────────────────────────────────────────────
+router.post("/hadar/admin/elements", adminAuth, upload.single("file"), async (req: any, res) => {
+  try {
+    const { name, category } = req.body;
+    if (!name) return res.status(400).json({ error: "name required" });
+
+    let fileContent: string;
+    let mimeType: string;
+
+    if (req.file) {
+      mimeType = req.file.mimetype || "image/svg+xml";
+      const base64 = req.file.buffer.toString("base64");
+      fileContent = `data:${mimeType};base64,${base64}`;
+    } else if (req.body.fileContent) {
+      fileContent = req.body.fileContent;
+      mimeType = req.body.mimeType || "image/svg+xml";
+    } else {
+      return res.status(400).json({ error: "file or fileContent required" });
+    }
+
+    const [el] = await db
+      .insert(hadarElements)
+      .values({ name, category: category || "general", fileContent, mimeType })
+      .returning();
+    res.json(el);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Admin: list all elements ──────────────────────────────────────────────
+router.get("/hadar/admin/elements", adminAuth, async (_req, res) => {
+  try {
+    const els = await db.select().from(hadarElements).orderBy(desc(hadarElements.createdAt));
+    res.json(els);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Admin: toggle element active ─────────────────────────────────────────
+router.patch("/hadar/admin/elements/:id", adminAuth, async (req, res) => {
+  try {
+    const { name, category, isActive } = req.body;
+    const patch: Record<string, any> = {};
+    if (name !== undefined) patch.name = name;
+    if (category !== undefined) patch.category = category;
+    if (isActive !== undefined) patch.isActive = isActive;
+    const [updated] = await db
+      .update(hadarElements)
+      .set(patch)
+      .where(eq(hadarElements.id, Number(req.params.id)))
+      .returning();
+    res.json(updated);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Admin: delete element ─────────────────────────────────────────────────
+router.delete("/hadar/admin/elements/:id", adminAuth, async (req, res) => {
+  try {
+    await db.delete(hadarElements).where(eq(hadarElements.id, Number(req.params.id)));
+    res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
