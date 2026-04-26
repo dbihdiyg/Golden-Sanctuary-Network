@@ -138,34 +138,33 @@ router.get("/hadar/checkout/verify", requireAuth(), async (req: any, res) => {
   }
 });
 
-export function stripeWebhookHandler() {
-  return Router().post("/hadar/webhook", async (req, res) => {
-    const sig = req.headers["stripe-signature"] as string;
-    let event: any;
+// Webhook handler — raw body is provided by the app-level middleware at /api/hadar/webhook
+router.post("/hadar/webhook", async (req, res) => {
+  const sig = req.headers["stripe-signature"] as string;
+  let event: any;
 
-    try {
-      const stripe = await getUncachableStripeClient();
-      event = stripe.webhooks.constructEvent(req.body as Buffer, sig, process.env.STRIPE_WEBHOOK_SECRET || "");
-    } catch (err: any) {
-      return res.status(400).send(`Webhook Error: ${err.message}`);
+  try {
+    const stripe = await getUncachableStripeClient();
+    event = stripe.webhooks.constructEvent(req.body as Buffer, sig, process.env.STRIPE_WEBHOOK_SECRET || "");
+  } catch (err: any) {
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const designId = Number(session.metadata?.designId);
+    if (designId) {
+      await db.update(hadarDesigns)
+        .set({ status: "paid", updatedAt: new Date() })
+        .where(eq(hadarDesigns.id, designId));
+
+      await db.update(hadarOrders)
+        .set({ status: "paid", stripePaymentIntent: session.payment_intent })
+        .where(eq(hadarOrders.stripeSessionId, session.id));
     }
+  }
 
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-      const designId = Number(session.metadata?.designId);
-      if (designId) {
-        await db.update(hadarDesigns)
-          .set({ status: "paid", updatedAt: new Date() })
-          .where(eq(hadarDesigns.id, designId));
-
-        await db.update(hadarOrders)
-          .set({ status: "paid", stripePaymentIntent: session.payment_intent })
-          .where(eq(hadarOrders.stripeSessionId, session.id));
-      }
-    }
-
-    res.json({ received: true });
-  });
-}
+  res.json({ received: true });
+});
 
 export default router;
