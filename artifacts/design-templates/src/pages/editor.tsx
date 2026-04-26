@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TextSlot, Template } from "@/lib/data";
-import { HEBREW_FONTS, loadGoogleFont, useCombinedFonts, injectCustomFont } from "@/lib/fonts";
+import { HEBREW_FONTS, loadGoogleFont, loadAnyFont, loadFontEntry, useCombinedFonts, useCustomFonts, injectCustomFont } from "@/lib/fonts";
 import { useTheme } from "@/hooks/useTheme";
 import { motion, AnimatePresence } from "framer-motion";
 import { ElementsPanel, PlacedElement, colorToFilter } from "@/components/ElementsPanel";
@@ -29,43 +29,8 @@ import { Text3DCanvas } from "@/components/Text3DCanvas";
 
 export interface LogoPos { x: number; y: number; width: number; }
 
-// ─── Local BA Hebrew fonts ─────────────────────────────────────────────────────
-const LOCAL_BA_FONTS: {
-  name: string; family: string; files: { weight: number; src: string }[];
-}[] = [
-  { name: "ארזי הלבנון",    family: "BA Arzey Halevanon",   files: [{ weight: 300, src: "BAArzeyHalevanon-Light.ttf" }, { weight: 700, src: "BAArzeyHalevanon-Bold.ttf" }] },
-  { name: "ברקאי",          family: "BA Barkai",             files: [{ weight: 400, src: "BABarkai-Regular.otf" }] },
-  { name: "קזבלנקה",        family: "BA Casablanca",         files: [{ weight: 300, src: "BA-Casablanca-Light.otf" }] },
-  { name: "פונטוב",         family: "BA Fontov",             files: [{ weight: 400, src: "BA-Fontov-Regular.otf" }, { weight: 700, src: "BA-Fontov-Bold.otf" }] },
-  { name: "היצירה",         family: "BA HaYetzira",          files: [{ weight: 300, src: "BA-HaYetzira-Light.otf" }, { weight: 400, src: "BA-HaYetzira-Regular.otf" }] },
-  { name: "קריית קודש",     family: "BA Kiriat Kodesh",      files: [{ weight: 700, src: "BA-Kiriat-Kodesh-Bold.otf" }] },
-  { name: "מים חיים",       family: "BA Maim Haim",          files: [{ weight: 400, src: "BA-Maim-Haim-Regular.otf" }] },
-  { name: "מסובין",         family: "BA Mesubin Rolltext",   files: [{ weight: 400, src: "BA-Mesubin-Rolltext.otf" }] },
-  { name: "מומנט",          family: "BA Moment Original",    files: [{ weight: 400, src: "BA-Moment-Original.otf" }] },
-  { name: "נפלאות",         family: "BA Niflaot",            files: [{ weight: 900, src: "BANiflaot-Black.ttf" }] },
-  { name: "פלטפורמה",       family: "BA Platforma",          files: [{ weight: 300, src: "BAPlatforma-Light.otf" }, { weight: 700, src: "BAPlatforma-Bold.otf" }, { weight: 900, src: "BAPlatforma-Black.otf" }] },
-  { name: "ראדלהיים",       family: "BA Radlheim",           files: [{ weight: 700, src: "BARadlheim-Bold.otf" }] },
-  { name: "ראשון לציון",    family: "BA Rishon LeZion",      files: [{ weight: 400, src: "BARishonLezion-Regular.ttf" }] },
-];
-
-LOCAL_BA_FONTS.forEach(f => HEBREW_FONTS.push({ name: f.name, family: f.family, category: "local" }));
-
 const DEFAULT_FONT = "Frank Ruhl Libre";
 const SYSTEM_SLOT_IDS = new Set(["__elements", "__slotStyles", "__logoPos", "__slotPositions", "__userSlots", "__lockedSlots"]);
-
-function loadLocalFont(family: string) {
-  const id = `lfont-${family.replace(/\s/g, "-")}`;
-  if (document.getElementById(id)) return;
-  const meta = LOCAL_BA_FONTS.find(f => f.family === family);
-  if (!meta) return;
-  const base = import.meta.env.BASE_URL;
-  const fmt = (src: string) => src.endsWith(".ttf") ? "truetype" : "opentype";
-  const css = meta.files.map(f => `@font-face { font-family: '${meta.family}'; src: url('${base}fonts/${f.src}') format('${fmt(f.src)}'); font-weight: ${f.weight}; font-style: normal; font-display: swap; }`).join("\n");
-  const style = document.createElement("style");
-  style.id = id;
-  style.textContent = css;
-  document.head.appendChild(style);
-}
 
 const TAB_LABELS: Record<"serif" | "sans" | "local" | "custom", string> = {
   serif: "סריף", sans: "סאנס", local: "עברית", custom: "מותאם",
@@ -716,6 +681,8 @@ export default function Editor() {
   const params = useParams();
   const id = params.id;
 
+  const combinedFonts = useCombinedFonts();
+
   const [template, setTemplate] = useState<Template | null | "loading">("loading");
   const [templateLoadError, setTemplateLoadError] = useState(false);
 
@@ -868,9 +835,7 @@ export default function Editor() {
 
       // Pre-load fonts referenced by admin
       if (style.fontFamily) {
-        const isLocal = LOCAL_BA_FONTS.some(f => f.family === style.fontFamily);
-        if (isLocal) loadLocalFont(style.fontFamily!);
-        else loadGoogleFont(style.fontFamily!);
+        loadAnyFont(style.fontFamily!);
       }
     });
     if (Object.keys(initSS).length > 0) setSlotStyles(initSS);
@@ -899,9 +864,7 @@ export default function Editor() {
               // Load all per-slot fonts that were saved
               Object.values(ss as Record<string, SlotStyle>).forEach(st => {
                 if (!st.fontFamily) return;
-                const isLocal = LOCAL_BA_FONTS.some(f => f.family === st.fontFamily);
-                if (isLocal) loadLocalFont(st.fontFamily!);
-                else loadGoogleFont(st.fontFamily!);
+                loadAnyFont(st.fontFamily!);
               });
             }
           } catch {}
@@ -2026,6 +1989,7 @@ export default function Editor() {
                     {!activeSlot.fixed && (
                       <SlotStylePanel
                         slotId={activeSlot.id}
+                        fonts={combinedFonts}
                         style={{
                           fontSize: activeSlot.fontSizePx ?? previewFontSizePx[activeSlot.fontSize || "sm"] ?? 16,
                           ...slotStyles[activeSlot.id],
@@ -2176,9 +2140,11 @@ function FontPickerPanel({ selected, onChange }: { selected: string; onChange: (
   const hasCustom = combinedFonts.some(f => f.category === "custom");
   const fonts = combinedFonts.filter(f => f.category === tab);
   const handlePick = (font: typeof combinedFonts[0]) => {
-    if (font.category === "local") loadLocalFont(font.family);
-    else if (font.category !== "custom") loadGoogleFont(font.family);
-    onChange(font.family);
+    console.log(`[FONT] FontPickerPanel pick: family="${font.family}" category="${font.category}"`);
+    loadFontEntry(font).then(() => {
+      console.log(`[FONT] FontPickerPanel applying fontFamily="${font.family}"`);
+      onChange(font.family);
+    });
   };
   return (
     <div className="px-4 pb-3">

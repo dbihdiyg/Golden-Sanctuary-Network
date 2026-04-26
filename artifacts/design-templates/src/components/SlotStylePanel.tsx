@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Bold, Italic, Underline, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
-import { FontEntry } from "@/lib/fonts";
+import { FontEntry, loadFontEntry } from "@/lib/fonts";
 import { SvgWarpText } from "./SvgWarpText";
 import { PRESETS_3D, build3DShadows, type Preset3DConfig } from "@/lib/3d-presets";
 import { Text3DCanvas, MATERIAL_3D_OPTIONS, type Material3DType } from "./Text3DCanvas";
@@ -371,6 +371,15 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
   const [fontOpen, setFontOpen] = useState(false);
   const [fontDropPos, setFontDropPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const fontBtnRef = useRef<HTMLButtonElement>(null);
+
+  const handleFontPick = useCallback((f: FontEntry) => {
+    console.log(`[FONT] SlotStylePanel pick: family="${f.family}" category="${f.category}"`);
+    setFontOpen(false);
+    loadFontEntry(f).then(() => {
+      console.log(`[FONT] SlotStylePanel applying fontFamily="${f.family}"`);
+      onChange({ fontFamily: f.family });
+    });
+  }, [onChange]);
   const [gradientCat, setGradientCat] = useState(GRADIENT_LIBRARY[0].id);
   const [presetCat, setPresetCat] = useState<string>("metal");
   const s = style;
@@ -587,7 +596,7 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
                   {customFonts.map(f => (
                     <button key={f.family} className="w-full text-right px-3 py-2 hover:bg-primary/10 text-sm border-t border-primary/5"
                       style={{ fontFamily: `'${f.family}', serif` }}
-                      onClick={() => { onChange({ fontFamily: f.family }); setFontOpen(false); }}>
+                      onClick={() => handleFontPick(f)}>
                       {f.name}
                     </button>
                   ))}
@@ -597,7 +606,7 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
                   {serifFonts.map(f => (
                     <button key={f.family} className="w-full text-right px-3 py-2 hover:bg-primary/10 text-sm border-t border-primary/5"
                       style={{ fontFamily: `'${f.family}', serif` }}
-                      onClick={() => { onChange({ fontFamily: f.family }); setFontOpen(false); }}>
+                      onClick={() => handleFontPick(f)}>
                       {f.name}
                     </button>
                   ))}
@@ -607,7 +616,7 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
                   {sansFonts.map(f => (
                     <button key={f.family} className="w-full text-right px-3 py-2 hover:bg-primary/10 text-sm border-t border-primary/5"
                       style={{ fontFamily: `'${f.family}', sans-serif` }}
-                      onClick={() => { onChange({ fontFamily: f.family }); setFontOpen(false); }}>
+                      onClick={() => handleFontPick(f)}>
                       {f.name}
                     </button>
                   ))}
@@ -617,7 +626,7 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
                   {localFonts.map(f => (
                     <button key={f.family} className="w-full text-right px-3 py-2 hover:bg-primary/10 text-sm border-t border-primary/5"
                       style={{ fontFamily: `'${f.family}', serif` }}
-                      onClick={() => { onChange({ fontFamily: f.family }); setFontOpen(false); }}>
+                      onClick={() => handleFontPick(f)}>
                       {f.name}
                     </button>
                   ))}

@@ -5,6 +5,8 @@ export type FontEntry = {
   family: string;
   category: "serif" | "sans" | "local" | "custom";
   file?: string;
+  fileUrl?: string;
+  mimeType?: string;
 };
 
 const LOCAL_BA_FONTS: FontEntry[] = [
@@ -98,6 +100,51 @@ export function injectCustomFont(font: CustomFont) {
   document.head.appendChild(style);
 }
 
+/**
+ * Load a font by its FontEntry, handling all categories:
+ * - local (BA fonts): uses FontFace API immediately
+ * - custom (uploaded): injects @font-face via <style>
+ * - serif/sans (Google): injects <link> tag
+ * Then waits up to 3 s for the font to be ready.
+ */
+export async function loadFontEntry(entry: FontEntry): Promise<void> {
+  const { family, category, file, fileUrl, mimeType } = entry;
+  console.log(`[FONT] loadFontEntry: family="${family}" category="${category}"`);
+
+  if (category === "local") {
+    if (file) {
+      loadLocalFont(family, file);
+    } else {
+      loadAnyFont(family);
+    }
+  } else if (category === "custom") {
+    if (fileUrl) {
+      const id = `cf-${family.replace(/\s+/g, "-")}`;
+      if (!document.getElementById(id)) {
+        const style = document.createElement("style");
+        style.id = id;
+        const apiBase = (typeof import.meta !== "undefined" ? import.meta.env.BASE_URL : "").replace(/\/[^/]*\/?$/, "");
+        const url = fileUrl.startsWith("/api") ? apiBase + fileUrl : fileUrl;
+        const fmt = mimeType?.replace("font/", "") || "truetype";
+        style.textContent = `@font-face { font-family: '${family}'; src: url('${url}') format('${fmt}'); font-display: swap; }`;
+        document.head.appendChild(style);
+        console.log(`[FONT] Injected custom @font-face for "${family}" → ${url}`);
+      }
+    } else {
+      console.warn(`[FONT] Custom font "${family}" has no fileUrl — cannot inject`);
+    }
+  } else {
+    loadGoogleFont(family);
+  }
+
+  try {
+    await document.fonts.load(`700 16px '${family}'`);
+    console.log(`[FONT] Ready: "${family}"`);
+  } catch (err) {
+    console.warn(`[FONT] fonts.load timed out or failed for "${family}":`, err);
+  }
+}
+
 const API_BASE = typeof window !== "undefined"
   ? (import.meta.env.BASE_URL || "").replace(/\/[^/]*\/?$/, "")
   : "";
@@ -126,6 +173,8 @@ export function useCombinedFonts(): FontEntry[] {
     name: f.displayName,
     family: f.name,
     category: "custom" as const,
+    fileUrl: f.fileUrl,
+    mimeType: f.mimeType,
   }));
   return [...custom, ...HEBREW_FONTS];
 }
