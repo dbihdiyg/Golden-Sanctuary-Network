@@ -55,6 +55,7 @@ export interface SlotStyle {
   glassBlur?: number;
   glassColor?: string;
   glassBorderRadius?: number;
+  glassPadding?: number;
 
   blendMode?: "normal" | "multiply" | "screen" | "overlay" | "soft-light";
 
@@ -296,7 +297,7 @@ function SliderRow({ label, min, max, step, value, defaultValue = 0, onChange, u
 }) {
   const external = value ?? defaultValue;
   const [local, setLocal] = useState(external);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => { setLocal(external); }, [external]);
 
@@ -1089,6 +1090,7 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
               </div>
               <SliderRow label="טשטוש" min={0} max={30} step={1} value={s.glassBlur} defaultValue={8} onChange={v => onChange({ glassBlur: v })} unit="px" />
               <SliderRow label="עיגול" min={0} max={30} step={2} value={s.glassBorderRadius} defaultValue={8} onChange={v => onChange({ glassBorderRadius: v })} unit="px" />
+              <SliderRow label="ריווח פנימי" min={0} max={40} step={2} value={s.glassPadding} defaultValue={8} onChange={v => onChange({ glassPadding: v })} unit="px" />
             </div>
           )}
         </div>

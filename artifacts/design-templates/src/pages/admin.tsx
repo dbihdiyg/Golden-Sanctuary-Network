@@ -4,7 +4,7 @@ import hadarLogo from "@/assets/logo-hadar.png";
 import { useCombinedFonts, loadAnyFont } from "@/lib/fonts";
 import { SlotStylePanel, SlotStyle } from "@/components/SlotStylePanel";
 import { SvgWarpText, WarpType } from "@/components/SvgWarpText";
-import { PRESETS_3D, build3DShadows } from "@/lib/3d-presets";
+import { buildTextCSS, buildAdminWrapperCSS as _buildAdminWrapperCSS } from "@/lib/designRenderer";
 import {
   Lock, Unlock, Plus, Trash2, Edit2, Eye, EyeOff, Copy, Package, ShoppingBag,
   BarChart3, LogOut, Check, X, ImagePlus, GripVertical,
@@ -103,121 +103,15 @@ function patchFromStyle(patch: Partial<SlotStyle>): Partial<AdminSlot> {
   return r;
 }
 
-// ─── Admin slot CSS renderers (mirrors user editor exactly) ───────────────────
-function buildAdminTextShadows(slot: AdminSlot): string {
-  const parts: string[] = [];
-  const baseColor = slot.color || "#D6A84F";
-
-  if (slot.preset3D && slot.preset3D !== "none") {
-    const preset = PRESETS_3D.find(p => p.id === slot.preset3D);
-    const glowCol = (slot as any).glowColor || preset?.glowColor || baseColor;
-    const shadows = build3DShadows(
-      slot.preset3D,
-      (slot as any).lightAngle3D ?? preset?.defaultAngle ?? 45,
-      (slot as any).depth3D ?? preset?.defaultDepth ?? 6,
-      (slot as any).shadowStr3D ?? preset?.defaultShadowStr ?? 70,
-      (slot as any).highlight3D ?? preset?.defaultHighlight ?? 60,
-      (slot as any).glow3D ?? preset?.defaultGlow ?? 0,
-      glowCol,
-    );
-    parts.push(...shadows);
-  }
-
-  if (slot.shadow || (slot as any).shadowX != null || (slot as any).shadowColor) {
-    const x = (slot as any).shadowX ?? 2, y = (slot as any).shadowY ?? 2;
-    const blur = (slot as any).shadowBlur ?? 6;
-    const col = (slot as any).shadowColor || "rgba(0,0,0,0.7)";
-    parts.push(`${x}px ${y}px ${blur}px ${col}`);
-  }
-
-  if ((slot as any).glow || (slot as any).glowColor || (slot as any).glowRadius) {
-    const gc = (slot as any).glowColor || baseColor;
-    const gr = (slot as any).glowRadius ?? 12;
-    const intensity = (slot as any).glowIntensity ?? 2;
-    for (let i = 0; i < intensity; i++) parts.push(`0 0 ${gr * (i + 1)}px ${gc}`);
-  }
-
-  if ((slot as any).extrudeEnabled && !slot.preset3D) {
-    const depth = (slot as any).extrudeDepth ?? 5;
-    const angle = ((slot as any).extrudeAngle ?? 225) * Math.PI / 180;
-    const col = (slot as any).extrudeColor || "rgba(0,0,0,0.6)";
-    for (let i = 1; i <= depth; i++) parts.push(`${(Math.cos(angle) * i).toFixed(1)}px ${(Math.sin(angle) * i).toFixed(1)}px 0 ${col}`);
-  }
-
-  if ((slot as any).longShadowEnabled && !slot.preset3D) {
-    const len = (slot as any).longShadowLength ?? 40;
-    const angle = ((slot as any).longShadowAngle ?? 135) * Math.PI / 180;
-    const col = (slot as any).longShadowColor || "rgba(0,0,0,0.15)";
-    for (let i = 1; i <= len; i++) parts.push(`${(Math.cos(angle) * i).toFixed(1)}px ${(Math.sin(angle) * i).toFixed(1)}px 0 ${col}`);
-  }
-
-  return parts.join(", ");
-}
-
-function buildAdminTextureGradient(type?: string): string | undefined {
-  switch (type) {
-    case "gold-foil": return "linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%)";
-    case "silver":    return "linear-gradient(135deg, #8e9eab 0%, #eef2f3 30%, #9da9b0 60%, #eef2f3 80%, #8e9eab 100%)";
-    case "fire":      return "linear-gradient(0deg, #ff4500 0%, #ff8c00 30%, #ffd700 60%, #fff44f 100%)";
-    case "neon":      return "linear-gradient(135deg, #a855f7 0%, #ec4899 35%, #3b82f6 70%, #a855f7 100%)";
-    case "rainbow":   return "linear-gradient(90deg, #ff0000, #ff7700, #ffff00, #00ff00, #0000ff, #8b00ff)";
-    default:          return undefined;
-  }
-}
-
+// ─── Admin slot CSS renderers — delegates to the shared design engine ──────────
 function buildAdminSlotCSS(slot: AdminSlot): React.CSSProperties {
-  const fontFamily = slot.fontFamily && slot.fontFamily !== "serif" && slot.fontFamily !== "sans"
-    ? `'${slot.fontFamily}', serif`
-    : slot.fontFamily === "sans" ? "sans-serif" : "serif";
-
-  const textShadow = buildAdminTextShadows(slot);
-
-  const texGrad = (slot as any).textureType && (slot as any).textureType !== "none"
-    ? buildAdminTextureGradient((slot as any).textureType)
-    : undefined;
-  const useGrad = !!(slot as any).gradientEnabled || !!texGrad;
-  const gradBg = texGrad ?? ((slot as any).gradientEnabled
-    ? `linear-gradient(${(slot as any).gradientAngle ?? 90}deg, ${(slot as any).gradientFrom || "#D6A84F"}, ${(slot as any).gradientTo || "#F8F1E3"})`
-    : undefined);
-
-  const strokeW = (slot as any).strokeWidth ?? 0;
-  const stroke = strokeW > 0 ? `${strokeW}px ${(slot as any).strokeColor || slot.color || "#D6A84F"}` : undefined;
-
-  const base: React.CSSProperties = {
-    fontSize: slot.fontSizePx ?? 18,
-    fontFamily,
-    fontWeight: slot.bold ? 700 : 400,
-    fontStyle: slot.italic ? "italic" : "normal",
-    textDecoration: (slot as any).underline ? "underline" : undefined,
-    letterSpacing: slot.letterSpacing ? `${slot.letterSpacing}px` : undefined,
-    lineHeight: slot.lineHeight ?? 1.35,
-    WebkitTextStroke: stroke,
-    textShadow: textShadow || undefined,
-  };
-
-  if (useGrad && gradBg) {
-    return { ...base, backgroundImage: gradBg, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", color: "transparent" };
-  }
-  return { ...base, color: slot.color || "#D6A84F" };
+  const baseColor = slot.color || "#D6A84F";
+  const styleData = { ...slot, fontSize: slot.fontSizePx ?? (slot as any).fontSize ?? 18 } as any;
+  return buildTextCSS(styleData, baseColor);
 }
 
 function buildAdminWrapperCSS(slot: AdminSlot): React.CSSProperties {
-  const ss = slot as any;
-  const transforms: string[] = ["translateX(-50%)"];
-  if (ss.rotation) transforms.push(`rotate(${ss.rotation}deg)`);
-  if (ss.skewX) transforms.push(`skewX(${ss.skewX}deg)`);
-  if (ss.skewY) transforms.push(`skewY(${ss.skewY}deg)`);
-  const style: React.CSSProperties = { transform: transforms.join(" ") };
-  if (slot.opacity != null && slot.opacity !== 1) style.opacity = slot.opacity;
-  if (ss.blendMode && ss.blendMode !== "normal") style.mixBlendMode = ss.blendMode;
-  if (ss.glassEnabled) {
-    style.background = ss.glassColor || "rgba(255,255,255,0.08)";
-    style.backdropFilter = `blur(${ss.glassBlur ?? 8}px)`;
-    (style as any).WebkitBackdropFilter = `blur(${ss.glassBlur ?? 8}px)`;
-    style.borderRadius = `${ss.glassBorderRadius ?? 8}px`;
-    style.padding = `${ss.glassPadding ?? 8}px ${(ss.glassPadding ?? 8) * 2}px`;
-  }
-  return style;
+  return _buildAdminWrapperCSS({ ...slot, fontSize: slot.fontSizePx ?? (slot as any).fontSize ?? 18 } as any, slot.opacity);
 }
 
 interface DBTemplate {

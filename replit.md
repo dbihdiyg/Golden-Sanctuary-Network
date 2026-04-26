@@ -30,7 +30,7 @@ The project is structured as a pnpm workspace monorepo, with each package managi
 -   **Build Tool**: esbuild is used for bundling into CommonJS.
 -   **AI Integration**: GPT-4o-mini is used for AI-powered text generation in the הדר marketplace, specifically for ceremonial invitation text.
 -   **Payment Processing**: Stripe is integrated for handling payments in the הדר marketplace, including checkout sessions, webhooks, and managing customer payment methods.
--   **Image/Text Effects (הדר)**: Advanced CSS techniques and a Canvas-based pixel displacement engine (`SvgWarpText`) are used to render complex text effects like gradients, textures, shadows, glows, 3D extrude, and text warping.
+-   **Image/Text Effects (הדר)**: Advanced CSS techniques and a Canvas-based pixel displacement engine (`SvgWarpText`) are used to render complex text effects like gradients, textures, shadows, glows, 3D extrude, and text warping. All visual rendering functions are centralized in a shared engine at `artifacts/design-templates/src/lib/designRenderer.ts` (`buildTextShadows`, `buildTextureGradient`, `buildTextCSS`, `buildWrapperCSS`, `buildAdminWrapperCSS`) — both the admin editor and the user editor import from this single source of truth to guarantee pixel-perfect parity between what the admin designs and what the user sees.
 
 ## Feature Specifications:
 -   **Community Board**: Signed-in users can post, react, and delete their own posts.

@@ -297,7 +297,7 @@ export function Text3DCanvas({
 
     // ── Animation loop ─────────────────────────────────────────
     let rotY = ((cameraAngleY ?? -18) * Math.PI) / 180;
-    let rafId: number;
+    let rafId: number = -1;
 
     const animate = () => {
       rafId = requestAnimationFrame(animate);

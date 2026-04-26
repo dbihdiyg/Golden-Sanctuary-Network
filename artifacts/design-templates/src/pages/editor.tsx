@@ -23,8 +23,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ElementsPanel, PlacedElement, colorToFilter } from "@/components/ElementsPanel";
 import { RichTextSlot } from "@/components/RichTextSlot";
 import { SlotStylePanel, SlotStyle } from "@/components/SlotStylePanel";
-import { build3DShadows, PRESETS_3D } from "@/lib/3d-presets";
 import { SvgWarpText, WarpType } from "@/components/SvgWarpText";
+import { buildTextShadows as _buildTextShadows, buildTextureGradient as _buildTextureGradient, buildWrapperCSS as _buildWrapperCSS } from "@/lib/designRenderer";
 import { Text3DCanvas } from "@/components/Text3DCanvas";
 
 export interface LogoPos { x: number; y: number; width: number; }
@@ -60,69 +60,11 @@ function resolveFont(slotFamily: string | undefined, fontOverride: string): stri
 }
 
 function buildTextShadows(ss: SlotStyle | undefined, baseColor: string): string {
-  const parts: string[] = [];
-
-  // ── Premium 3D preset (takes priority over classic extrude) ──────────────
-  if (ss?.preset3D && ss.preset3D !== "none") {
-    const preset = PRESETS_3D.find(p => p.id === ss.preset3D);
-    const glowCol = ss.glowColor || preset?.glowColor || baseColor;
-    const shadows = build3DShadows(
-      ss.preset3D,
-      ss.lightAngle3D ?? preset?.defaultAngle ?? 45,
-      ss.depth3D     ?? preset?.defaultDepth     ?? 6,
-      ss.shadowStr3D ?? preset?.defaultShadowStr ?? 70,
-      ss.highlight3D ?? preset?.defaultHighlight ?? 60,
-      ss.glow3D      ?? preset?.defaultGlow      ?? 0,
-      glowCol,
-    );
-    parts.push(...shadows);
-  }
-
-  // ── Basic drop shadow ─────────────────────────────────────────────────────
-  if (ss?.shadow || ss?.shadowX != null || ss?.shadowY != null || ss?.shadowColor) {
-    const x = ss?.shadowX ?? 2, y = ss?.shadowY ?? 2;
-    const blur = ss?.shadowBlur ?? 6;
-    const col = ss?.shadowColor || "rgba(0,0,0,0.7)";
-    parts.push(`${x}px ${y}px ${blur}px ${col}`);
-  }
-
-  // ── Classic glow ──────────────────────────────────────────────────────────
-  if (ss?.glow || ss?.glowColor || ss?.glowRadius) {
-    const gc = ss?.glowColor || baseColor;
-    const gr = ss?.glowRadius ?? 12;
-    const intensity = ss?.glowIntensity ?? 2;
-    for (let i = 0; i < intensity; i++) parts.push(`0 0 ${gr * (i + 1)}px ${gc}`);
-    if (gc.startsWith("#") && gc.length <= 7) parts.push(`0 0 ${Math.ceil(gr * 0.4)}px ${gc}cc`);
-  }
-
-  // ── Classic extrude (legacy / not active when preset3D is set) ───────────
-  if (ss?.extrudeEnabled && !ss?.preset3D) {
-    const depth = ss.extrudeDepth ?? 5;
-    const angle = (ss.extrudeAngle ?? 225) * Math.PI / 180;
-    const col = ss.extrudeColor || "rgba(0,0,0,0.6)";
-    for (let i = 1; i <= depth; i++) parts.push(`${(Math.cos(angle) * i).toFixed(1)}px ${(Math.sin(angle) * i).toFixed(1)}px 0 ${col}`);
-  }
-
-  // ── Long shadow ───────────────────────────────────────────────────────────
-  if (ss?.longShadowEnabled && !ss?.preset3D) {
-    const len = ss.longShadowLength ?? 40;
-    const angle = (ss.longShadowAngle ?? 135) * Math.PI / 180;
-    const col = ss.longShadowColor || "rgba(0,0,0,0.15)";
-    for (let i = 1; i <= len; i++) parts.push(`${(Math.cos(angle) * i).toFixed(1)}px ${(Math.sin(angle) * i).toFixed(1)}px 0 ${col}`);
-  }
-
-  return parts.join(", ");
+  return _buildTextShadows(ss as any, baseColor);
 }
 
 function buildTextureGradient(type: SlotStyle["textureType"]): string | undefined {
-  switch (type) {
-    case "gold-foil": return "linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%)";
-    case "silver":    return "linear-gradient(135deg, #8e9eab 0%, #eef2f3 30%, #9da9b0 60%, #eef2f3 80%, #8e9eab 100%)";
-    case "fire":      return "linear-gradient(0deg, #ff4500 0%, #ff8c00 30%, #ffd700 60%, #fff44f 100%)";
-    case "neon":      return "linear-gradient(135deg, #a855f7 0%, #ec4899 35%, #3b82f6 70%, #a855f7 100%)";
-    case "rainbow":   return "linear-gradient(90deg, #ff0000, #ff7700, #ffff00, #00ff00, #0000ff, #8b00ff)";
-    default:          return undefined;
-  }
+  return _buildTextureGradient(type);
 }
 
 function buildSlotCSS(slot: TextSlot, fontOverride: string, ss?: SlotStyle): React.CSSProperties {
@@ -158,24 +100,7 @@ function buildSlotCSS(slot: TextSlot, fontOverride: string, ss?: SlotStyle): Rea
 }
 
 function buildSlotWrapperCSS(ss?: SlotStyle, slotOpacity?: number): React.CSSProperties {
-  if (!ss && slotOpacity == null) return {};
-  const transforms: string[] = [];
-  if (ss?.rotation) transforms.push(`rotate(${ss.rotation}deg)`);
-  if (ss?.skewX) transforms.push(`skewX(${ss.skewX}deg)`);
-  if (ss?.skewY) transforms.push(`skewY(${ss.skewY}deg)`);
-  const style: React.CSSProperties = {};
-  if (transforms.length) style.transform = transforms.join(" ");
-  const op = ss?.opacity ?? slotOpacity;
-  if (op != null && op !== 1) style.opacity = op;
-  if (ss?.blendMode && ss.blendMode !== "normal") style.mixBlendMode = ss.blendMode as React.CSSProperties["mixBlendMode"];
-  if (ss?.glassEnabled) {
-    style.background = ss.glassColor || "rgba(255,255,255,0.08)";
-    style.backdropFilter = `blur(${ss.glassBlur ?? 8}px)`;
-    style.WebkitBackdropFilter = `blur(${ss.glassBlur ?? 8}px)`;
-    style.borderRadius = `${ss.glassBorderRadius ?? 8}px`;
-    style.padding = "4px 14px";
-  }
-  return style;
+  return _buildWrapperCSS(ss as any, slotOpacity);
 }
 
 // ─── Logo Uploader ─────────────────────────────────────────────────────────────
@@ -455,7 +380,7 @@ function InteractiveCanvas({
                   warpType={warpType}
                   warpAmount={warpAmount}
                   cssStyle={css}
-                  pathWidth={220}
+                  pathWidth={Math.round(dims.width * (pos.width / 100) * 0.9)}
                 />
               </div>
             ) : (
@@ -804,7 +729,7 @@ export default function Editor() {
       "strokeColor", "strokeWidth", "outline",
       "gradientEnabled", "gradientFrom", "gradientTo", "gradientAngle",
       "textureType",
-      "glassEnabled", "glassBlur", "glassColor", "glassBorderRadius",
+      "glassEnabled", "glassBlur", "glassColor", "glassBorderRadius", "glassPadding",
       "blendMode",
       "warpType", "warpAmount", "arcDegrees",
       "zIndex",
