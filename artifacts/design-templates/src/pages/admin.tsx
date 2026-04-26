@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import hadarLogo from "@/assets/logo-hadar.png";
-import { HEBREW_FONTS, loadGoogleFont, useCombinedFonts } from "@/lib/fonts";
+import { useCombinedFonts, loadAnyFont } from "@/lib/fonts";
+import { SlotStylePanel, SlotStyle } from "@/components/SlotStylePanel";
 import {
   Lock, Plus, Trash2, Edit2, Eye, Package, ShoppingBag,
   BarChart3, LogOut, Check, X, ImagePlus, GripVertical,
   RefreshCw, ArrowRight, ChevronDown, ChevronUp, Loader2,
   AlertCircle, Users, DollarSign, Clock, ToggleLeft, ToggleRight, Upload,
-  AlignCenter, AlignRight, AlignLeft, Type, Palette, Sliders, Layers, Move,
+  AlignCenter, AlignRight, AlignLeft, Type, Layers, Move,
   Maximize2, FileType2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,7 @@ interface AdminStats {
   totalDesigns: number;
 }
 
-interface AdminSlot {
+interface AdminSlot extends SlotStyle {
   id: string;
   label: string;
   placeholder: string;
@@ -78,15 +79,24 @@ interface AdminSlot {
   fontSizePx: number;
   fontFamily: string;
   bold: boolean;
-  italic?: boolean;
   color: string;
-  opacity?: number;
-  textShadow?: boolean;
-  letterSpacing?: number;
-  lineHeight?: number;
   align: "center" | "right" | "left";
   multiline: boolean;
   fixed?: boolean;
+}
+
+function slotToStyle(s: AdminSlot): SlotStyle {
+  return {
+    ...s,
+    fontSize: s.fontSize ?? s.fontSizePx,
+    shadow: s.shadow ?? (s as any).textShadow,
+  };
+}
+
+function patchFromStyle(patch: Partial<SlotStyle>): Partial<AdminSlot> {
+  const r: Partial<AdminSlot> = { ...patch } as any;
+  if (patch.fontSize !== undefined) r.fontSizePx = patch.fontSize;
+  return r;
 }
 
 interface DBTemplate {
@@ -115,7 +125,7 @@ const emptySlot = (): AdminSlot => ({
   fontSizePx: 18, fontFamily: "Frank Ruhl Libre",
   bold: false, italic: false,
   color: "#D6A84F", opacity: 1,
-  textShadow: false, letterSpacing: 0, lineHeight: 1.35,
+  shadow: false, letterSpacing: 0, lineHeight: 1.35,
   align: "center", multiline: false, fixed: false,
 });
 
@@ -264,7 +274,7 @@ function TemplateEditor({
     setForm(p => ({ ...p, slots: p.slots.map(s => s.id === id ? { ...s, ...patch } : s) })), []);
 
   useEffect(() => {
-    form.slots.forEach(s => { if (s.fontFamily) loadGoogleFont(s.fontFamily); });
+    form.slots.forEach(s => { if (s.fontFamily) loadAnyFont(s.fontFamily); });
   }, [form.slots]);
 
   const canvasBg = form.displayImageUrl || form.imageUrl;
@@ -381,7 +391,7 @@ function TemplateEditor({
                       color: slot.color || "#D6A84F",
                       letterSpacing: slot.letterSpacing ? `${slot.letterSpacing}px` : undefined,
                       lineHeight: slot.lineHeight ?? 1.35,
-                      textShadow: slot.textShadow ? "1px 1px 4px rgba(0,0,0,0.7)" : undefined,
+                      textShadow: slot.shadow ? "1px 1px 4px rgba(0,0,0,0.7)" : undefined,
                       userSelect: "none", display: "block", whiteSpace: "pre-line", pointerEvents: "none",
                     }}>
                       {slot.defaultValue || slot.label}
@@ -518,128 +528,13 @@ function TemplateEditor({
 
                 <hr className="border-primary/10" />
 
-                {/* Typography */}
-                <div className="space-y-3">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Type className="w-3 h-3" /> טיפוגרפיה</p>
-
-                  <div>
-                    <Label className="text-[10px] text-muted-foreground">פונט</Label>
-                    <select className="mt-0.5 w-full h-8 px-2 bg-background border border-primary/20 rounded-md text-sm text-foreground"
-                      value={selectedSlot.fontFamily}
-                      onChange={e => { loadGoogleFont(e.target.value); updateSlot(selectedSlot.id, { fontFamily: e.target.value }); }}>
-                      {combinedFonts.filter(f => f.category === "custom").length > 0 && (
-                        <optgroup label="── פונטים מותאמים ──">
-                          {combinedFonts.filter(f => f.category === "custom").map(f => (
-                            <option key={f.family} value={f.family}>{f.name}</option>
-                          ))}
-                        </optgroup>
-                      )}
-                      <optgroup label="── סריף ──">
-                        {combinedFonts.filter(f => f.category === "serif").map(f => (
-                          <option key={f.family} value={f.family}>{f.name}</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="── סאנס-סריף ──">
-                        {combinedFonts.filter(f => f.category === "sans").map(f => (
-                          <option key={f.family} value={f.family}>{f.name}</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="── מיוחד ──">
-                        {combinedFonts.filter(f => f.category === "local").map(f => (
-                          <option key={f.family} value={f.family}>{f.name}</option>
-                        ))}
-                      </optgroup>
-                    </select>
-                    <div className="mt-1.5 px-3 py-1.5 bg-background/60 border border-primary/10 rounded-md text-center text-sm"
-                      style={{ fontFamily: `'${selectedSlot.fontFamily}', serif`, direction: "rtl", color: selectedSlot.color || "#D6A84F", fontSize: Math.min(selectedSlot.fontSizePx ?? 18, 22) }}>
-                      {selectedSlot.defaultValue || "תצוגה מקדימה של הפונט"}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-0.5">
-                      <Label className="text-[10px] text-muted-foreground">גודל פונט</Label>
-                      <span className="text-[10px] font-mono text-primary">{selectedSlot.fontSizePx ?? 18}px</span>
-                    </div>
-                    <input type="range" min={6} max={120} step={1}
-                      value={selectedSlot.fontSizePx ?? 18}
-                      onChange={e => updateSlot(selectedSlot.id, { fontSizePx: Number(e.target.value) })}
-                      className="w-full accent-primary h-1.5 rounded" />
-                  </div>
-
-                  <div className="flex gap-2">
-                    {[
-                      { key: "bold",       label: "B",  title: "מודגש",    style: { fontWeight: 700 } },
-                      { key: "italic",     label: "I",  title: "נטוי",     style: { fontStyle: "italic" } },
-                      { key: "textShadow", label: "S",  title: "צל טקסט", style: {} },
-                    ].map(({ key, label, title, style }) => (
-                      <button key={key} title={title}
-                        onClick={() => updateSlot(selectedSlot.id, { [key]: !(selectedSlot as any)[key] })}
-                        className={`flex-1 h-8 rounded-md border text-sm transition-all ${(selectedSlot as any)[key] ? "border-primary bg-primary/20 text-primary" : "border-primary/20 text-muted-foreground hover:border-primary/40"}`}
-                        style={style as any}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <hr className="border-primary/10" />
-
-                {/* Color & Opacity */}
-                <div className="space-y-3">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Palette className="w-3 h-3" /> צבע ושקיפות</p>
-                  <div>
-                    <Label className="text-[10px] text-muted-foreground mb-1 block">צבע טקסט</Label>
-                    <div className="flex items-center gap-2">
-                      <input type="color"
-                        value={selectedSlot.color?.startsWith("#") ? selectedSlot.color : "#D6A84F"}
-                        onChange={e => updateSlot(selectedSlot.id, { color: e.target.value })}
-                        className="w-9 h-8 rounded border border-primary/20 cursor-pointer bg-transparent p-0.5" />
-                      <Input dir="ltr" className="flex-1 h-8 text-xs bg-background border-primary/20 font-mono"
-                        value={selectedSlot.color || "#D6A84F"}
-                        onChange={e => updateSlot(selectedSlot.id, { color: e.target.value })} />
-                    </div>
-                    <div className="flex gap-1.5 mt-2">
-                      {["#D6A84F","#F8F1E3","#FFFFFF","#0B1833","#B8860B","#E8D5A3"].map(hex => (
-                        <button key={hex} title={hex} onClick={() => updateSlot(selectedSlot.id, { color: hex })}
-                          className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${selectedSlot.color === hex ? "border-primary scale-110" : "border-white/20"}`}
-                          style={{ background: hex }} />
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-0.5">
-                      <Label className="text-[10px] text-muted-foreground">אטימות</Label>
-                      <span className="text-[10px] font-mono text-primary">{Math.round((selectedSlot.opacity ?? 1) * 100)}%</span>
-                    </div>
-                    <input type="range" min={0} max={1} step={0.01}
-                      value={selectedSlot.opacity ?? 1}
-                      onChange={e => updateSlot(selectedSlot.id, { opacity: Number(e.target.value) })}
-                      className="w-full accent-primary h-1.5 rounded" />
-                  </div>
-                </div>
-
-                <hr className="border-primary/10" />
-
-                {/* Spacing */}
-                <div className="space-y-3">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Sliders className="w-3 h-3" /> ריווח</p>
-                  {[
-                    { key: "letterSpacing", label: "ריווח אותיות", min: -3, max: 20, step: 0.5, unit: "px" },
-                    { key: "lineHeight",    label: "גובה שורה",    min: 0.8, max: 3, step: 0.05 },
-                  ].map(({ key, label, min, max, step, unit }) => (
-                    <div key={key}>
-                      <div className="flex items-center justify-between mb-0.5">
-                        <Label className="text-[10px] text-muted-foreground">{label}</Label>
-                        <span className="text-[10px] font-mono text-primary">{((selectedSlot as any)[key] ?? (key === "lineHeight" ? 1.35 : 0)).toFixed(key === "lineHeight" ? 2 : 1)}{unit ?? ""}</span>
-                      </div>
-                      <input type="range" min={min} max={max} step={step}
-                        value={(selectedSlot as any)[key] ?? (key === "lineHeight" ? 1.35 : 0)}
-                        onChange={e => updateSlot(selectedSlot.id, { [key]: Number(e.target.value) })}
-                        className="w-full accent-primary h-1.5 rounded" />
-                    </div>
-                  ))}
-                </div>
+                {/* ── Full style panel (same as customer editor + more) ── */}
+                <SlotStylePanel
+                  slotId={selectedSlot.id}
+                  style={slotToStyle(selectedSlot)}
+                  onChange={patch => updateSlot(selectedSlot.id, patchFromStyle(patch))}
+                  fonts={combinedFonts}
+                />
 
                 <hr className="border-primary/10" />
 
@@ -911,10 +806,61 @@ function FontsManager({ token }: { token: string }) {
     setFonts(prev => prev.filter(x => x.id !== id));
   };
 
+  const LOCAL_FONTS_PREVIEW = [
+    { name: "אילנות הלבנון – כבד",   family: "BA-Arzey-Bold",      file: "BAArzeyHalevanon-Bold.ttf"   },
+    { name: "אילנות הלבנון – עדין",  family: "BA-Arzey-Light",     file: "BAArzeyHalevanon-Light.ttf"  },
+    { name: "ברקאי",                  family: "BA-Barkai",          file: "BABarkai-Regular.otf"         },
+    { name: "קזבלנקה",               family: "BA-Casablanca",      file: "BA-Casablanca-Light.otf"      },
+    { name: "פונטוב – כבד",          family: "BA-Fontov-Bold",     file: "BA-Fontov-Bold.otf"           },
+    { name: "פונטוב – רגיל",         family: "BA-Fontov",          file: "BA-Fontov-Regular.otf"        },
+    { name: "היצירה – עדין",         family: "BA-HaYetzira-Light", file: "BA-HaYetzira-Light.otf"       },
+    { name: "היצירה – רגיל",         family: "BA-HaYetzira",       file: "BA-HaYetzira-Regular.otf"     },
+    { name: "קרית קודש",             family: "BA-Kiriat-Kodesh",   file: "BA-Kiriat-Kodesh-Bold.otf"    },
+    { name: "מים חיים",              family: "BA-Maim-Haim",       file: "BA-Maim-Haim-Regular.otf"     },
+    { name: "מסובין",                family: "BA-Mesubin",         file: "BA-Mesubin-Rolltext.otf"      },
+    { name: "מומנט",                 family: "BA-Moment",          file: "BA-Moment-Original.otf"       },
+    { name: "נפלאות",                family: "BA-Niflaot",         file: "BANiflaot-Black.ttf"          },
+    { name: "פלטפורמה – שחור",       family: "BA-Platforma-Black", file: "BAPlatforma-Black.otf"        },
+    { name: "פלטפורמה – כבד",        family: "BA-Platforma-Bold",  file: "BAPlatforma-Bold.otf"         },
+    { name: "פלטפורמה – עדין",       family: "BA-Platforma-Light", file: "BAPlatforma-Light.otf"        },
+    { name: "ראדלהיים",              family: "BA-Radlheim",        file: "BARadlheim-Bold.otf"          },
+    { name: "ראשון לציון",           family: "BA-Rishon",          file: "BARishonLezion-Regular.ttf"   },
+  ];
+
+  useEffect(() => {
+    LOCAL_FONTS_PREVIEW.forEach(f => loadAnyFont(f.family));
+  }, []);
+
   return (
     <motion.div key="fonts" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+
+      {/* ── BA local fonts (pre-installed) ─────────────────────────────── */}
       <div className="bg-card border border-primary/10 rounded-xl p-5 mb-6">
-        <h3 className="font-semibold text-sm mb-4 flex items-center gap-2"><FileType2 className="w-4 h-4 text-primary" /> העלאת פונט חדש</h3>
+        <h3 className="font-semibold text-sm mb-1 flex items-center gap-2">
+          <FileType2 className="w-4 h-4 text-primary" /> פונטי BA מותקנים ({LOCAL_FONTS_PREVIEW.length})
+        </h3>
+        <p className="text-[11px] text-muted-foreground mb-4">פונטים מקומיים זמינים לכל התבניות — ניתן לבחור בהם בעורך</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {LOCAL_FONTS_PREVIEW.map(f => (
+            <div key={f.family} className="flex flex-col gap-1 p-3 rounded-lg border border-primary/10 bg-background/50">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-foreground">{f.name}</span>
+                <span className="text-[9px] text-muted-foreground font-mono bg-primary/5 px-1.5 py-0.5 rounded">{f.file.split(".").pop()?.toUpperCase()}</span>
+              </div>
+              <div dir="rtl" className="text-lg leading-tight truncate" style={{ fontFamily: `'${f.family}', serif`, color: "#D6A84F" }}>
+                אבגדהוזחטי
+              </div>
+              <div dir="rtl" className="text-sm leading-tight truncate text-muted-foreground" style={{ fontFamily: `'${f.family}', serif` }}>
+                שמחת חתן וכלה
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Uploaded custom fonts ─────────────────────────────────────── */}
+      <div className="bg-card border border-primary/10 rounded-xl p-5 mb-6">
+        <h3 className="font-semibold text-sm mb-4 flex items-center gap-2"><FileType2 className="w-4 h-4 text-primary" /> העלאת פונט נוסף</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
           <div>
             <Label className="text-xs mb-1 block">שם פנימי (ללא רווחים, לאנגלית)</Label>
