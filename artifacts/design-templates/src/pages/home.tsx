@@ -198,127 +198,179 @@ export default function Home() {
         )}
       </header>
 
-      {/* ═══════════════════════════════════════════
-           CINEMATIC HERO — full-viewport split screen
-          ═══════════════════════════════════════════ */}
-      <section style={{ height: "100vh", overflow: "hidden", display: "flex", background: "#0c0c0c", direction: "ltr" }}>
+      {/* ══════════════════════════════════════════════
+           BRANDED HERO — Navy/Gold/Cream palette
+          ══════════════════════════════════════════════ */}
+      <section style={{ height: "100vh", overflow: "hidden", display: "flex", direction: "ltr", background: "#0B1833", position: "relative" }}>
+
+        {/* Background radial glows */}
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+          <div style={{ position: "absolute", top: "30%", left: "30%", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(214,168,79,0.07) 0%, transparent 65%)", filter: "blur(20px)" }} />
+          <div style={{ position: "absolute", top: "60%", left: "70%", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(214,168,79,0.05) 0%, transparent 65%)", filter: "blur(30px)" }} />
+          {/* Subtle gold grid */}
+          <div style={{ position: "absolute", inset: 0, opacity: 0.02, backgroundImage: "linear-gradient(rgba(214,168,79,1) 1px, transparent 1px), linear-gradient(90deg, rgba(214,168,79,1) 1px, transparent 1px)", backgroundSize: "80px 80px" }} />
+          {/* Diagonal fade — right panel separator */}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg, transparent 52%, rgba(214,168,79,0.03) 53%, transparent 54%)" }} />
+        </div>
 
         {/* LEFT — text panel (55%) */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.7 }}
-          style={{ width: "55%", background: "#0c0c0c", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "100px 60px 60px", position: "relative", overflow: "hidden" }}
-        >
-          {/* Ambient glow */}
-          <div style={{ position: "absolute", bottom: 200, right: -50, width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(214,168,79,0.06) 0%, transparent 70%)" }} />
+        <div style={{ width: "55%", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "120px 64px 64px", position: "relative", zIndex: 2 }}>
 
-          {/* Studio label */}
+          {/* Ornamental top mark */}
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            style={{ color: "rgba(255,255,255,0.2)", fontSize: 11, letterSpacing: 6, marginBottom: 24, fontFamily: "monospace" }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}
           >
-            INVITATION DESIGN STUDIO — {new Date().getFullYear()}
+            <div style={{ height: 1, width: 32, background: "rgba(214,168,79,0.4)" }} />
+            <span style={{ color: "rgba(214,168,79,0.55)", fontSize: 10, letterSpacing: 5, fontFamily: "monospace" }}>HADAR STUDIO — {new Date().getFullYear()}</span>
           </motion.div>
 
           {/* Main heading */}
           <motion.h1
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            style={{ fontFamily: "serif", fontSize: "clamp(60px, 7vw, 90px)", fontWeight: 700, color: "#fff", lineHeight: 0.95, margin: "0 0 32px", direction: "rtl" }}
+            transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            style={{ fontFamily: "serif", fontSize: "clamp(64px, 8vw, 108px)", fontWeight: 700, lineHeight: 0.92, margin: "0 0 28px", direction: "rtl" }}
           >
-            עיצוב<br />
-            <span style={{ color: "#D6A84F" }}>מהוד</span><br />
-            ומהדר
+            <span style={{ color: "#F8F1E3" }}>עיצוב</span><br />
+            <span style={{ color: "#D6A84F", textShadow: "0 0 80px rgba(214,168,79,0.35)" }}>מהוד</span><br />
+            <span style={{ color: "#F8F1E3" }}>ומהדר</span>
           </motion.h1>
 
-          {/* Gold divider */}
+          {/* Gold ornamental divider */}
           <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ duration: 0.7, delay: 0.55 }}
-            style={{ width: 48, height: 1, background: "#D6A84F", marginBottom: 24, transformOrigin: "left" }}
-          />
+            initial={{ scaleX: 0, opacity: 0 }}
+            animate={{ scaleX: 1, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.5, ease: "easeOut" }}
+            style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24, transformOrigin: "left" }}
+          >
+            <div style={{ width: 40, height: 1, background: "#D6A84F" }} />
+            <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#D6A84F", opacity: 0.6 }} />
+            <div style={{ width: 16, height: 1, background: "rgba(214,168,79,0.3)" }} />
+          </motion.div>
 
           {/* Subtitle */}
           <motion.p
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.65 }}
-            style={{ color: "rgba(255,255,255,0.35)", fontSize: 14, lineHeight: 1.9, maxWidth: 360, direction: "rtl" }}
+            transition={{ duration: 0.7, delay: 0.6 }}
+            style={{ color: "rgba(248,241,227,0.45)", fontSize: 14, lineHeight: 2, maxWidth: 380, direction: "rtl" }}
           >
             הזמנות חרדיות בסטנדרט הגבוה ביותר.<br />
             עריכה עצמית, תשלום חד-פעמי של ₪49,<br />
             קבלת קבצי דפוס תוך דקות.
           </motion.p>
 
-          {/* CTA buttons */}
+          {/* CTAs */}
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.8 }}
-            style={{ display: "flex", gap: 12, marginTop: 36 }}
+            transition={{ duration: 0.7, delay: 0.75 }}
+            style={{ display: "flex", gap: 14, marginTop: 36 }}
           >
             <motion.button
-              whileHover={{ scale: 1.03, boxShadow: "0 0 30px rgba(214,168,79,0.3)" }}
+              whileHover={{ scale: 1.03, boxShadow: "0 0 40px rgba(214,168,79,0.35)" }}
               whileTap={{ scale: 0.97 }}
               onClick={() => document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth" })}
-              style={{ padding: "14px 32px", border: "none", borderRadius: 4, background: "#D6A84F", color: "#0c0c0c", fontSize: 13, fontWeight: 700, letterSpacing: 1, cursor: "pointer", fontFamily: "inherit" }}
+              style={{ padding: "14px 34px", border: "none", borderRadius: 6, background: "#D6A84F", color: "#0B1833", fontSize: 14, fontWeight: 700, letterSpacing: 0.5, cursor: "pointer", fontFamily: "inherit" }}
             >
               לגלריה ←
             </motion.button>
             <Link href="/order">
               <motion.button
-                whileHover={{ borderColor: "rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.75)" }}
+                whileHover={{ background: "rgba(214,168,79,0.1)", borderColor: "rgba(214,168,79,0.5)" }}
                 whileTap={{ scale: 0.97 }}
-                style={{ padding: "14px 32px", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, background: "transparent", color: "rgba(255,255,255,0.5)", fontSize: 13, letterSpacing: 1, cursor: "pointer", fontFamily: "monospace" }}
+                style={{ padding: "14px 34px", border: "1px solid rgba(214,168,79,0.25)", borderRadius: 6, background: "transparent", color: "rgba(248,241,227,0.6)", fontSize: 14, letterSpacing: 0.5, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}
               >
-                ORDER NOW
+                הזמינו עכשיו
               </motion.button>
             </Link>
           </motion.div>
-        </motion.div>
+
+          {/* Stats */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.7, delay: 0.95 }}
+            style={{ display: "flex", gap: 28, marginTop: 40, direction: "rtl" }}
+          >
+            {[["500+", "עיצובים"], ["₪49", "מחיר קבוע"], ["48 שע׳", "זמן מסירה"]].map(([v, l]) => (
+              <div key={l} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <span style={{ fontFamily: "serif", fontWeight: 700, color: "#D6A84F", fontSize: 20, lineHeight: 1 }}>{v}</span>
+                <span style={{ color: "rgba(248,241,227,0.3)", fontSize: 11 }}>{l}</span>
+              </div>
+            ))}
+          </motion.div>
+        </div>
 
         {/* RIGHT — visual panel (45%) */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.1 }}
-          style={{ width: "45%", position: "relative", overflow: "hidden" }}
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.9, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          style={{ width: "45%", position: "relative", overflow: "hidden", zIndex: 2 }}
         >
-          {/* Panel background */}
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg, #1a1007 0%, #0d0d0d 100%)" }} />
+          {/* Panel gradient overlay */}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg, rgba(10,20,50,0.6) 0%, rgba(8,16,38,0.8) 100%)", borderLeft: "1px solid rgba(214,168,79,0.07)" }} />
 
-          {/* Ambient light */}
-          <div style={{ position: "absolute", top: "30%", left: "50%", transform: "translateX(-50%)", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(214,168,79,0.08) 0%, transparent 70%)", filter: "blur(30px)" }} />
+          {/* Warm amber glow — centered on card */}
+          <div style={{ position: "absolute", top: "40%", left: "50%", transform: "translate(-50%, -50%)", width: 360, height: 360, borderRadius: "50%", background: "radial-gradient(circle, rgba(214,168,79,0.09) 0%, transparent 70%)", filter: "blur(40px)" }} />
 
-          {/* Second card (behind) */}
-          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-35%, -45%) rotate(6deg)", width: 240, height: 340, borderRadius: 12, background: "linear-gradient(145deg, #0d1520 0%, #0a1018 100%)", border: "1px solid rgba(100,150,255,0.1)", opacity: 0.6 }} />
+          {/* Rotating decorative ring */}
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 40, ease: "linear" }}
+            style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 360, height: 360, borderRadius: "50%", border: "1px solid rgba(214,168,79,0.06)" }}
+          />
+          <motion.div
+            animate={{ rotate: -360 }}
+            transition={{ repeat: Infinity, duration: 60, ease: "linear" }}
+            style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 440, height: 440, borderRadius: "50%", border: "1px dashed rgba(214,168,79,0.04)" }}
+          />
+
+          {/* Back card — blue tint */}
+          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-30%, -46%) rotate(7deg)", width: 230, height: 330, borderRadius: 14, background: "linear-gradient(145deg, #0d1e3d 0%, #091628 100%)", border: "1px solid rgba(214,168,79,0.08)", opacity: 0.65 }} />
 
           {/* Main invitation card */}
           <motion.div
-            animate={{ y: [0, -10, 0] }}
-            transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-            style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%) rotate(-4deg)", width: 240, height: 340, borderRadius: 12, background: "linear-gradient(145deg, #1a1508 0%, #241c0a 100%)", border: "1px solid rgba(214,168,79,0.25)", boxShadow: "0 40px 100px rgba(0,0,0,0.7), 0 0 60px rgba(214,168,79,0.08)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 24, direction: "rtl" }}
+            animate={{ y: [0, -12, 0] }}
+            transition={{ repeat: Infinity, duration: 6.5, ease: "easeInOut" }}
+            style={{
+              position: "absolute", top: "50%", left: "50%",
+              transform: "translate(-50%, -50%) rotate(-4deg)",
+              width: 240, height: 345, borderRadius: 14,
+              background: "linear-gradient(155deg, #0f1e3a 0%, #1a2d54 50%, #0d1830 100%)",
+              border: "1px solid rgba(214,168,79,0.3)",
+              boxShadow: "0 40px 100px rgba(0,0,0,0.5), 0 0 80px rgba(214,168,79,0.07), inset 0 1px 0 rgba(214,168,79,0.1)",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              gap: 9, padding: "28px 22px", direction: "rtl"
+            }}
           >
+            {/* Inner border */}
+            <div style={{ position: "absolute", inset: 8, borderRadius: 8, border: "1px solid rgba(214,168,79,0.1)", pointerEvents: "none" }} />
+            {/* Corner ornaments */}
+            {[["top-2.5 right-2.5", "top right"], ["top-2.5 left-2.5", "top left"], ["bottom-2.5 right-2.5", "bottom right"], ["bottom-2.5 left-2.5", "bottom left"]].map(([pos]) => (
+              <div key={pos} style={{ position: "absolute", top: pos.includes("top") ? 10 : undefined, bottom: pos.includes("bottom") ? 10 : undefined, right: pos.includes("right") ? 10 : undefined, left: pos.includes("left") ? 10 : undefined, width: 10, height: 10, borderTop: pos.includes("top") ? "1px solid rgba(214,168,79,0.4)" : undefined, borderBottom: pos.includes("bottom") ? "1px solid rgba(214,168,79,0.4)" : undefined, borderRight: pos.includes("right") ? "1px solid rgba(214,168,79,0.4)" : undefined, borderLeft: pos.includes("left") ? "1px solid rgba(214,168,79,0.4)" : undefined }} />
+            ))}
             <div style={{ width: 40, height: 1, background: "rgba(214,168,79,0.5)" }} />
-            <div style={{ color: "rgba(214,168,79,0.4)", fontSize: 9, letterSpacing: 3, fontFamily: "serif" }}>בסייעתא דשמיא</div>
-            <div style={{ fontFamily: "serif", fontSize: 26, fontWeight: 700, color: "#D6A84F", textAlign: "center", lineHeight: 1.2 }}>שמחת<br />בר המצווה</div>
-            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, textAlign: "center", lineHeight: 1.8 }}>ראובן בן שמעון<br />ח׳ אדר תשפ״ו</div>
-            <div style={{ color: "rgba(255,255,255,0.2)", fontSize: 10, textAlign: "center", lineHeight: 1.8 }}>יש לנו את הכבוד להזמינכם<br />לסעודת מצווה</div>
+            <div style={{ color: "rgba(214,168,79,0.45)", fontSize: 9, letterSpacing: 3 }}>בסייעתא דשמיא</div>
+            <div style={{ fontFamily: "serif", fontSize: 24, fontWeight: 700, color: "#D6A84F", textAlign: "center", lineHeight: 1.2 }}>שמחת<br />בר המצווה</div>
+            <div style={{ color: "rgba(248,241,227,0.55)", fontSize: 12, textAlign: "center", lineHeight: 1.85 }}>ראובן בן שמעון<br />ח׳ אדר תשפ״ו</div>
+            <div style={{ width: 28, height: 1, background: "rgba(214,168,79,0.25)" }} />
+            <div style={{ color: "rgba(248,241,227,0.25)", fontSize: 10, textAlign: "center", lineHeight: 1.85 }}>יש לנו את הכבוד להזמינכם<br />לסעודת מצווה</div>
             <div style={{ width: 40, height: 1, background: "rgba(214,168,79,0.5)" }} />
+            <div style={{ color: "rgba(214,168,79,0.2)", fontSize: 8, letterSpacing: 4, fontFamily: "serif" }}>הדר</div>
           </motion.div>
 
-          {/* Frame counter — bottom right */}
-          <div style={{ position: "absolute", bottom: 24, right: 24, color: "rgba(255,255,255,0.2)", fontSize: 11, fontFamily: "monospace", letterSpacing: 3 }}>01 / 12</div>
+          {/* Frame counter */}
+          <div style={{ position: "absolute", bottom: 28, right: 28, color: "rgba(214,168,79,0.25)", fontSize: 10, fontFamily: "monospace", letterSpacing: 3 }}>01 / 12</div>
 
-          {/* Frame dots — bottom left */}
-          <div style={{ position: "absolute", bottom: 24, left: 24, display: "flex", gap: 6 }}>
+          {/* Dots */}
+          <div style={{ position: "absolute", bottom: 30, left: 28, display: "flex", gap: 6 }}>
             {[1,2,3].map(i => (
-              <div key={i} style={{ width: i === 1 ? 20 : 6, height: 2, borderRadius: 1, background: i === 1 ? "#D6A84F" : "rgba(255,255,255,0.2)" }} />
+              <div key={i} style={{ width: i === 1 ? 22 : 6, height: 2, borderRadius: 1, background: i === 1 ? "#D6A84F" : "rgba(214,168,79,0.2)" }} />
             ))}
           </div>
         </motion.div>
