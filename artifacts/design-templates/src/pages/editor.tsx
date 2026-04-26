@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useId } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useAuth, useUser, useClerk } from "@clerk/react";
 import hadarLogo from "@/assets/logo-hadar.png";
@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ElementsPanel, PlacedElement, colorToFilter } from "@/components/ElementsPanel";
 import { RichTextSlot } from "@/components/RichTextSlot";
 import { SlotStylePanel, SlotStyle } from "@/components/SlotStylePanel";
+import { SvgWarpText, WarpType } from "@/components/SvgWarpText";
 
 export interface LogoPos { x: number; y: number; width: number; }
 
@@ -179,58 +180,6 @@ function buildSlotWrapperCSS(ss?: SlotStyle, slotOpacity?: number): React.CSSPro
     style.padding = "4px 14px";
   }
   return style;
-}
-
-function SvgWarpText({ text, warpType, arcDeg, cssStyle }: {
-  text: string; warpType: "arc-up" | "arc-down" | "wave" | "circle";
-  arcDeg: number; cssStyle: React.CSSProperties;
-}) {
-  const uid = useId().replace(/:/g, "");
-  const W = 300;
-  const fontSize = typeof cssStyle.fontSize === "number" ? cssStyle.fontSize : 14;
-  const fill = (cssStyle.color && cssStyle.color !== "transparent") ? cssStyle.color as string : cssStyle.backgroundImage ? `url(#grad-${uid})` : "#F8F1E3";
-  const gradFrom = cssStyle.backgroundImage ? (cssStyle.backgroundImage as string).match(/#[0-9a-fA-F]{3,6}/g)?.[0] || "#D6A84F" : undefined;
-  const gradTo = cssStyle.backgroundImage ? (cssStyle.backgroundImage as string).match(/#[0-9a-fA-F]{3,6}/g)?.[1] || "#F8F1E3" : undefined;
-  const isGradient = !!cssStyle.backgroundImage;
-  let pathD = "", svgW = W, svgH = 80;
-  if (warpType === "arc-up" || warpType === "arc-down") {
-    const H = 100, absAngle = Math.abs(arcDeg) * Math.PI / 180;
-    const r = absAngle < 0.05 ? 99999 : (W / 2) / Math.sin(absAngle / 2);
-    const sagitta = r - Math.sqrt(Math.max(0, r * r - (W / 2) * (W / 2)));
-    const isUp = warpType === "arc-up";
-    const sy = isUp ? sagitta : H - sagitta;
-    pathD = `M 0 ${sy} A ${r} ${r} 0 0 ${isUp ? 1 : 0} ${W} ${sy}`;
-    svgH = Math.max(H, sagitta + fontSize * 1.4 + 4);
-  } else if (warpType === "wave") {
-    const amplitude = Math.max(5, Math.abs(arcDeg) * 0.5), cy = svgH / 2;
-    const pts = Array.from({ length: 41 }, (_, i) => `${((i / 40) * W).toFixed(1)},${(cy + amplitude * Math.sin((i / 40) * Math.PI * 2 * (arcDeg > 0 ? 1 : -1))).toFixed(1)}`);
-    pathD = `M ${pts.join(" L ")}`;
-    svgH = Math.max(60, cy + amplitude + fontSize * 1.2);
-  } else if (warpType === "circle") {
-    const r = Math.max(40, 100 - Math.abs(arcDeg) * 0.3);
-    svgW = r * 2 + 20; svgH = r * 2 + 20;
-    pathD = `M ${svgW / 2},${svgH / 2 - r} A ${r},${r} 0 1 1 ${svgW / 2 - 0.001},${svgH / 2 - r}`;
-  }
-  return (
-    <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ display: "block", overflow: "visible", direction: "rtl", maxWidth: "100%" }}>
-      <defs>
-        <path id={uid} d={pathD} />
-        {isGradient && gradFrom && gradTo && (
-          <linearGradient id={`grad-${uid}`} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor={gradFrom} />
-            <stop offset="100%" stopColor={gradTo} />
-          </linearGradient>
-        )}
-      </defs>
-      <text fill={fill} fontSize={fontSize} fontFamily={cssStyle.fontFamily as string}
-        fontWeight={cssStyle.fontWeight as number} fontStyle={cssStyle.fontStyle as string}
-        stroke={typeof cssStyle.WebkitTextStroke === "string" ? cssStyle.WebkitTextStroke.split(" ").slice(1).join(" ") : undefined}
-        strokeWidth={typeof cssStyle.WebkitTextStroke === "string" ? parseFloat(cssStyle.WebkitTextStroke) || undefined : undefined}
-        paintOrder="stroke">
-        <textPath href={`#${uid}`} startOffset="50%" textAnchor="middle">{text}</textPath>
-      </text>
-    </svg>
-  );
 }
 
 // ─── Logo Uploader ─────────────────────────────────────────────────────────────
@@ -420,8 +369,9 @@ function InteractiveCanvas({
         const css = buildSlotCSS(slot, fontOverride, slotStyles[slot.id]);
         const wrapCSS = buildSlotWrapperCSS(slotStyles[slot.id], slot.opacity);
         const zIdx = (slotStyles[slot.id]?.zIndex as number) ?? (slot.zIndex ?? 10);
-        const warpType = slotStyles[slot.id]?.warpType;
-        const arcDeg = slotStyles[slot.id]?.arcDegrees ?? 0;
+        const warpType = slotStyles[slot.id]?.warpType as WarpType | undefined;
+        const warpAmount = slotStyles[slot.id]?.warpAmount
+          ?? (slotStyles[slot.id]?.arcDegrees != null ? Math.abs(slotStyles[slot.id]!.arcDegrees!) : 40);
         const plainText = value.replace(/<[^>]+>/g, "");
 
         return (
@@ -450,8 +400,14 @@ function InteractiveCanvas({
             onClick={e => e.stopPropagation()}
           >
             {warpType && warpType !== "none" ? (
-              <div className="flex justify-center">
-                <SvgWarpText text={plainText} warpType={warpType} arcDeg={arcDeg} cssStyle={css} />
+              <div className="flex justify-center" style={{ width: "100%", overflow: "visible" }}>
+                <SvgWarpText
+                  text={plainText}
+                  warpType={warpType}
+                  warpAmount={warpAmount}
+                  cssStyle={css}
+                  pathWidth={220}
+                />
               </div>
             ) : (
               <span style={css} className="whitespace-pre-line">{value}</span>

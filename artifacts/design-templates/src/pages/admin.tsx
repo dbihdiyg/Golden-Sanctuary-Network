@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import hadarLogo from "@/assets/logo-hadar.png";
 import { useCombinedFonts, loadAnyFont } from "@/lib/fonts";
 import { SlotStylePanel, SlotStyle } from "@/components/SlotStylePanel";
+import { SvgWarpText, WarpType } from "@/components/SvgWarpText";
 import {
   Lock, Plus, Trash2, Edit2, Eye, Package, ShoppingBag,
   BarChart3, LogOut, Check, X, ImagePlus, GripVertical,
@@ -372,6 +373,16 @@ function TemplateEditor({
                 const fontFamily = slot.fontFamily && slot.fontFamily !== "serif" && slot.fontFamily !== "sans"
                   ? `'${slot.fontFamily}', serif`
                   : slot.fontFamily === "sans" ? "sans-serif" : "serif";
+                const hasWarp = !!(slot.warpType && slot.warpType !== "none");
+                const warpAmt = slot.warpAmount ?? (slot.arcDegrees != null ? Math.abs(slot.arcDegrees) : 40);
+                const slotCSS: React.CSSProperties = {
+                  fontSize: slot.fontSizePx ?? 14, fontFamily,
+                  fontWeight: slot.bold ? 700 : 400, fontStyle: slot.italic ? "italic" : "normal",
+                  color: slot.color || "#D6A84F",
+                  letterSpacing: slot.letterSpacing ? `${slot.letterSpacing}px` : undefined,
+                  lineHeight: slot.lineHeight ?? 1.35,
+                  textShadow: slot.shadow ? "1px 1px 4px rgba(0,0,0,0.7)" : undefined,
+                };
                 return (
                   <div key={slot.id} data-slot={slot.id}
                     onPointerDown={e => onSlotPointerDown(e, slot.id)}
@@ -383,19 +394,24 @@ function TemplateEditor({
                       cursor: "move", padding: "2px 4px", borderRadius: 3, minHeight: 18,
                       touchAction: "none", opacity: slot.opacity ?? 1, zIndex: slot.zIndex ?? undefined,
                       textAlign: slot.align ?? "center", direction: "rtl",
+                      overflow: "visible",
                     }}
                   >
-                    <span style={{
-                      fontSize: slot.fontSizePx ?? 14, fontFamily,
-                      fontWeight: slot.bold ? 700 : 400, fontStyle: slot.italic ? "italic" : "normal",
-                      color: slot.color || "#D6A84F",
-                      letterSpacing: slot.letterSpacing ? `${slot.letterSpacing}px` : undefined,
-                      lineHeight: slot.lineHeight ?? 1.35,
-                      textShadow: slot.shadow ? "1px 1px 4px rgba(0,0,0,0.7)" : undefined,
-                      userSelect: "none", display: "block", whiteSpace: "pre-line", pointerEvents: "none",
-                    }}>
-                      {slot.defaultValue || slot.label}
-                    </span>
+                    {hasWarp ? (
+                      <div style={{ pointerEvents: "none", overflow: "visible" }}>
+                        <SvgWarpText
+                          text={slot.defaultValue || slot.label}
+                          warpType={slot.warpType as WarpType}
+                          warpAmount={warpAmt}
+                          cssStyle={slotCSS}
+                          pathWidth={220}
+                        />
+                      </div>
+                    ) : (
+                      <span style={{ ...slotCSS, userSelect: "none", display: "block", whiteSpace: "pre-line", pointerEvents: "none" }}>
+                        {slot.defaultValue || slot.label}
+                      </span>
+                    )}
                     {isSelected && (
                       <span style={{ position: "absolute", top: -18, right: 0, fontSize: 9, color: "#D6A84F", background: "rgba(0,0,0,0.7)", padding: "1px 5px", borderRadius: 3, whiteSpace: "nowrap", pointerEvents: "none" }}>
                         {slot.label}{slot.fixed ? " 🔒" : ""}

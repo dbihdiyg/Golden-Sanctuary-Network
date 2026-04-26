@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Bold, Italic, Underline, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { FontEntry } from "@/lib/fonts";
+import { SvgWarpText } from "./SvgWarpText";
 
 export interface SlotStyle {
   fontFamily?: string;
@@ -54,7 +55,9 @@ export interface SlotStyle {
 
   blendMode?: "normal" | "multiply" | "screen" | "overlay" | "soft-light";
 
-  warpType?: "none" | "arc-up" | "arc-down" | "wave" | "circle";
+  warpType?: "none" | "arc-up" | "arc-down" | "wave" | "circle" | "bulge" | "arch";
+  warpAmount?: number;    // 1–100 intensity
+  /** @deprecated use warpAmount */
   arcDegrees?: number;
 
   outline?: boolean;
@@ -79,11 +82,13 @@ const PRESET_COLORS = [
 const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 42, 48, 60, 72, 96, 120];
 
 const WARP_OPTIONS = [
-  { value: "none",     label: "ישר" },
-  { value: "arc-up",   label: "קשת ↑" },
-  { value: "arc-down", label: "קשת ↓" },
-  { value: "wave",     label: "גל ~" },
-  { value: "circle",   label: "⭕ עיגול" },
+  { value: "none",     label: "ישר",       icon: "—" },
+  { value: "arc-up",   label: "קשת ↑",     icon: "⌒" },
+  { value: "arc-down", label: "קשת ↓",     icon: "⌣" },
+  { value: "arch",     label: "כיפה",      icon: "∩" },
+  { value: "bulge",    label: "בליטה",     icon: "◠" },
+  { value: "wave",     label: "גל ~",      icon: "∿" },
+  { value: "circle",   label: "עיגול",     icon: "○" },
 ] as const;
 
 const TEXTURE_OPTIONS = [
@@ -719,17 +724,53 @@ export function SlotStylePanel({ slotId: _slotId, style, onChange, fonts = [] }:
 
       {/* ── עיקום (Warp) ──────────────────────────────────────────── */}
       <Section title="עיקום טקסט" active={hasWarp} badge={hasWarp ? WARP_OPTIONS.find(w => w.value === s.warpType)?.label : undefined}>
-        <div className="flex items-center gap-1 flex-wrap">
+        {/* Type grid */}
+        <div className="grid grid-cols-4 gap-1">
           {WARP_OPTIONS.map(opt => (
             <button key={opt.value}
-              onClick={() => onChange({ warpType: opt.value })}
-              className={`px-2 py-0.5 rounded text-[11px] border transition-all ${(s.warpType || "none") === opt.value ? "bg-primary/20 text-primary border-primary/40" : "border-primary/15 text-muted-foreground hover:bg-primary/10"}`}>
-              {opt.label}
+              onClick={() => onChange({ warpType: opt.value as SlotStyle["warpType"] })}
+              className={`flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[10px] border transition-all ${(s.warpType || "none") === opt.value ? "bg-primary/20 text-primary border-primary/40" : "border-primary/15 text-muted-foreground hover:bg-primary/10"}`}>
+              <span className="text-base leading-none">{opt.icon}</span>
+              <span className="leading-tight text-center">{opt.label}</span>
             </button>
           ))}
         </div>
-        {(s.warpType && s.warpType !== "none") && (
-          <SliderRow label="עוצמה" min={-80} max={80} step={5} value={s.arcDegrees} defaultValue={0} onChange={v => onChange({ arcDegrees: v })} unit="" />
+
+        {/* Controls */}
+        {hasWarp && (
+          <>
+            <SliderRow
+              label="עוצמה"
+              min={1} max={100} step={1}
+              value={s.warpAmount ?? (s.arcDegrees != null ? Math.abs(s.arcDegrees) : 40)}
+              defaultValue={40}
+              onChange={v => onChange({ warpAmount: v, arcDegrees: v })}
+              unit=""
+            />
+            <button
+              onClick={() => onChange({ warpType: "none", warpAmount: 40, arcDegrees: 0 })}
+              className="w-full flex items-center justify-center gap-1.5 py-1 text-[11px] text-muted-foreground hover:text-foreground border border-dashed border-primary/15 rounded-lg transition-colors"
+            >
+              <RotateCcw className="w-3 h-3" />
+              איפוס עיקום
+            </button>
+
+            {/* Live preview */}
+            <div className="bg-black/30 rounded-xl p-3 flex items-center justify-center overflow-hidden border border-primary/10" style={{ minHeight: 80 }}>
+              <SvgWarpText
+                text="דוגמת טקסט"
+                warpType={(s.warpType as any) || "arc-up"}
+                warpAmount={s.warpAmount ?? (s.arcDegrees != null ? Math.abs(s.arcDegrees) : 40)}
+                cssStyle={{
+                  fontSize: Math.min(s.fontSize ?? 18, 22),
+                  fontFamily: s.fontFamily ? `'${s.fontFamily}', serif` : "serif",
+                  fontWeight: s.bold ? 700 : 400,
+                  color: s.color || "#D6A84F",
+                }}
+                pathWidth={200}
+              />
+            </div>
+          </>
         )}
       </Section>
 
