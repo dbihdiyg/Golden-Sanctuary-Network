@@ -9,6 +9,7 @@ This workspace is a pnpm monorepo using TypeScript, housing two main application
     - **AI Image Generation** (new): custom "AI" tab in Polotno's SidePanel. User enters Hebrew prompts → `POST /api/hadar/generate-image` → `gpt-image-1` via Replit AI Integrations proxy → base64 PNG → auto-added as new Polotno layer. Supports 3 sizes, 8 suggested prompts, regenerate button. Image data stored in Polotno JSON.
     - AI-powered invitation text generation, comprehensive admin template editor, user portal for designs/orders/support tickets.
     - Clerk auth + Stripe ₪49 payment → download flow preserved.
+    - **Premium Video Template Generator** (new): Admin creates video templates (base MP4 + text overlay field definitions with x/y/timing/font config) → user fills a form → pays via Stripe → FFmpeg (`drawtext` filter with NotoSansHebrew-Bold font, `text_shaping=1` for RTL) renders a custom MP4 in the background → user downloads. DB tables: `hadar_video_templates`, `hadar_video_jobs`. API routes in `hadar-video.ts`. Frontend pages: `/video` (gallery), `/video/:slug` (detail + real-time CSS preview overlay), `/my-videos` (polling dashboard with auto-refresh for in-progress jobs). Admin "וידאו" tab in admin panel for full template CRUD and video file upload.
 
 Both applications are integrated with a shared authentication system (Clerk) and utilize a PostgreSQL database.
 

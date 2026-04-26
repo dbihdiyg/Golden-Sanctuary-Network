@@ -103,6 +103,12 @@ function AuthNavButton() {
             העיצובים שלי
           </Button>
         </Link>
+        <Link href="/my-videos">
+          <Button size="sm" variant="ghost" className="text-primary border border-primary/20 hover:bg-primary/10 gap-1.5 h-8 px-2.5 text-xs">
+            <Video className="w-3.5 h-3.5" />
+            הסרטונים שלי
+          </Button>
+        </Link>
         <UserButton appearance={{ variables: { colorPrimary: "#D6A84F" } }} />
       </div>
     );
@@ -830,8 +836,8 @@ export default function Home() {
                   <Video className="w-6 h-6" />
                 </div>
                 <h3 className="font-serif text-3xl font-bold mb-2">קליפי וידאו</h3>
-                <p className="text-muted-foreground mb-4 max-w-sm">מצגות מרגשות וקליפים קצרים להקרנה באירועים ושמחות.</p>
-                <Link href="/order"><span className="text-primary font-bold flex items-center gap-2 group-hover:gap-3 transition-all cursor-pointer">גלה עוד &larr;</span></Link>
+                <p className="text-muted-foreground mb-4 max-w-sm">סרטוני וידאו מותאמים אישית לאירועים ושמחות — הזינו את הפרטים ואנחנו מייצרים.</p>
+                <Link href="/video"><span className="text-primary font-bold flex items-center gap-2 group-hover:gap-3 transition-all cursor-pointer">לגלריית הוידאו &larr;</span></Link>
               </div>
             </motion.div>
 

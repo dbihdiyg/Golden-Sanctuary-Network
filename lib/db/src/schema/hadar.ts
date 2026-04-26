@@ -103,7 +103,49 @@ export const hadarPaymentMethods = pgTable("hadar_payment_methods", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// ── Video Templates ──────────────────────────────────────────────────────────
+export const hadarVideoTemplates = pgTable("hadar_video_templates", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  category: text("category").notNull().default(""),
+  price: integer("price").notNull().default(4900), // agorot
+  baseVideoUrl: text("base_video_url"),            // source MP4
+  previewVideoUrl: text("preview_video_url"),       // short loop for gallery
+  previewImageUrl: text("preview_image_url"),       // thumbnail
+  // [{id,label,type:'text'|'textarea',defaultValue,placeholder,maxLength,required}]
+  fields: jsonb("fields").notNull().default(sql`'[]'::jsonb`),
+  // [{fieldId,x,y,fontSize,fontColor,fontFamily,align,shadowColor,startTime,endTime}]
+  overlays: jsonb("overlays").notNull().default(sql`'[]'::jsonb`),
+  videoDuration: integer("video_duration").default(15), // seconds
+  videoWidth: integer("video_width").default(1920),
+  videoHeight: integer("video_height").default(1080),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ── Video Jobs ─────────────────────────────────────────────────────────────────
+export const hadarVideoJobs = pgTable("hadar_video_jobs", {
+  id: serial("id").primaryKey(),
+  clerkUserId: text("clerk_user_id").notNull(),
+  templateId: integer("template_id").notNull().references(() => hadarVideoTemplates.id),
+  fieldValues: jsonb("field_values").notNull().default(sql`'{}'::jsonb`),
+  // pending_payment | paid | rendering | ready | failed
+  status: text("status").notNull().default("pending_payment"),
+  stripeSessionId: text("stripe_session_id"),
+  outputUrl: text("output_url"),
+  errorMessage: text("error_message"),
+  pricePaid: integer("price_paid"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // ── Types ──────────────────────────────────────────────────────────────────────
+export type HadarVideoTemplate = typeof hadarVideoTemplates.$inferSelect;
+export type HadarVideoJob = typeof hadarVideoJobs.$inferSelect;
+
 export type HadarElement = typeof hadarElements.$inferSelect;
 export type HadarFont = typeof hadarFonts.$inferSelect;
 export type HadarTicket = typeof hadarTickets.$inferSelect;

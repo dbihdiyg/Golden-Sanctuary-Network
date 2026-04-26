@@ -16,6 +16,7 @@ import hadarDesignsRouter from "./hadar-designs";
 import hadarAdminRouter from "./hadar-admin";
 import hadarTicketsRouter from "./hadar-tickets";
 import hadarPaymentRouter from "./hadar-payment";
+import hadarVideoRouter from "./hadar-video";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(hadarDesignsRouter);
 router.use(hadarAdminRouter);
 router.use(hadarTicketsRouter);
 router.use(hadarPaymentRouter);
+router.use(hadarVideoRouter);
 
 export default router;

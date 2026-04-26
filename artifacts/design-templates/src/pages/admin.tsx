@@ -11,7 +11,7 @@ import {
   RefreshCw, ArrowRight, ChevronDown, ChevronUp, Loader2,
   AlertCircle, Users, DollarSign, Clock, ToggleLeft, ToggleRight, Upload,
   AlignCenter, AlignRight, AlignLeft, Type, Layers, Move,
-  Maximize2, FileType2, Send, MessageSquare,
+  Maximize2, FileType2, Send, MessageSquare, Film,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1367,8 +1367,308 @@ function TicketsManager({ token }: { token: string }) {
   );
 }
 
+// ─── Video Templates Manager ──────────────────────────────────────────────────
+
+interface VideoFieldDef { id: string; label: string; type: "text" | "textarea"; defaultValue: string; placeholder: string; maxLength: number; required: boolean; }
+interface VideoOverlay { fieldId: string; x: number; y: number; fontSize: number; fontColor: string; shadowColor: string; align: "left"|"center"|"right"; startTime: number; endTime: number; }
+interface AdminVideoTemplate {
+  id: number; slug: string; title: string; description: string; category: string; price: number;
+  baseVideoUrl: string|null; previewVideoUrl: string|null; previewImageUrl: string|null;
+  fields: VideoFieldDef[]; overlays: VideoOverlay[];
+  videoDuration: number|null; videoWidth: number|null; videoHeight: number|null; isActive: boolean;
+}
+
+function emptyField(): VideoFieldDef { return { id: crypto.randomUUID().slice(0,8), label: "", type: "text", defaultValue: "", placeholder: "", maxLength: 50, required: false }; }
+function emptyOverlay(fieldId: string): VideoOverlay { return { fieldId, x: 50, y: 50, fontSize: 60, fontColor: "#FFFFFF", shadowColor: "#000000", align: "center", startTime: 0, endTime: 0 }; }
+
+function VideoTemplatesManager({ token }: { token: string }) {
+  const api = import.meta.env.VITE_API_BASE_URL ?? "";
+  const [templates, setTemplates] = useState<AdminVideoTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Partial<AdminVideoTemplate> | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState<null | "base" | "preview" | "thumb">(null);
+  const [msg, setMsg] = useState<string|null>(null);
+  const [activeTemplateId, setActiveTemplateId] = useState<number|null>(null);
+
+  const headers = { "Content-Type": "application/json", "x-admin-secret": token };
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await fetch(`${api}/api/hadar/admin/video-templates`, { headers });
+      const data = await res.json();
+      setTemplates(data);
+    } finally { setLoading(false); }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function save() {
+    if (!editing) return;
+    setSaving(true);
+    setMsg(null);
+    try {
+      const isNew = !editing.id;
+      const res = await fetch(
+        isNew ? `${api}/api/hadar/admin/video-templates` : `${api}/api/hadar/admin/video-templates/${editing.id}`,
+        { method: isNew ? "POST" : "PUT", headers, body: JSON.stringify(editing) }
+      );
+      if (!res.ok) throw new Error((await res.json()).error);
+      const saved = await res.json();
+      setMsg("נשמר בהצלחה ✓");
+      setEditing(null);
+      await load();
+      if (isNew) setActiveTemplateId(saved.id);
+    } catch (e: any) { setMsg(`שגיאה: ${e.message}`); }
+    finally { setSaving(false); }
+  }
+
+  async function uploadVideo(id: number, type: "base"|"preview"|"thumb", file: File) {
+    setUploadingVideo(type);
+    const fd = new FormData();
+    fd.append("video", file);
+    fd.append("type", type);
+    try {
+      const res = await fetch(`${api}/api/hadar/admin/video-templates/${id}/upload-video`, { method: "POST", headers: { "x-admin-secret": token }, body: fd });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setMsg("קובץ הועלה ✓");
+      await load();
+    } catch (e: any) { setMsg(`שגיאת העלאה: ${e.message}`); }
+    finally { setUploadingVideo(null); }
+  }
+
+  async function toggleActive(t: AdminVideoTemplate) {
+    await fetch(`${api}/api/hadar/admin/video-templates/${t.id}`, { method: "PUT", headers, body: JSON.stringify({ isActive: !t.isActive }) });
+    await load();
+  }
+
+  const isNew = editing && !editing.id;
+
+  // Field editor helpers
+  function setField(idx: number, patch: Partial<VideoFieldDef>) {
+    setEditing(prev => {
+      if (!prev) return prev;
+      const fields = [...(prev.fields ?? [])];
+      fields[idx] = { ...fields[idx], ...patch };
+      return { ...prev, fields };
+    });
+  }
+  function addField() {
+    setEditing(prev => prev ? { ...prev, fields: [...(prev.fields ?? []), emptyField()] } : prev);
+  }
+  function removeField(idx: number) {
+    setEditing(prev => {
+      if (!prev) return prev;
+      const fields = (prev.fields ?? []).filter((_, i) => i !== idx);
+      return { ...prev, fields };
+    });
+  }
+
+  // Overlay editor helpers
+  function setOverlay(idx: number, patch: Partial<VideoOverlay>) {
+    setEditing(prev => {
+      if (!prev) return prev;
+      const overlays = [...(prev.overlays ?? [])];
+      overlays[idx] = { ...overlays[idx], ...patch };
+      return { ...prev, overlays };
+    });
+  }
+  function addOverlay(fieldId: string) {
+    setEditing(prev => prev ? { ...prev, overlays: [...(prev.overlays ?? []), emptyOverlay(fieldId)] } : prev);
+  }
+  function removeOverlay(idx: number) {
+    setEditing(prev => {
+      if (!prev) return prev;
+      const overlays = (prev.overlays ?? []).filter((_, i) => i !== idx);
+      return { ...prev, overlays };
+    });
+  }
+
+  const activeTemplate = activeTemplateId != null ? templates.find(t => t.id === activeTemplateId) : null;
+
+  return (
+    <div className="space-y-4" dir="rtl">
+      {msg && <p className={`text-sm p-2 rounded-lg ${msg.startsWith("שגיא") ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"}`}>{msg}</p>}
+
+      <div className="flex items-center justify-between">
+        <h2 className="font-bold text-lg">תבניות וידאו ({templates.length})</h2>
+        <Button size="sm" className="gap-1.5" onClick={() => setEditing({ fields: [], overlays: [], price: 4900, videoDuration: 15, videoWidth: 1920, videoHeight: 1080, isActive: true })}>
+          <Plus className="w-4 h-4" /> תבנית חדשה
+        </Button>
+      </div>
+
+      {/* Edit form */}
+      <AnimatePresence>
+        {editing && (
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="bg-card border border-primary/15 rounded-xl p-5 space-y-4">
+            <h3 className="font-semibold text-primary">{isNew ? "תבנית חדשה" : `עריכה: ${editing.title}`}</h3>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              {[
+                ["slug","כתובת (slug)",false],["title","כותרת",false],["description","תיאור",false],["category","קטגוריה",false],
+              ].map(([k,l]) => (
+                <div key={k as string}>
+                  <Label className="text-xs text-muted-foreground mb-0.5">{l as string}</Label>
+                  <Input dir="rtl" value={(editing as any)[k as string] ?? ""} onChange={e => setEditing(p => p ? ({ ...p, [k as string]: e.target.value }) : p)} className="h-8 text-sm" />
+                </div>
+              ))}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-0.5">מחיר (אגורות, ₪49=4900)</Label>
+                <Input type="number" value={editing.price ?? 4900} onChange={e => setEditing(p => p ? ({ ...p, price: Number(e.target.value) }) : p)} className="h-8 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-0.5">משך (שניות)</Label>
+                <Input type="number" value={editing.videoDuration ?? 15} onChange={e => setEditing(p => p ? ({ ...p, videoDuration: Number(e.target.value) }) : p)} className="h-8 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-0.5">רוחב (px)</Label>
+                <Input type="number" value={editing.videoWidth ?? 1920} onChange={e => setEditing(p => p ? ({ ...p, videoWidth: Number(e.target.value) }) : p)} className="h-8 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-0.5">גובה (px)</Label>
+                <Input type="number" value={editing.videoHeight ?? 1080} onChange={e => setEditing(p => p ? ({ ...p, videoHeight: Number(e.target.value) }) : p)} className="h-8 text-sm" />
+              </div>
+            </div>
+
+            {/* Fields */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="font-semibold text-sm">שדות טקסט למשתמש</Label>
+                <Button size="sm" variant="outline" onClick={addField} className="h-7 gap-1 text-xs"><Plus className="w-3 h-3" />הוסף שדה</Button>
+              </div>
+              <div className="space-y-2">
+                {(editing.fields ?? []).map((f, i) => (
+                  <div key={f.id} className="bg-muted/30 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Input dir="rtl" placeholder="תווית שדה" value={f.label} onChange={e => setField(i, { label: e.target.value })} className="h-7 text-sm flex-1" />
+                      <select value={f.type} onChange={e => setField(i, { type: e.target.value as "text"|"textarea" })} className="border rounded h-7 text-xs px-1">
+                        <option value="text">שדה קצר</option>
+                        <option value="textarea">שדה ארוך</option>
+                      </select>
+                      <Input type="number" placeholder="max" value={f.maxLength} onChange={e => setField(i, { maxLength: Number(e.target.value) })} className="h-7 text-xs w-16" />
+                      <label className="flex items-center gap-1 text-xs whitespace-nowrap">
+                        <input type="checkbox" checked={f.required} onChange={e => setField(i, { required: e.target.checked })} />
+                        חובה
+                      </label>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500" onClick={() => removeField(i)}><X className="w-3.5 h-3.5" /></Button>
+                    </div>
+                    <Input dir="rtl" placeholder="placeholder" value={f.placeholder} onChange={e => setField(i, { placeholder: e.target.value })} className="h-7 text-xs" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Overlays */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="font-semibold text-sm">מיקומי טקסט (Overlays)</Label>
+              </div>
+              {(editing.fields ?? []).length === 0 && <p className="text-xs text-muted-foreground">הוסיפו שדות קודם</p>}
+              <div className="space-y-2">
+                {(editing.overlays ?? []).map((ov, i) => {
+                  const fieldLabel = (editing.fields ?? []).find(f => f.id === ov.fieldId)?.label ?? ov.fieldId;
+                  return (
+                    <div key={i} className="bg-muted/30 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-medium text-primary">{fieldLabel}</span>
+                        <div className="flex items-center gap-1 text-xs"><span>X%</span><Input type="number" value={ov.x} onChange={e => setOverlay(i, { x: Number(e.target.value) })} className="h-6 w-14 text-xs" /></div>
+                        <div className="flex items-center gap-1 text-xs"><span>Y%</span><Input type="number" value={ov.y} onChange={e => setOverlay(i, { y: Number(e.target.value) })} className="h-6 w-14 text-xs" /></div>
+                        <div className="flex items-center gap-1 text-xs"><span>גודל</span><Input type="number" value={ov.fontSize} onChange={e => setOverlay(i, { fontSize: Number(e.target.value) })} className="h-6 w-16 text-xs" /></div>
+                        <div className="flex items-center gap-1 text-xs"><span>צבע</span><input type="color" value={ov.fontColor} onChange={e => setOverlay(i, { fontColor: e.target.value })} className="h-6 w-8 rounded border-0 cursor-pointer" /></div>
+                        <div className="flex items-center gap-1 text-xs"><span>צל</span><input type="color" value={ov.shadowColor} onChange={e => setOverlay(i, { shadowColor: e.target.value })} className="h-6 w-8 rounded border-0 cursor-pointer" /></div>
+                        <select value={ov.align} onChange={e => setOverlay(i, { align: e.target.value as "left"|"center"|"right" })} className="border rounded h-6 text-xs px-1">
+                          <option value="center">מרכז</option>
+                          <option value="right">ימין</option>
+                          <option value="left">שמאל</option>
+                        </select>
+                        <div className="flex items-center gap-1 text-xs"><span>מ-</span><Input type="number" value={ov.startTime} onChange={e => setOverlay(i, { startTime: Number(e.target.value) })} className="h-6 w-14 text-xs" /></div>
+                        <div className="flex items-center gap-1 text-xs"><span>עד</span><Input type="number" value={ov.endTime} onChange={e => setOverlay(i, { endTime: Number(e.target.value) })} className="h-6 w-14 text-xs" /><span className="text-muted-foreground">(0=סוף)</span></div>
+                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-500" onClick={() => removeOverlay(i)}><X className="w-3 h-3" /></Button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* Add overlay for a field */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {(editing.fields ?? []).map(f => (
+                    <Button key={f.id} size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => addOverlay(f.id)}>
+                      <Plus className="w-3 h-3" /> {f.label || f.id}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button size="sm" onClick={save} disabled={saving} className="gap-1.5">
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                שמור
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => { setEditing(null); setMsg(null); }}>ביטול</Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Template list */}
+      {loading && <div className="flex justify-center py-10"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>}
+      {!loading && templates.length === 0 && <p className="text-muted-foreground text-center py-12 text-sm">אין תבניות וידאו עדיין</p>}
+
+      <div className="space-y-3">
+        {templates.map(t => (
+          <div key={t.id} className="bg-card border border-primary/10 rounded-xl overflow-hidden">
+            <div className="flex items-center gap-3 p-4 cursor-pointer select-none" onClick={() => setActiveTemplateId(prev => prev === t.id ? null : t.id)}>
+              <div className="w-16 h-10 bg-[#0B1833] rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {t.previewImageUrl ? <img src={`${import.meta.env.VITE_API_BASE_URL ?? ""}${t.previewImageUrl}`} className="w-full h-full object-cover" /> : <Film className="w-5 h-5 text-[#D6A84F]/40" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm truncate">{t.title}</p>
+                <p className="text-xs text-muted-foreground">/{t.slug} · ₪{(t.price/100).toFixed(0)} · {t.fields.length} שדות</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={e => { e.stopPropagation(); toggleActive(t); }} className={`text-xs px-2 py-0.5 rounded-full border ${t.isActive ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-100 text-gray-500 border-gray-200"}`}>
+                  {t.isActive ? "פעיל" : "מוסתר"}
+                </button>
+                <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={e => { e.stopPropagation(); setEditing(t); }}>
+                  <Edit2 className="w-3 h-3" /> עריכה
+                </Button>
+              </div>
+            </div>
+
+            {activeTemplateId === t.id && (
+              <div className="border-t border-primary/10 p-4 space-y-3 bg-muted/20">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">העלאת קבצים</p>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { type: "base" as const, label: "וידאו בסיס (MP4)", accept: "video/*" },
+                    { type: "preview" as const, label: "תצוגה מקדימה (MP4 קצר)", accept: "video/*" },
+                    { type: "thumb" as const, label: "תמונה ממוזערת", accept: "image/*" },
+                  ].map(({ type, label, accept }) => (
+                    <label key={type} className={`cursor-pointer flex items-center gap-1.5 text-xs border rounded-lg px-3 py-2 transition-colors ${uploadingVideo === type ? "opacity-50" : "hover:bg-primary/5 border-primary/20"}`}>
+                      {uploadingVideo === type ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      {label}
+                      <input type="file" accept={accept} className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadVideo(t.id, type, f); e.target.value = ""; }} />
+                    </label>
+                  ))}
+                </div>
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                  {t.baseVideoUrl && <p>✓ וידאו בסיס: <span className="text-foreground font-mono">{t.baseVideoUrl.slice(0, 50)}…</span></p>}
+                  {t.previewVideoUrl && <p>✓ תצוגה מקדימה: <span className="text-foreground font-mono">{t.previewVideoUrl.slice(0, 50)}…</span></p>}
+                  {t.previewImageUrl && <p>✓ תמונה: <span className="text-foreground font-mono">{t.previewImageUrl.slice(0, 50)}…</span></p>}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Admin Panel ─────────────────────────────────────────────────────────
-type Tab = "orders" | "templates" | "elements" | "fonts" | "stats" | "tickets";
+type Tab = "orders" | "templates" | "elements" | "fonts" | "stats" | "tickets" | "videos";
 
 export default function Admin() {
   const [pw, setPw] = useState("");
@@ -1533,7 +1833,7 @@ export default function Admin() {
         )}
 
         <div className="flex gap-0 mb-6 border-b border-primary/10 overflow-x-auto">
-          {([["orders","הזמנות"],["tickets","פניות"],["templates","תבניות"],["elements","אלמנטים"],["fonts","פונטים"],["stats","סטטיסטיקות"]] as [Tab,string][]).map(([t, l]) => (
+          {([["orders","הזמנות"],["tickets","פניות"],["templates","תבניות"],["videos","וידאו"],["elements","אלמנטים"],["fonts","פונטים"],["stats","סטטיסטיקות"]] as [Tab,string][]).map(([t, l]) => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap ${tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               {l}
@@ -1683,6 +1983,11 @@ export default function Admin() {
           {tab === "tickets"  && token && <motion.div key="tickets" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><TicketsManager token={token} /></motion.div>}
           {tab === "elements" && token && <ElementsManager token={token} />}
           {tab === "fonts"    && token && <FontsManager    token={token} />}
+          {tab === "videos"   && token && (
+            <motion.div key="videos" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <VideoTemplatesManager token={token} />
+            </motion.div>
+          )}
 
           {tab === "stats" && stats && (
             <motion.div key="stats" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>

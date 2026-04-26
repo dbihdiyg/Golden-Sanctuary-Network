@@ -21,6 +21,9 @@ const Admin = lazy(() => import("@/pages/admin"));
 const Editor = lazy(() => import("@/pages/editor"));
 const MyDesigns = lazy(() => import("@/pages/MyDesigns"));
 const Support = lazy(() => import("@/pages/Support"));
+const VideoGallery = lazy(() => import("@/pages/VideoGallery"));
+const VideoDetail = lazy(() => import("@/pages/VideoDetail"));
+const MyVideos = lazy(() => import("@/pages/MyVideos"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +63,10 @@ function SupportRoute() {
   return <AuthGuard><Support /></AuthGuard>;
 }
 
+function MyVideosRoute() {
+  return <AuthGuard><MyVideos /></AuthGuard>;
+}
+
 function AppRoutes() {
   return (
     <AnimatePresence mode="wait">
@@ -75,6 +82,9 @@ function AppRoutes() {
           <Route path="/help" component={Help} />
           <Route path="/admin" component={Admin} />
           <Route path="/editor/:id" component={Editor} />
+          <Route path="/video" component={VideoGallery} />
+          <Route path="/video/:slug" component={VideoDetail} />
+          <Route path="/my-videos" component={MyVideosRoute} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>

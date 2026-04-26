@@ -225,7 +225,10 @@ router.post("/hadar/webhook", async (req, res) => {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     const designId = Number(session.metadata?.designId);
+    const videoJobId = Number(session.metadata?.videoJobId);
+    const type = session.metadata?.type;
 
+    // ── Image design payment ────────────────────────────────────────────────
     if (designId) {
       await db.update(hadarDesigns)
         .set({ status: "paid", updatedAt: new Date() })
@@ -237,6 +240,21 @@ router.post("/hadar/webhook", async (req, res) => {
 
       console.log(`[HADAR] payment success via webhook: design=${designId} session=${session.id}`);
       console.log(`[HADAR] download unlocked for design=${designId}`);
+    }
+
+    // ── Video job payment ───────────────────────────────────────────────────
+    if (type === "video_job" && videoJobId) {
+      const { hadarVideoJobs } = await import("@workspace/db/schema");
+      await db.update(hadarVideoJobs)
+        .set({ status: "paid", updatedAt: new Date() })
+        .where(eq(hadarVideoJobs.id, videoJobId));
+      console.log(`[HADAR] video job ${videoJobId} marked paid — starting render`);
+      // Kick off background render (non-blocking)
+      import("../lib/videoRenderer").then(({ processVideoJob }) => {
+        processVideoJob(videoJobId).catch((err: Error) => {
+          console.error(`[HADAR] background render failed for job ${videoJobId}:`, err.message);
+        });
+      });
     }
   }
 
