@@ -13,6 +13,7 @@ import Inspiration from "@/components/sections/Inspiration";
 import FeaturedShiur from "@/components/sections/FeaturedShiur";
 import CommunityEventBanner from "@/components/sections/CommunityEventBanner";
 import HilulaBanner from "@/components/sections/HilulaBanner";
+import Announcements from "@/components/sections/Announcements";
 
 export default function Home() {
   return (
@@ -22,6 +23,7 @@ export default function Home() {
       <Hero />
       
       <div className="relative z-10 bg-background">
+        <Announcements />
         <HilulaBanner />
         <CommunityEventBanner />
         <FeaturedShiur />

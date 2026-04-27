@@ -1,10 +1,23 @@
-import { useEffect, useRef } from "react";
-import { Download, FileText, Eye, BookOpen } from "lucide-react";
-import { pdfs } from "@/content/community";
+import { useEffect, useRef, useState } from "react";
+import { Download, FileText, Eye, BookOpen, Loader2 } from "lucide-react";
+import { pdfs as FALLBACK_PDFS } from "@/content/community";
 import ShareButton from "@/components/ShareButton";
 
-function PDFRow({ file, index }: { file: typeof pdfs[0]; index: number }) {
+interface PdfItem {
+  id?: number;
+  title: string;
+  date?: string;
+  dateLabel?: string;
+  description?: string;
+  size?: string;
+  url?: string | null;
+  fileUrl?: string | null;
+}
+
+function PDFRow({ file, index }: { file: PdfItem; index: number }) {
   const ref = useRef<HTMLDivElement>(null);
+  const fileUrl = file.fileUrl ?? file.url ?? null;
+  const date = file.dateLabel ?? file.date ?? "";
 
   useEffect(() => {
     const el = ref.current;
@@ -33,7 +46,7 @@ function PDFRow({ file, index }: { file: typeof pdfs[0]; index: number }) {
           <h3 className="font-serif text-lg font-bold text-white leading-snug">{file.title}</h3>
           <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
             <BookOpen className="h-3 w-3" />
-            <span>{file.date}</span>
+            <span>{date}</span>
             <span className="opacity-40">·</span>
             <span className="uppercase font-bold tracking-wider text-primary/60">PDF</span>
           </div>
@@ -44,10 +57,10 @@ function PDFRow({ file, index }: { file: typeof pdfs[0]; index: number }) {
       </div>
 
       <div className="flex gap-2 shrink-0 mr-18 md:mr-0">
-        {file.url ? (
+        {fileUrl ? (
           <>
             <a
-              href={file.url}
+              href={fileUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-4 py-2.5 text-sm font-bold text-muted-foreground transition-all duration-300 hover:text-white hover:border-white/35 hover:bg-white/[0.08]"
@@ -56,7 +69,7 @@ function PDFRow({ file, index }: { file: typeof pdfs[0]; index: number }) {
               צפייה
             </a>
             <a
-              href={file.url}
+              href={fileUrl}
               download
               className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/40 bg-primary/8 px-4 py-2.5 text-sm font-bold text-primary transition-all duration-300 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_28px_rgba(245,192,55,0.25)]"
             >
@@ -75,6 +88,20 @@ function PDFRow({ file, index }: { file: typeof pdfs[0]; index: number }) {
 }
 
 export default function PDFLibrary() {
+  const [pdfs, setPdfs] = useState<PdfItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/cms/pdfs")
+      .then(r => r.ok ? r.json() : null)
+      .then((data: PdfItem[] | null) => {
+        if (data && data.length > 0) setPdfs(data);
+        else setPdfs(FALLBACK_PDFS);
+      })
+      .catch(() => setPdfs(FALLBACK_PDFS))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <section className="px-4 py-20 md:px-6 md:py-28" id="library">
       <div className="mx-auto max-w-5xl space-y-12">
@@ -91,11 +118,17 @@ export default function PDFLibrary() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02] shadow-[0_35px_100px_rgba(0,0,0,0.4)] backdrop-blur-xl">
-          {pdfs.map((file, index) => (
-            <PDFRow key={file.title} file={file} index={index} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-7 w-7 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02] shadow-[0_35px_100px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+            {pdfs.map((file, index) => (
+              <PDFRow key={file.id ?? file.title} file={file} index={index} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

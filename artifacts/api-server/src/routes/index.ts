@@ -12,6 +12,7 @@ import chatbotRouter from "./chatbot";
 import analyticsRouter from "./analytics";
 import hadarTicketsRouter from "./hadar-tickets";
 import hadarVideoRouter from "./hadar-video";
+import cmsRouter from "./cms";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use("/chatbot", chatbotRouter);
 router.use(analyticsRouter);
 router.use(hadarTicketsRouter);
 router.use(hadarVideoRouter);
+router.use(cmsRouter);
 
 export default router;

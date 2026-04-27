@@ -43,6 +43,18 @@ The project is structured as a pnpm workspace monorepo, with each package managi
 -   **Payment Processing**: Stripe is integrated for handling payments in the הדר marketplace, including checkout sessions, webhooks, and managing customer payment methods.
 -   **Video Rendering (הדר)**: After Effects-only rendering via Nexrender. `videoRenderer.ts` handles the AE render pipeline: job pickup → nexrender API call → poll for completion → upload to object storage → signed download URL. No FFmpeg or Polotno dependencies.
 
+## CMS (Content Management System):
+The alumni community site has a full DB-backed CMS (no code editing required):
+- **Tables**: `cms_announcements`, `cms_gallery`, `cms_videos`, `cms_pdfs`, `cms_events`
+- **Public API**: `GET /api/cms/{announcements|gallery|videos|pdfs|events}` — returns only active, non-expired items
+- **Admin API**: `GET|POST|PUT|DELETE /api/cms/admin/{type}[/:id]` — full CRUD, protected by `requireAdmin`
+- **File uploads**: multer → Object Storage → `/api/cms/media/` proxy (gallery images, PDF files)
+- **Announcements**: Appear as dismissible banner bars at top of homepage. Variants: info/gold/warning/success. Support links (url, youtube, audio, pdf types).
+- **Gallery**: API-driven with fallback to hardcoded photos. Same lightbox UI.
+- **Videos**: CMS videos override YouTube API feed when present. Admins paste YouTube URL, ID extracted automatically.
+- **PDFs**: CMS PDFs override hardcoded fallback list. Support file upload or external URL.
+- **Admin UI**: New "תוכן" tab in AdminPage.tsx → `CmsManager.tsx` with sub-tabs for each content type.
+
 ## Feature Specifications:
 -   **Community Board**: Signed-in users can post, react, and delete their own posts.
 -   **Ask Rabbi**: A form for users to submit questions, which are then managed by admins with status tracking.

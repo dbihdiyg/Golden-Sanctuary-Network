@@ -4,8 +4,9 @@ import {
   Lock, Eye, EyeOff, TrendingUp, LogOut, Users, ImageIcon,
   Video, ThumbsUp, ThumbsDown, Inbox, Mail, Phone, Trash2, UserCheck, UserX, Bot,
   Monitor, Smartphone, Maximize, Activity, MousePointerClick, Globe, ArrowUp, ArrowDown,
-  Repeat2, Sparkles, Chrome, Navigation, RefreshCw, AlertTriangle, X
+  Repeat2, Sparkles, Chrome, Navigation, RefreshCw, AlertTriangle, X, LayoutGrid
 } from "lucide-react";
+import CmsManager from "@/components/admin/CmsManager";
 
 /* ─── Safe Delete Confirmation Modal ─────────────────────── */
 function ConfirmDeleteModal({
@@ -1009,7 +1010,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("הכל");
-  const [tab, setTab] = useState<"questions" | "media" | "newsletter" | "chatbot" | "analytics">("questions");
+  const [tab, setTab] = useState<"questions" | "media" | "newsletter" | "chatbot" | "analytics" | "content">("questions");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1074,7 +1075,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         )}
 
         <div className="flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1 mb-2 overflow-x-auto scrollbar-none">
-          {([["questions", "שאלות לרב", MessageSquare], ["media", "תוכן ממשתמשים", Inbox], ["newsletter", "רשימת תפוצה", Mail], ["chatbot", "שיחות AI", Bot], ["analytics", "סטטיסטיקות", BarChart3]] as const).map(([k, l, Icon]) => (
+          {([["questions", "שאלות לרב", MessageSquare], ["content", "תוכן", LayoutGrid], ["media", "ממשתמשים", Inbox], ["newsletter", "תפוצה", Mail], ["chatbot", "שיחות AI", Bot], ["analytics", "סטטיסטיקות", BarChart3]] as const).map(([k, l, Icon]) => (
             <button key={k} onClick={() => setTab(k as any)}
               className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition whitespace-nowrap ${tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-white"}`}>
               <Icon className="h-4 w-4" />{l}
@@ -1082,6 +1083,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           ))}
         </div>
 
+        {tab === "content" && <CmsManager />}
         {tab === "media" && <MediaSubmissions token={sessionStorage.getItem(TOKEN_KEY) ?? ""} />}
         {tab === "newsletter" && <MailingList />}
         {tab === "chatbot" && <ChatbotSessions />}

@@ -47,8 +47,6 @@ const SHORTS_IDS = new Set([
 ]);
 
 interface Props {
-  /** When true, renders a standalone full-section layout with heading.
-   *  When false (default), renders just the filter + grid — for embedding inside a page. */
   standalone?: boolean;
 }
 
@@ -59,15 +57,37 @@ export default function VideoSection({ standalone = false }: Props) {
   const [activeCategory, setActiveCategory] = useState("הכל");
 
   useEffect(() => {
-    fetch("/api/youtube")
-      .then((r) => r.json())
-      .then((data) => {
+    const fetchVideos = async () => {
+      try {
+        const cmsRes = await fetch("/api/cms/videos");
+        if (cmsRes.ok) {
+          const cmsData = await cmsRes.json();
+          if (Array.isArray(cmsData) && cmsData.length > 0) {
+            const mapped: Video[] = cmsData.map((v: {
+              youtubeId: string; title: string; category: string; dateLabel: string;
+            }) => ({
+              id: v.youtubeId,
+              title: v.title,
+              category: v.category || "כללי",
+              thumbnail: `https://img.youtube.com/vi/${v.youtubeId}/maxresdefault.jpg`,
+              published: v.dateLabel || "",
+            }));
+            setVideos(mapped);
+            return;
+          }
+        }
+      } catch (_) {}
+
+      try {
+        const ytRes = await fetch("/api/youtube");
+        const data = await ytRes.json();
         const all: Video[] = data.videos ?? [];
         const filtered = all.filter((v) => !SHORTS_IDS.has(v.id));
         if (filtered.length > 0) setVideos(filtered);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      } catch (_) {}
+    };
+
+    fetchVideos().finally(() => setLoading(false));
   }, []);
 
   const displayed =
