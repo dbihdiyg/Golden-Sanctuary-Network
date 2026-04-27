@@ -1424,10 +1424,14 @@ function VideoTemplatesManager({ token }: { token: string }) {
 
   async function load() {
     setLoading(true);
+    setMsg(null);
     try {
       const res = await fetch(`${api}/api/hadar/admin/video-templates`, { headers });
+      if (!res.ok) throw new Error(`שגיאת שרת: ${res.status}`);
       const data = await res.json();
       setTemplates(data);
+    } catch (e: any) {
+      setMsg(`שגיאה: ${e.message}`);
     } finally { setLoading(false); }
   }
 
@@ -1531,7 +1535,14 @@ function VideoTemplatesManager({ token }: { token: string }) {
 
   return (
     <div className="space-y-4" dir="rtl">
-      {msg && <p className={`text-sm p-2 rounded-lg ${msg.startsWith("שגיא") ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"}`}>{msg}</p>}
+      {msg && (
+        <div className={`text-sm p-3 rounded-lg flex items-center justify-between gap-2 ${msg.startsWith("שגיא") ? "bg-red-50 text-red-600 border border-red-200" : "bg-green-50 text-green-700 border border-green-200"}`}>
+          <span>{msg}</span>
+          {msg.startsWith("שגיא") && (
+            <button onClick={load} className="text-xs underline opacity-70 hover:opacity-100 whitespace-nowrap">נסה שוב</button>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <h2 className="font-bold text-lg">תבניות וידאו ({templates.length})</h2>
@@ -1844,8 +1855,11 @@ function VideoJobsManager({ token }: { token: string }) {
     try {
       const url = `${api}/api/hadar/admin/video-jobs${statusFilter ? `?status=${statusFilter}` : ""}`;
       const res = await fetch(url, { headers });
+      if (!res.ok) throw new Error(`שגיאת שרת: ${res.status}`);
       const data = await res.json();
       setJobs(data);
+    } catch (e: any) {
+      setMsg(`שגיאה: ${e.message}`);
     } finally { setLoading(false); }
   }
 
@@ -1876,7 +1890,14 @@ function VideoJobsManager({ token }: { token: string }) {
 
   return (
     <div className="space-y-4" dir="rtl">
-      {msg && <p className={`text-sm p-2 rounded-lg ${msg.startsWith("שגיא") ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"}`}>{msg}</p>}
+      {msg && (
+        <div className={`text-sm p-3 rounded-lg flex items-center justify-between gap-2 ${msg.startsWith("שגיא") ? "bg-red-50 text-red-600 border border-red-200" : "bg-green-50 text-green-700 border border-green-200"}`}>
+          <span>{msg}</span>
+          {msg.startsWith("שגיא") && (
+            <button onClick={load} className="text-xs underline opacity-70 hover:opacity-100 whitespace-nowrap">נסה שוב</button>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center gap-3 flex-wrap">
         <h2 className="font-bold text-lg">עבודות וידאו ({jobs.length})</h2>
