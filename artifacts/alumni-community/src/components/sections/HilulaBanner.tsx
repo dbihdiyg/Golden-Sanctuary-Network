@@ -189,10 +189,10 @@ export default function HilulaBanner() {
               }}
             >
               <Flame size={12} className="shrink-0" style={{ color: "#d4a843" }} />
-              יום הזיכרון
+              יום הפטירה
             </span>
             <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
-              ל׳ ניסן תשפ״ו
+              י׳ באייר תשפ״ו
             </span>
           </div>
           <button
