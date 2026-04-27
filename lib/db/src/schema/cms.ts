@@ -15,6 +15,12 @@ export const cmsAnnouncements = pgTable("cms_announcements", {
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  type: text("type").notNull().default("regular"),
+  eventDate: text("event_date"),
+  locationText: text("location_text"),
+  imageUrl: text("image_url"),
+  ctaText: text("cta_text"),
+  ctaUrl: text("cta_url"),
 });
 
 export const cmsGallery = pgTable("cms_gallery", {
@@ -61,6 +67,37 @@ export const cmsEvents = pgTable("cms_events", {
   location: text("location"),
   linkUrl: text("link_url"),
   linkLabel: text("link_label"),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const cmsFeaturedShiur = pgTable("cms_featured_shiur", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  subtitle: text("subtitle").notNull().default(""),
+  audioUrl: text("audio_url"),
+  thumbnailUrl: text("thumbnail_url"),
+  rabbiName: text("rabbi_name").notNull().default('הרב שניאור גרוסמן שליט"א'),
+  parasha: text("parasha").notNull().default(""),
+  durationLabel: text("duration_label").notNull().default(""),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const cmsCommunityEvents = pgTable("cms_community_events", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  subtitle: text("subtitle").notNull().default(""),
+  description: text("description").notNull().default(""),
+  eventDate: text("event_date").notNull().default(""),
+  eventTime: text("event_time").notNull().default(""),
+  location: text("location").notNull().default(""),
+  imageUrl: text("image_url"),
+  ctaText: text("cta_text").notNull().default("הצטרפו אלינו"),
+  ctaLink: text("cta_link"),
+  expiresAt: timestamp("expires_at"),
   isActive: boolean("is_active").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
