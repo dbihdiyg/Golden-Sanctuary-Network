@@ -7,19 +7,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AnimatePresence } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { LangProvider } from "@/contexts/LangContext";
-import { ChatWidget } from "@/components/ChatWidget";
 
-import Home from "@/pages/home";
 import NotFound from "@/pages/not-found";
 import SignInPage from "@/pages/SignInPage";
 import SignUpPage from "@/pages/SignUpPage";
 
-const TemplateDetail = lazy(() => import("@/pages/TemplateDetail"));
-const Order = lazy(() => import("@/pages/order"));
-const Help = lazy(() => import("@/pages/help"));
 const Admin = lazy(() => import("@/pages/admin"));
-const Editor = lazy(() => import("@/pages/editor"));
-const MyDesigns = lazy(() => import("@/pages/MyDesigns"));
 const Support = lazy(() => import("@/pages/Support"));
 const VideoGallery = lazy(() => import("@/pages/VideoGallery"));
 const VideoDetail = lazy(() => import("@/pages/VideoDetail"));
@@ -55,10 +48,6 @@ function AuthGuard({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function MyDesignsRoute() {
-  return <AuthGuard><MyDesigns /></AuthGuard>;
-}
-
 function SupportRoute() {
   return <AuthGuard><Support /></AuthGuard>;
 }
@@ -72,17 +61,11 @@ function AppRoutes() {
     <AnimatePresence mode="wait">
       <Suspense fallback={<PageLoader />}>
         <Switch>
-          <Route path="/" component={Home} />
+          <Route path="/" component={VideoGallery} />
           <Route path="/sign-in/*?" component={SignInPage} />
           <Route path="/sign-up/*?" component={SignUpPage} />
-          <Route path="/my-designs" component={MyDesignsRoute} />
           <Route path="/support" component={SupportRoute} />
-          <Route path="/template/:id" component={TemplateDetail} />
-          <Route path="/order" component={Order} />
-          <Route path="/help" component={Help} />
           <Route path="/admin" component={Admin} />
-          <Route path="/editor/:id" component={Editor} />
-          <Route path="/video" component={VideoGallery} />
           <Route path="/video/:slug" component={VideoDetail} />
           <Route path="/my-videos" component={MyVideosRoute} />
           <Route component={NotFound} />
@@ -110,7 +93,6 @@ function ClerkProviderWithRoutes() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <AppRoutes />
-          <ChatWidget />
         </TooltipProvider>
         <Toaster />
       </QueryClientProvider>

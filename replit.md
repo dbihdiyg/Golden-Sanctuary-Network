@@ -4,21 +4,18 @@ This workspace is a pnpm monorepo using TypeScript, housing two main application
 
 1.  **קהילת הבוגרים Website**: A Hebrew RTL single-page alumni community website with a dark, luxurious, spiritual aesthetic. It features a cinematic hero section, updates, a masonry gallery with lightbox, video cards, a downloadable PDF library, a community feed, and an "Ask the Rabbi" section. The site has undergone a brand upgrade, incorporating a new logo and a visual palette of black/graphite, luminous gold, and deep royal blue. It's expanded into a multi-page hub with enhanced navigation, interactive elements, and dedicated content pages.
 
-2.  **הדר — Design Template Marketplace**: A separate React + Vite application serving as a Hebrew RTL design template marketplace with a navy, gold, and cream aesthetic. It allows users to browse, customize, pay for, and download design templates. Key features include:
-    - **Polotno SDK editor** (replaced custom editor): full drag-and-drop canvas with text, image, elements, background, and layers panels. Saves design state as Polotno JSON in `hadar_designs.fieldValues.__polotnoJson`. Uses local React 18.3.1 (aliased in Vite) for Polotno compatibility alongside global React 19.
-    - **AI Image Generation** (new): custom "AI" tab in Polotno's SidePanel. User enters Hebrew prompts → `POST /api/hadar/generate-image` → `gpt-image-1` via Replit AI Integrations proxy → base64 PNG → auto-added as new Polotno layer. Supports 3 sizes, 8 suggested prompts, regenerate button. Image data stored in Polotno JSON.
-    - AI-powered invitation text generation, comprehensive admin template editor, user portal for designs/orders/support tickets.
-    - Clerk auth + Stripe ₪49 payment → download flow preserved.
-    - **Premium Automated Video Template System**: Full production system:
-      - **Dual render engines**: FFmpeg (text overlays) + After Effects via Nexrender (`renderType: "ffmpeg"|"aefx"` per template). Configure `NEXRENDER_API_URL` to connect to external nexrender server.
-      - **Admin template manager**: CRUD + render type selector, AE composition name, AE project upload (.aep/.zip), AE layer mapping table (user field → AE layer name), tier (standard/premium), FFmpeg preset/CRF, max render seconds.
-      - **Priority render queue**: `renderQueue.ts` — concurrency via `RENDER_CONCURRENCY`, premium jobs get priority, rolling ETA per tier.
-      - **Signed download URLs**: HMAC-SHA256 signed tokens with 48h expiry (`signedUrls.ts`). `GET /api/hadar/dl/:token` for email links. `DOWNLOAD_LINK_SECRET` env var for signing.
-      - **Email notifications**: `emailService.ts` — video-ready email with signed download link, video-failed email, admin failure alert.
-      - **Admin video jobs tab**: Separate "עבודות" sub-tab in admin panel. Shows all jobs with user info, template, status badge (Hebrew), renderer used, progress, error log expansion, retry button for failed jobs. Auto-polls every 8s when active jobs present.
-      - **Job status flow**: draft → pending_payment → paid → queued → rendering → ready/failed.
-      - **My Videos dashboard**: Real-time progress bar, queue position, ETA countdown, premium badge, ready toast notification. Polls every 4s.
-      - DB tables: `hadar_video_templates` (renderType, aeLayerMappings, aeProjectUrl, tier, maxRenderSeconds, renderPreset, renderCrf, aeCompositionName), `hadar_video_jobs` (priority, progressPct, rendererUsed, nexrenderJobId, estimatedCompletionAt).
+2.  **הדר — Automated Video Marketplace**: A VIDEO-ONLY Hebrew RTL marketplace (After Effects/Nexrender automated rendering). NO image templates, NO Polotno editor, NO FFmpeg text overlays. Key features:
+    - **Video-only flow**: Browse video templates → fill fields → Stripe ₪49 payment → AE render → download.
+    - **After Effects rendering via Nexrender**: All rendering is AE-only. Requires `NEXRENDER_API_URL` env var pointing to a running nexrender server. If not configured, admin shows a warning banner and jobs fail with a clear error.
+    - **Admin panel** (tabs: וידאו / פניות / סטטיסטיקות): Video templates CRUD (AE project upload, field definitions, AE layer mappings), video jobs manager with retry, tickets manager, video stats with nexrender health indicator.
+    - **Priority render queue**: `renderQueue.ts` — concurrency via `RENDER_CONCURRENCY`, premium jobs get priority, rolling ETA per tier.
+    - **Signed download URLs**: HMAC-SHA256 signed tokens with 48h expiry (`signedUrls.ts`). `GET /api/hadar/dl/:token` for email links. `DOWNLOAD_LINK_SECRET` env var for signing.
+    - **Email notifications**: `emailService.ts` — video-ready email with signed download link, video-failed email, admin failure alert.
+    - **Job status flow**: pending → paid → queued → rendering → ready/failed.
+    - **My Videos dashboard**: Real-time progress bar, queue position, ETA countdown, premium badge, ready toast. Polls every 4s.
+    - **Routes (frontend)**: `/` → VideoGallery, `/video/:slug` → VideoDetail, `/my-videos` → MyVideos (auth), `/admin` → Admin, `/sign-in`, `/sign-up`, `/support`.
+    - **Backend routes**: `hadar-video.ts` (all endpoints incl. admin auth, media proxy, stats), `hadar-tickets.ts`. All image/design/AI/payment routes removed.
+    - DB tables: `hadar_video_templates`, `hadar_video_jobs`, `hadar_support_tickets`.
 
 Both applications are integrated with a shared authentication system (Clerk) and utilize a PostgreSQL database.
 
@@ -44,7 +41,7 @@ The project is structured as a pnpm workspace monorepo, with each package managi
 -   **Build Tool**: esbuild is used for bundling into CommonJS.
 -   **AI Integration**: GPT-4o-mini is used for AI-powered text generation in the הדר marketplace, specifically for ceremonial invitation text.
 -   **Payment Processing**: Stripe is integrated for handling payments in the הדר marketplace, including checkout sessions, webhooks, and managing customer payment methods.
--   **Image/Text Effects (הדר)**: Advanced CSS techniques and a Canvas-based pixel displacement engine (`SvgWarpText`) are used to render complex text effects like gradients, textures, shadows, glows, 3D extrude, and text warping. All visual rendering functions are centralized in a shared engine at `artifacts/design-templates/src/lib/designRenderer.ts` (`buildTextShadows`, `buildTextureGradient`, `buildTextCSS`, `buildWrapperCSS`, `buildAdminWrapperCSS`) — both the admin editor and the user editor import from this single source of truth to guarantee pixel-perfect parity between what the admin designs and what the user sees.
+-   **Video Rendering (הדר)**: After Effects-only rendering via Nexrender. `videoRenderer.ts` handles the AE render pipeline: job pickup → nexrender API call → poll for completion → upload to object storage → signed download URL. No FFmpeg or Polotno dependencies.
 
 ## Feature Specifications:
 -   **Community Board**: Signed-in users can post, react, and delete their own posts.

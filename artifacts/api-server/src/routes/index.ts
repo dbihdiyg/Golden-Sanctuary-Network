@@ -10,12 +10,7 @@ import mediaSubmissionsRouter from "./media-submissions";
 import newsletterRouter from "./newsletter";
 import chatbotRouter from "./chatbot";
 import analyticsRouter from "./analytics";
-import hadarAiRouter from "./hadar-ai";
-import hadarStripeRouter from "./hadar-stripe";
-import hadarDesignsRouter from "./hadar-designs";
-import hadarAdminRouter from "./hadar-admin";
 import hadarTicketsRouter from "./hadar-tickets";
-import hadarPaymentRouter from "./hadar-payment";
 import hadarVideoRouter from "./hadar-video";
 
 const router: IRouter = Router();
@@ -31,12 +26,7 @@ router.use(mediaSubmissionsRouter);
 router.use("/newsletter", newsletterRouter);
 router.use("/chatbot", chatbotRouter);
 router.use(analyticsRouter);
-router.use(hadarAiRouter);
-router.use(hadarStripeRouter);
-router.use(hadarDesignsRouter);
-router.use(hadarAdminRouter);
 router.use(hadarTicketsRouter);
-router.use(hadarPaymentRouter);
 router.use(hadarVideoRouter);
 
 export default router;

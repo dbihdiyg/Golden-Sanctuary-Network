@@ -27,6 +27,60 @@ function adminAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// ─── Admin login ──────────────────────────────────────────────────────────────
+router.post("/hadar/admin/auth", (req, res) => {
+  const { password } = req.body;
+  if (!password || password !== process.env.ADMIN_PASSWORD) {
+    return res.status(401).json({ error: "Incorrect password" });
+  }
+  res.json({ token: process.env.ADMIN_SECRET });
+});
+
+// ─── Media proxy (serve object storage files without public ACL) ──────────────
+router.use("/hadar/media", async (req: Request, res: Response, next: NextFunction) => {
+  if (req.method !== "GET") return next();
+  try {
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) return res.status(500).send("Storage not configured");
+    const filePath = req.path.replace(/^\//, "");
+    if (!filePath || filePath.includes("..")) return res.status(400).send("Invalid path");
+    const bucket = objectStorageClient.bucket(bucketId);
+    const file = bucket.file(filePath);
+    const [exists] = await file.exists();
+    if (!exists) return res.status(404).send("Not found");
+    const [metadata] = await file.getMetadata();
+    const contentType = (metadata.contentType as string) || "application/octet-stream";
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    file.createReadStream().pipe(res);
+  } catch (err: any) {
+    res.status(500).send(err.message);
+  }
+});
+
+// ─── Admin: video stats ───────────────────────────────────────────────────────
+router.get("/hadar/admin/video-stats", adminAuth, async (_req, res) => {
+  try {
+    const jobs = await db.select({
+      status: hadarVideoJobs.status,
+    }).from(hadarVideoJobs);
+
+    const stats = {
+      totalJobs: jobs.length,
+      paidJobs: jobs.filter(j => j.status === "paid").length,
+      queuedJobs: jobs.filter(j => j.status === "queued").length,
+      renderingJobs: jobs.filter(j => j.status === "rendering").length,
+      readyJobs: jobs.filter(j => j.status === "ready").length,
+      failedJobs: jobs.filter(j => j.status === "failed").length,
+      nexrenderConfigured: !!process.env.NEXRENDER_API_URL,
+    };
+    res.json(stats);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 async function uploadVideoToStorage(buffer: Buffer, mimetype: string, folder: string, ext: string): Promise<string> {
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
   if (!bucketId) throw new Error("Object storage not configured");
