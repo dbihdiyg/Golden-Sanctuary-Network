@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { X, Flame } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { X, Flame, Play, Pause, Volume2 } from "lucide-react";
 
 const EXPIRY_DATE = new Date("2026-04-28T21:00:00Z");
 const YOUTUBE_ID = "g3xmmp9k0gE";
+const HESPED_AUDIO = "/hesped-levi-yitzchak.wav";
 
 const TRANSCRIPT = `בוגרי מגדל אור, הנפלאים והיקרים, הצמודים לליבנו כבנים ממש —
 מתפללים עליכם, אוהבים אתכם.
@@ -26,6 +27,123 @@ const TRANSCRIPT = `בוגרי מגדל אור, הנפלאים והיקרים, �
 לראות אותו חוזר למשפחה — בתוך שמחה עם כלל ישראל.
 
 אמן ואמן.`;
+
+function fmt(s: number) {
+  const m = Math.floor(s / 60);
+  const ss = Math.floor(s % 60);
+  return `${m}:${ss.toString().padStart(2, "0")}`;
+}
+
+function HespedPlayer() {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [current, setCurrent] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    const onTime = () => { if (!dragging) setCurrent(el.currentTime); };
+    const onDur = () => setDuration(el.duration);
+    const onEnd = () => setPlaying(false);
+    el.addEventListener("timeupdate", onTime);
+    el.addEventListener("loadedmetadata", onDur);
+    el.addEventListener("ended", onEnd);
+    return () => {
+      el.removeEventListener("timeupdate", onTime);
+      el.removeEventListener("loadedmetadata", onDur);
+      el.removeEventListener("ended", onEnd);
+    };
+  }, [dragging]);
+
+  const toggle = async () => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (playing) { el.pause(); setPlaying(false); }
+    else { await el.play(); setPlaying(true); }
+  };
+
+  const seek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const t = Number(e.target.value);
+    setCurrent(t);
+    if (audioRef.current) audioRef.current.currentTime = t;
+  };
+
+  const pct = duration > 0 ? (current / duration) * 100 : 0;
+
+  return (
+    <div
+      className="rounded-xl p-4 flex flex-col gap-3"
+      style={{
+        background: "rgba(0,0,0,0.35)",
+        border: "1px solid rgba(181,154,106,0.2)",
+        backdropFilter: "blur(8px)",
+      }}
+    >
+      <audio ref={audioRef} src={HESPED_AUDIO} preload="metadata" />
+
+      {/* Label */}
+      <div className="flex items-center gap-2" dir="rtl">
+        <Volume2 size={14} style={{ color: "#c9a96e", flexShrink: 0 }} />
+        <div>
+          <p className="text-xs font-bold" style={{ color: "#c9a96e" }}>
+            ספד על חברינו — הרב שניאור גרוסמן שליט״א
+          </p>
+          <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+            הספד מרגש לעילוי נשמת לוי יצחק בן אליהו ועדינה ז״ל
+          </p>
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="flex items-center gap-3" dir="ltr">
+        <button
+          onClick={toggle}
+          className="shrink-0 rounded-full flex items-center justify-center transition-all active:scale-95"
+          style={{
+            width: 38,
+            height: 38,
+            background: playing ? "rgba(201,169,110,0.25)" : "rgba(201,169,110,0.9)",
+            color: playing ? "#c9a96e" : "#1a0d00",
+            border: "1px solid rgba(201,169,110,0.5)",
+          }}
+          aria-label={playing ? "השהה" : "נגן"}
+        >
+          {playing ? <Pause size={16} /> : <Play size={16} className="ml-0.5" />}
+        </button>
+
+        {/* Progress */}
+        <div className="flex-1 flex flex-col gap-1">
+          <div className="relative h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+            <div
+              className="absolute inset-y-0 right-0 rounded-full transition-all"
+              style={{ width: `${pct}%`, right: "auto", left: 0, background: "linear-gradient(90deg, #c9a028, #ffe4a0)" }}
+            />
+            <input
+              type="range"
+              min={0}
+              max={duration || 100}
+              value={current}
+              step={0.1}
+              onChange={seek}
+              onMouseDown={() => setDragging(true)}
+              onMouseUp={() => setDragging(false)}
+              onTouchStart={() => setDragging(true)}
+              onTouchEnd={() => setDragging(false)}
+              className="absolute inset-0 w-full opacity-0 cursor-pointer"
+              style={{ height: "100%" }}
+            />
+          </div>
+          <div className="flex justify-between text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+            <span>{fmt(current)}</span>
+            <span>{duration ? fmt(duration) : "--:--"}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function HilulaBanner() {
   const isExpired = new Date() >= EXPIRY_DATE;
@@ -89,9 +207,9 @@ export default function HilulaBanner() {
           </button>
         </div>
 
-        {/* Main card */}
+        {/* Main card — video + transcript */}
         <div
-          className="rounded-2xl overflow-hidden"
+          className="rounded-2xl overflow-hidden mb-4"
           style={{
             border: "1px solid rgba(181,154,106,0.18)",
             background: "rgba(255,255,255,0.025)",
@@ -114,7 +232,6 @@ export default function HilulaBanner() {
 
             {/* Text side */}
             <div className="lg:w-[55%] p-5 md:p-7 flex flex-col justify-center gap-4">
-              {/* Title */}
               <div>
                 <h2
                   className="text-xl md:text-2xl font-bold leading-snug mb-1"
@@ -127,15 +244,13 @@ export default function HilulaBanner() {
                 </p>
               </div>
 
-              {/* Divider */}
               <div
                 className="h-px w-16"
                 style={{ background: "linear-gradient(90deg, rgba(181,154,106,0.6), transparent)" }}
               />
 
-              {/* Transcript */}
               <div
-                className="text-sm leading-[1.95] overflow-y-auto max-h-52 pr-1"
+                className="text-sm leading-[1.95] overflow-y-auto max-h-44 pr-1"
                 style={{
                   color: "rgba(255,255,255,0.72)",
                   scrollbarWidth: "thin",
@@ -147,7 +262,6 @@ export default function HilulaBanner() {
                 {TRANSCRIPT}
               </div>
 
-              {/* Footer note */}
               <div
                 className="pt-3 border-t text-xs flex items-center gap-2"
                 style={{
@@ -156,17 +270,18 @@ export default function HilulaBanner() {
                 }}
               >
                 <Flame size={11} style={{ color: "#c9a96e", flexShrink: 0 }} />
-                <span>
-                  תהא נשמתו צרורה בצרור החיים. בואו תיקחו על עצמכם מצווה אחת לזיכרו.
-                </span>
+                <span>תהא נשמתו צרורה בצרור החיים. בואו תיקחו על עצמכם מצווה אחת לזיכרו.</span>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Eulogy audio player */}
+        <HespedPlayer />
+
         {/* Bottom fade */}
         <div
-          className="h-px mt-0 opacity-25"
+          className="h-px mt-4 opacity-25"
           style={{ background: "linear-gradient(90deg, transparent, #b59a6a, transparent)" }}
         />
       </div>
