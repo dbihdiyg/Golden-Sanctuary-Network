@@ -14,6 +14,7 @@ import FeaturedShiur from "@/components/sections/FeaturedShiur";
 import CommunityEventBanner from "@/components/sections/CommunityEventBanner";
 import Announcements from "@/components/sections/Announcements";
 import SpecialBanners from "@/components/sections/SpecialBanners";
+import HilulaBanner from "@/components/sections/HilulaBanner";
 
 export default function Home() {
   return (
@@ -24,6 +25,7 @@ export default function Home() {
       
       <div className="relative z-10 bg-background">
         <Announcements />
+        <HilulaBanner />
         <SpecialBanners />
         <CommunityEventBanner />
         <FeaturedShiur />

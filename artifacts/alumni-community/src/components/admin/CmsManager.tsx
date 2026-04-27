@@ -7,7 +7,7 @@ import {
   Radio, MapPin, PartyPopper
 } from "lucide-react";
 
-const TOKEN_KEY = "alumni_admin_token";
+const TOKEN_KEY = "meirim_admin_token";
 const adminFetch = (url: string, opts: RequestInit = {}) => {
   const token = sessionStorage.getItem(TOKEN_KEY) ?? "";
   return fetch(url, {
