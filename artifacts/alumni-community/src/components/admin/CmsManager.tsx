@@ -19,9 +19,10 @@ const adminFetch = (url: string, opts: RequestInit = {}) => {
   });
 };
 
-type SubTab = "announcements" | "gallery" | "videos" | "pdfs" | "events";
+type SubTab = "banners" | "announcements" | "gallery" | "videos" | "pdfs" | "events";
 
 const SUBTABS: { key: SubTab; label: string; icon: typeof Megaphone }[] = [
+  { key: "banners",       label: "כרזות",  icon: Star },
   { key: "announcements", label: "מודעות", icon: Megaphone },
   { key: "gallery",       label: "גלריה",  icon: ImageIcon },
   { key: "videos",        label: "וידאו",  icon: Youtube },
@@ -668,8 +669,262 @@ function EventsTab() {
   );
 }
 
+const LABEL_ICONS = [
+  { value: "flame",   label: "🔥 להבה" },
+  { value: "star",    label: "⭐ כוכב" },
+  { value: "bell",    label: "🔔 פעמון" },
+  { value: "heart",   label: "❤️ לב" },
+  { value: "book",    label: "📖 ספר" },
+  { value: "warning", label: "⚠️ אזהרה" },
+];
+
+interface SpecialBannerItem {
+  id: number;
+  label: string;
+  labelIcon: string;
+  dateLabel: string;
+  headline: string;
+  subtitle: string;
+  bodyText: string;
+  footerText: string;
+  youtubeId: string | null;
+  audioUrl: string | null;
+  audioLabel: string;
+  audioSublabel: string;
+  expiresAt: string | null;
+  isActive: boolean;
+}
+
+function SpecialBannersTab() {
+  const { items, loading, load, del, toggle } = useList<SpecialBannerItem>(
+    "/api/cms/admin/special-banners",
+    "/api/cms/admin/special-banners"
+  );
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [useAudioFile, setUseAudioFile] = useState(false);
+  const [form, setForm] = useState({
+    label: "יום הפטירה",
+    labelIcon: "flame",
+    dateLabel: "",
+    headline: "",
+    subtitle: "",
+    bodyText: "",
+    footerText: "",
+    youtubeId: "",
+    audioUrl: "",
+    audioLabel: "",
+    audioSublabel: "",
+    expiresAt: "",
+  });
+
+  const f = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+    setForm(prev => ({ ...prev, [k]: e.target.value }));
+
+  const save = async () => {
+    if (!form.headline.trim()) return;
+    setSaving(true);
+    try {
+      if (useAudioFile && audioFile) {
+        const fd = new FormData();
+        fd.append("audio", audioFile);
+        Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v); });
+        const token = sessionStorage.getItem(TOKEN_KEY) ?? "";
+        await fetch("/api/cms/admin/special-banners", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        });
+      } else {
+        await adminFetch("/api/cms/admin/special-banners", {
+          method: "POST",
+          body: JSON.stringify({
+            ...form,
+            youtubeId: form.youtubeId || null,
+            audioUrl: form.audioUrl || null,
+            expiresAt: form.expiresAt || null,
+          }),
+        });
+      }
+      setForm({
+        label: "יום הפטירה", labelIcon: "flame", dateLabel: "", headline: "", subtitle: "",
+        bodyText: "", footerText: "", youtubeId: "", audioUrl: "", audioLabel: "", audioSublabel: "", expiresAt: "",
+      });
+      setAudioFile(null);
+      setOpen(false);
+      await load();
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-black text-white">כרזות מיוחדות ({items.length})</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            כרזות עם עיצוב זהב-כהה כמו שאר האתר — לימי פטירה, אירועים, בשורות חשובות
+          </p>
+        </div>
+        <button onClick={() => setOpen(o => !o)}
+          className="inline-flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/20 transition">
+          <Plus className="h-4 w-4" /> כרזה חדשה
+        </button>
+      </div>
+
+      {open && (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 space-y-4" dir="rtl">
+          <div className="grid grid-cols-2 gap-3">
+            <FieldRow label="תווית הכרזה *">
+              <input className={inputCls} placeholder='יום הפטירה / אירוע מיוחד...' value={form.label} onChange={f("label")} />
+            </FieldRow>
+            <FieldRow label="אייקון תווית">
+              <select className={selectCls} value={form.labelIcon} onChange={f("labelIcon")}>
+                {LABEL_ICONS.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
+              </select>
+            </FieldRow>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FieldRow label="כותרת ראשית *">
+              <input className={inputCls} placeholder='לעילוי נשמת...' value={form.headline} onChange={f("headline")} />
+            </FieldRow>
+            <FieldRow label="תאריך (עברי)">
+              <input className={inputCls} placeholder='י׳ באייר תשפ״ו' value={form.dateLabel} onChange={f("dateLabel")} />
+            </FieldRow>
+          </div>
+
+          <FieldRow label="כותרת משנה">
+            <input className={inputCls} placeholder='פנייה מרגשת לבוגרי...' value={form.subtitle} onChange={f("subtitle")} />
+          </FieldRow>
+
+          <FieldRow label="גוף הטקסט (ישמר עם ירידות שורה)">
+            <textarea className={inputCls} rows={6} placeholder='הטקסט המלא שיוצג...' value={form.bodyText} onChange={f("bodyText")} />
+          </FieldRow>
+
+          <FieldRow label="שורת פסקה בתחתית">
+            <input className={inputCls} placeholder='תהא נשמתו צרורה בצרור החיים...' value={form.footerText} onChange={f("footerText")} />
+          </FieldRow>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FieldRow label="ID יוטיוב (אופציונלי)">
+              <input className={inputCls} placeholder='g3xmmp9k0gE' value={form.youtubeId} onChange={f("youtubeId")} />
+            </FieldRow>
+            <FieldRow label="תפוגה (השתק אחרי תאריך)">
+              <input type="datetime-local" className={inputCls} value={form.expiresAt} onChange={f("expiresAt")} />
+            </FieldRow>
+          </div>
+
+          <div className="border-t border-white/10 pt-4 space-y-3">
+            <p className="text-xs font-bold text-muted-foreground">קובץ אודיו (אופציונלי)</p>
+            <div className="flex gap-2">
+              {[false, true].map(v => (
+                <button key={String(v)} onClick={() => setUseAudioFile(v)}
+                  className={`rounded-xl px-4 py-2 text-sm font-bold transition ${useAudioFile === v ? "bg-primary text-primary-foreground" : "border border-white/15 text-muted-foreground"}`}>
+                  {v ? <><UploadCloud className="h-4 w-4 inline ml-1" />העלאה</> : <><Link2 className="h-4 w-4 inline ml-1" />URL</>}
+                </button>
+              ))}
+            </div>
+            {useAudioFile ? (
+              <FieldRow label="קובץ שמע">
+                <input type="file" accept="audio/*" className={inputCls} onChange={e => setAudioFile(e.target.files?.[0] ?? null)} />
+              </FieldRow>
+            ) : (
+              <FieldRow label="קישור אודיו">
+                <input className={inputCls} placeholder="/hesped.wav או https://..." value={form.audioUrl} onChange={f("audioUrl")} />
+              </FieldRow>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <FieldRow label="כותרת השמע">
+                <input className={inputCls} placeholder='ספד על חברינו...' value={form.audioLabel} onChange={f("audioLabel")} />
+              </FieldRow>
+              <FieldRow label="תת-כותרת השמע">
+                <input className={inputCls} placeholder='הספד מרגש...' value={form.audioSublabel} onChange={f("audioSublabel")} />
+              </FieldRow>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <SaveBtn loading={saving} onClick={save} />
+            <button onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-white transition">ביטול</button>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="py-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+      ) : (
+        <div className="space-y-3">
+          {items.length === 0 && (
+            <div className="text-center py-10 space-y-2">
+              <p className="text-white/40 text-sm">אין כרזות עדיין</p>
+              <p className="text-white/25 text-xs">צרו כרזה מיוחדת עם עיצוב יום הפטירה</p>
+            </div>
+          )}
+          {items.map(item => (
+            <div
+              key={item.id}
+              className="rounded-2xl border overflow-hidden"
+              style={{
+                borderColor: item.isActive ? "rgba(201,169,110,0.3)" : "rgba(255,255,255,0.08)",
+                background: item.isActive
+                  ? "linear-gradient(135deg, rgba(45,26,0,0.6) 0%, rgba(26,13,0,0.6) 100%)"
+                  : "rgba(255,255,255,0.03)",
+              }}
+            >
+              <div className="p-4" dir="rtl">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className="text-xs font-bold px-2 py-0.5 rounded-full"
+                        style={{ background: "rgba(201,169,110,0.15)", color: "#c9a96e", border: "1px solid rgba(201,169,110,0.3)" }}
+                      >
+                        {item.label}
+                      </span>
+                      {item.dateLabel && (
+                        <span className="text-xs text-white/40">{item.dateLabel}</span>
+                      )}
+                      {item.expiresAt && (
+                        <span className="text-xs text-orange-400/60">
+                          תפוגה: {new Date(item.expiresAt).toLocaleDateString("he-IL")}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm font-bold text-white truncate">{item.headline}</p>
+                    {item.subtitle && <p className="text-xs text-white/50 mt-0.5 truncate">{item.subtitle}</p>}
+                    <div className="flex gap-3 mt-2 text-xs text-white/30">
+                      {item.youtubeId && <span className="flex items-center gap-1"><Youtube size={11} />וידאו</span>}
+                      {item.audioUrl && <span className="flex items-center gap-1"><CheckCircle size={11} />אודיו</span>}
+                      {item.bodyText && <span>טקסט ✓</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => toggle(item.id, "isActive", item.isActive)} title={item.isActive ? "כבה" : "הדלק"}>
+                      {item.isActive
+                        ? <ToggleRight className="h-7 w-7 text-amber-400" />
+                        : <ToggleLeft className="h-7 w-7 text-white/20" />
+                      }
+                    </button>
+                    <button onClick={() => del(item.id)} className="text-red-400/40 hover:text-red-400 transition">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {item.isActive && (
+                <div className="h-0.5" style={{ background: "linear-gradient(90deg, transparent, #c9a028, transparent)" }} />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CmsManager() {
-  const [sub, setSub] = useState<SubTab>("announcements");
+  const [sub, setSub] = useState<SubTab>("banners");
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -691,6 +946,7 @@ export default function CmsManager() {
       </div>
 
       <div className="rounded-[1.5rem] border border-white/10 bg-card p-6">
+        {sub === "banners"       && <SpecialBannersTab />}
         {sub === "announcements" && <AnnouncementsTab />}
         {sub === "gallery"       && <GalleryTab />}
         {sub === "videos"        && <VideosTab />}

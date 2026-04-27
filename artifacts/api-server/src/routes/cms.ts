@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { db } from "@workspace/db";
-import { cmsAnnouncements, cmsGallery, cmsVideos, cmsPdfs, cmsEvents } from "@workspace/db/schema";
+import { cmsAnnouncements, cmsGallery, cmsVideos, cmsPdfs, cmsEvents, cmsSpecialBanners } from "@workspace/db/schema";
 import { eq, asc, desc } from "drizzle-orm";
 import { objectStorageClient } from "../lib/objectStorage";
 import { randomUUID } from "node:crypto";
@@ -379,6 +379,89 @@ router.put("/cms/admin/events/:id", requireAdmin, async (req, res) => {
 router.delete("/cms/admin/events/:id", requireAdmin, async (req, res) => {
   try {
     await db.delete(cmsEvents).where(eq(cmsEvents.id, Number(req.params.id)));
+    res.json({ ok: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// SPECIAL BANNERS
+// ═══════════════════════════════════════════════════════════════════
+
+router.get("/cms/special-banners", async (_req, res) => {
+  try {
+    const rows = await db.select().from(cmsSpecialBanners)
+      .where(eq(cmsSpecialBanners.isActive, true))
+      .orderBy(asc(cmsSpecialBanners.sortOrder), desc(cmsSpecialBanners.createdAt));
+    const now = new Date();
+    res.json(rows.filter(r => !r.expiresAt || r.expiresAt > now));
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+router.get("/cms/admin/special-banners", requireAdmin, async (_req, res) => {
+  try {
+    const rows = await db.select().from(cmsSpecialBanners)
+      .orderBy(asc(cmsSpecialBanners.sortOrder), desc(cmsSpecialBanners.createdAt));
+    res.json(rows);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+router.post("/cms/admin/special-banners", requireAdmin, upload.single("audio"), async (req: any, res) => {
+  try {
+    const { label, labelIcon, dateLabel, headline, subtitle, bodyText, footerText,
+            youtubeId, audioLabel, audioSublabel, expiresAt, sortOrder } = req.body;
+    if (!headline) return res.status(400).json({ error: "headline required" });
+    let audioUrl = req.body.audioUrl ?? null;
+    if (req.file) {
+      const ext = req.file.originalname.split(".").pop()?.toLowerCase() || "mp3";
+      audioUrl = await uploadToStorage(req.file.buffer, req.file.mimetype || "audio/mpeg", "cms/audio", ext);
+    }
+    const [row] = await db.insert(cmsSpecialBanners).values({
+      label: label ?? "הודעה מיוחדת",
+      labelIcon: labelIcon ?? "flame",
+      dateLabel: dateLabel ?? "",
+      headline,
+      subtitle: subtitle ?? "",
+      bodyText: bodyText ?? "",
+      footerText: footerText ?? "",
+      youtubeId: youtubeId || null,
+      audioUrl,
+      audioLabel: audioLabel ?? "",
+      audioSublabel: audioSublabel ?? "",
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+      sortOrder: sortOrder ? Number(sortOrder) : 0,
+    }).returning();
+    res.json(row);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+router.put("/cms/admin/special-banners/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { label, labelIcon, dateLabel, headline, subtitle, bodyText, footerText,
+            youtubeId, audioUrl, audioLabel, audioSublabel, expiresAt, isActive, sortOrder } = req.body;
+    const updates: any = {};
+    if (label !== undefined) updates.label = label;
+    if (labelIcon !== undefined) updates.labelIcon = labelIcon;
+    if (dateLabel !== undefined) updates.dateLabel = dateLabel;
+    if (headline !== undefined) updates.headline = headline;
+    if (subtitle !== undefined) updates.subtitle = subtitle;
+    if (bodyText !== undefined) updates.bodyText = bodyText;
+    if (footerText !== undefined) updates.footerText = footerText;
+    if (youtubeId !== undefined) updates.youtubeId = youtubeId || null;
+    if (audioUrl !== undefined) updates.audioUrl = audioUrl || null;
+    if (audioLabel !== undefined) updates.audioLabel = audioLabel;
+    if (audioSublabel !== undefined) updates.audioSublabel = audioSublabel;
+    if (expiresAt !== undefined) updates.expiresAt = expiresAt ? new Date(expiresAt) : null;
+    if (isActive !== undefined) updates.isActive = isActive;
+    if (sortOrder !== undefined) updates.sortOrder = Number(sortOrder);
+    const [row] = await db.update(cmsSpecialBanners).set(updates).where(eq(cmsSpecialBanners.id, id)).returning();
+    res.json(row);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+router.delete("/cms/admin/special-banners/:id", requireAdmin, async (req, res) => {
+  try {
+    await db.delete(cmsSpecialBanners).where(eq(cmsSpecialBanners.id, Number(req.params.id)));
     res.json({ ok: true });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });

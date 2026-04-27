@@ -65,3 +65,22 @@ export const cmsEvents = pgTable("cms_events", {
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const cmsSpecialBanners = pgTable("cms_special_banners", {
+  id: serial("id").primaryKey(),
+  label: text("label").notNull().default("הודעה מיוחדת"),
+  labelIcon: text("label_icon").notNull().default("flame"),
+  dateLabel: text("date_label").notNull().default(""),
+  headline: text("headline").notNull(),
+  subtitle: text("subtitle").notNull().default(""),
+  bodyText: text("body_text").notNull().default(""),
+  footerText: text("footer_text").notNull().default(""),
+  youtubeId: text("youtube_id"),
+  audioUrl: text("audio_url"),
+  audioLabel: text("audio_label").notNull().default(""),
+  audioSublabel: text("audio_sublabel").notNull().default(""),
+  expiresAt: timestamp("expires_at"),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

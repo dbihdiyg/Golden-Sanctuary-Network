@@ -12,8 +12,8 @@ import QuickActions from "@/components/sections/QuickActions";
 import Inspiration from "@/components/sections/Inspiration";
 import FeaturedShiur from "@/components/sections/FeaturedShiur";
 import CommunityEventBanner from "@/components/sections/CommunityEventBanner";
-import HilulaBanner from "@/components/sections/HilulaBanner";
 import Announcements from "@/components/sections/Announcements";
+import SpecialBanners from "@/components/sections/SpecialBanners";
 
 export default function Home() {
   return (
@@ -24,7 +24,7 @@ export default function Home() {
       
       <div className="relative z-10 bg-background">
         <Announcements />
-        <HilulaBanner />
+        <SpecialBanners />
         <CommunityEventBanner />
         <FeaturedShiur />
         <PesachExclusive />
