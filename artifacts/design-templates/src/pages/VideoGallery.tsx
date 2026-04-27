@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { Play, Film, ChevronLeft } from "lucide-react";
+import { Play, Film, ChevronLeft, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
@@ -18,21 +18,29 @@ interface VideoTemplate {
   previewVideoUrl: string | null;
   previewImageUrl: string | null;
   videoDuration: number | null;
+  renderType: "ffmpeg" | "aefx";
   fields: { id: string; label: string }[];
+}
+
+interface RenderConfig {
+  nexrenderConfigured: boolean;
 }
 
 function formatPrice(agorot: number) {
   return `₪${(agorot / 100).toFixed(0)}`;
 }
 
-function TemplateCard({ t }: { t: VideoTemplate }) {
+function TemplateCard({ t, nexrenderConfigured }: { t: VideoTemplate; nexrenderConfigured: boolean }) {
+  const isAe = t.renderType === "aefx";
+  const aeBlocked = isAe && !nexrenderConfigured;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4 }}
+      whileHover={{ y: aeBlocked ? 0 : -4 }}
       transition={{ duration: 0.3 }}
-      className="group relative rounded-2xl overflow-hidden bg-white border border-[#D6A84F]/20 shadow-md hover:shadow-xl transition-shadow"
+      className={`group relative rounded-2xl overflow-hidden bg-white border shadow-md transition-shadow ${aeBlocked ? "border-amber-200 opacity-80" : "border-[#D6A84F]/20 hover:shadow-xl"}`}
       dir="rtl"
     >
       {/* Thumbnail / Preview */}
@@ -69,32 +77,65 @@ function TemplateCard({ t }: { t: VideoTemplate }) {
             {t.videoDuration}″
           </span>
         )}
+        {/* AE badge */}
+        {isAe && (
+          <span className="absolute top-2 right-2 bg-purple-600/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+            Premium AE
+          </span>
+        )}
+        {/* Blocked overlay */}
+        {aeBlocked && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <div className="bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              בקרוב
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Body */}
       <div className="p-4 space-y-2">
-        {t.category && (
-          <Badge
-            variant="outline"
-            className="text-xs border-[#D6A84F]/50 text-[#D6A84F] bg-[#D6A84F]/10"
-          >
-            {t.category}
-          </Badge>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {t.category && (
+            <Badge
+              variant="outline"
+              className="text-xs border-[#D6A84F]/50 text-[#D6A84F] bg-[#D6A84F]/10"
+            >
+              {t.category}
+            </Badge>
+          )}
+        </div>
         <h3 className="font-bold text-[#0B1833] text-lg leading-tight">{t.title}</h3>
         {t.description && (
           <p className="text-sm text-gray-500 line-clamp-2">{t.description}</p>
         )}
+        {aeBlocked && (
+          <p className="text-xs text-amber-600 flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" />
+            תבנית Premium — בקרוב
+          </p>
+        )}
         <div className="flex items-center justify-between pt-2">
           <span className="text-[#D6A84F] font-bold text-xl">{formatPrice(t.price)}</span>
-          <Link href={`/video/${t.slug}`}>
+          {aeBlocked ? (
             <Button
               size="sm"
-              className="bg-[#0B1833] hover:bg-[#0B1833]/80 text-[#D6A84F] font-semibold rounded-full px-4"
+              disabled
+              className="bg-gray-200 text-gray-400 font-semibold rounded-full px-4 cursor-not-allowed"
             >
-              התאמה אישית
+              בקרוב
             </Button>
-          </Link>
+          ) : (
+            <Link href={`/video/${t.slug}`}>
+              <Button
+                size="sm"
+                className="bg-[#0B1833] hover:bg-[#0B1833]/80 text-[#D6A84F] font-semibold rounded-full px-4"
+              >
+                התאמה אישית
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </motion.div>
@@ -110,6 +151,18 @@ export default function VideoGallery() {
       return res.json();
     },
   });
+
+  const { data: renderConfig } = useQuery<RenderConfig>({
+    queryKey: ["render-config"],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/hadar/render-config`);
+      if (!res.ok) return { nexrenderConfigured: false };
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+
+  const nexrenderConfigured = renderConfig?.nexrenderConfigured ?? true;
 
   return (
     <div className="min-h-screen bg-[#F8F1E3]" dir="rtl">
@@ -154,7 +207,7 @@ export default function VideoGallery() {
         {!isLoading && !isError && templates && templates.length > 0 && (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {templates.map((t) => (
-              <TemplateCard key={t.id} t={t} />
+              <TemplateCard key={t.id} t={t} nexrenderConfigured={nexrenderConfigured} />
             ))}
           </div>
         )}

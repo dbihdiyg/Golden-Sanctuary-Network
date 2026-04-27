@@ -92,6 +92,11 @@ async function uploadVideoToStorage(buffer: Buffer, mimetype: string, folder: st
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// PUBLIC — Render config (lets frontend know if AE rendering is available)
+router.get("/hadar/render-config", (_req, res) => {
+  res.json({ nexrenderConfigured: !!process.env.NEXRENDER_API_URL });
+});
+
 // PUBLIC — Video template listing + detail
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -337,6 +342,15 @@ router.post("/hadar/video-checkout", requireAuth(), async (req: any, res) => {
       .from(hadarVideoTemplates)
       .where(eq(hadarVideoTemplates.slug, templateSlug));
     if (!template) return res.status(404).json({ error: "Template not found" });
+
+    // Block AE templates if nexrender not configured
+    const renderType = (template as any).renderType ?? "ffmpeg";
+    if (renderType === "aefx" && !process.env.NEXRENDER_API_URL) {
+      return res.status(503).json({
+        error: "תבנית זו דורשת מנוע After Effects (Nexrender) שאינו מוגדר כרגע. נסו שוב מאוחר יותר.",
+        code: "AE_UNAVAILABLE",
+      });
+    }
 
     const priority = (template.tier === "premium" ? "premium" : "standard") as "standard" | "premium";
 

@@ -11,6 +11,7 @@ import {
   Lock,
   AlertCircle,
   CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +58,11 @@ interface VideoTemplate {
   videoDuration: number | null;
   videoWidth: number | null;
   videoHeight: number | null;
+  renderType: "ffmpeg" | "aefx";
+}
+
+interface RenderConfig {
+  nexrenderConfigured: boolean;
 }
 
 function formatPrice(agorot: number) {
@@ -164,6 +170,19 @@ export default function VideoDetail() {
     },
     enabled: !!slug,
   });
+
+  const { data: renderConfig } = useQuery<RenderConfig>({
+    queryKey: ["render-config"],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/hadar/render-config`);
+      if (!res.ok) return { nexrenderConfigured: false };
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+
+  const isAe = template?.renderType === "aefx";
+  const aeBlocked = isAe && !(renderConfig?.nexrenderConfigured ?? true);
 
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -408,6 +427,17 @@ export default function VideoDetail() {
                 )}
               </AnimatePresence>
 
+              {/* AE unavailable warning */}
+              {aeBlocked && (
+                <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">תבנית Premium — בקרוב</p>
+                    <p className="text-xs text-amber-700 mt-0.5">תבנית זו מבוססת After Effects ותהיה זמינה בקרוב. בינתיים תוכלו לבחור תבנית אחרת.</p>
+                  </div>
+                </div>
+              )}
+
               {/* Price + Checkout */}
               <div className="border-t border-[#D6A84F]/20 pt-5 space-y-3">
                 <div className="flex items-center justify-between">
@@ -415,7 +445,20 @@ export default function VideoDetail() {
                   <span className="text-[#D6A84F] font-bold text-2xl">{formatPrice(template.price)}</span>
                 </div>
 
-                {!isLoaded ? (
+                {aeBlocked ? (
+                  <div className="space-y-2">
+                    <Button disabled className="w-full bg-gray-100 text-gray-400 font-bold text-base py-6 rounded-xl cursor-not-allowed">
+                      בקרוב
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full border-[#D6A84F]/30 text-[#0B1833]"
+                      onClick={() => navigate("/")}
+                    >
+                      חזרה לגלריה לבחירת תבנית אחרת
+                    </Button>
+                  </div>
+                ) : !isLoaded ? (
                   <Button disabled className="w-full">
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                     טוען...
@@ -455,9 +498,11 @@ export default function VideoDetail() {
                   </Button>
                 )}
 
-                <p className="text-xs text-gray-400 text-center">
-                  לאחר התשלום הסרטון יוכן ויישלח לאזור ההורדות שלכם
-                </p>
+                {!aeBlocked && (
+                  <p className="text-xs text-gray-400 text-center">
+                    לאחר התשלום הסרטון יוכן ויישלח לאזור ההורדות שלכם
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>
