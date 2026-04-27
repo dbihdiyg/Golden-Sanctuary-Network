@@ -11,11 +11,105 @@ import { logger } from "../lib/logger";
 import { renderQueue } from "../lib/renderQueue";
 import { verifyDownloadToken, generateDownloadToken } from "../lib/signedUrls";
 import type { Request, Response, NextFunction } from "express";
+import Stripe from "stripe";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
 
 const VIDEO_PRICE_AGOROT = 4900;
+
+// ─── Stripe webhook ───────────────────────────────────────────────────────────
+// Must be registered BEFORE express.json() middleware (raw body required).
+// Set STRIPE_WEBHOOK_SECRET to the signing secret from your Stripe dashboard.
+router.post("/hadar/webhook", async (req: Request, res: Response) => {
+  let event: Stripe.Event;
+
+  try {
+    const stripe = await getUncachableStripeClient();
+    const sig = req.headers["stripe-signature"];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (webhookSecret && sig) {
+      try {
+        event = stripe.webhooks.constructEvent(req.body as Buffer, sig, webhookSecret);
+      } catch (err: any) {
+        logger.warn({ err }, "[Webhook] Signature verification failed — rejecting");
+        return res.status(400).json({ error: `Webhook signature invalid: ${err.message}` });
+      }
+    } else {
+      // Development fallback: parse without verification
+      if (process.env.NODE_ENV === "production") {
+        logger.error("[Webhook] STRIPE_WEBHOOK_SECRET not set in production — rejecting");
+        return res.status(400).json({ error: "Webhook secret not configured" });
+      }
+      logger.warn("[Webhook] No STRIPE_WEBHOOK_SECRET — skipping signature verification (dev mode)");
+      event = JSON.parse((req.body as Buffer).toString()) as Stripe.Event;
+    }
+  } catch (err: any) {
+    logger.error({ err }, "[Webhook] Failed to parse event");
+    return res.status(400).json({ error: err.message });
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object as Stripe.Checkout.Session;
+
+    if (session.metadata?.type !== "video_job") {
+      return res.json({ received: true, skipped: true });
+    }
+
+    const jobId = Number(session.metadata?.videoJobId);
+    if (!jobId || isNaN(jobId)) {
+      logger.warn({ session }, "[Webhook] checkout.session.completed missing videoJobId");
+      return res.json({ received: true, skipped: true });
+    }
+
+    try {
+      const [job] = await db
+        .select()
+        .from(hadarVideoJobs)
+        .where(eq(hadarVideoJobs.id, jobId));
+
+      if (!job) {
+        logger.warn(`[Webhook] Job ${jobId} not found`);
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      if (job.status !== "pending_payment") {
+        logger.info(`[Webhook] Job ${jobId} already past pending_payment (${job.status}) — ignoring`);
+        return res.json({ received: true, skipped: true });
+      }
+
+      const [template] = await db
+        .select()
+        .from(hadarVideoTemplates)
+        .where(eq(hadarVideoTemplates.id, job.templateId));
+
+      const priority = (job.priority as "standard" | "premium") ?? "standard";
+
+      const eta = new Date(Date.now() + ((template?.maxRenderSeconds ?? 300) + 120) * 1000);
+
+      await db
+        .update(hadarVideoJobs)
+        .set({
+          status: "queued",
+          stripeSessionId: session.id,
+          estimatedCompletionAt: eta,
+          updatedAt: new Date(),
+        })
+        .where(eq(hadarVideoJobs.id, jobId));
+
+      renderQueue.enqueue(jobId, priority);
+
+      logger.info(`[Webhook] Job ${jobId} queued for rendering (priority: ${priority})`);
+      res.json({ received: true, jobId, queued: true });
+    } catch (err: any) {
+      logger.error({ err }, `[Webhook] Error processing job ${jobId}`);
+      res.status(500).json({ error: err.message });
+    }
+  } else {
+    res.json({ received: true, skipped: true });
+  }
+});
 
 function adminAuth(req: Request, res: Response, next: NextFunction) {
   const secret =

@@ -781,11 +781,95 @@ function StatsSection({ token }: { token: string }) {
   return (
     <div className="space-y-6">
       {!stats.nexrenderConfigured && (
-        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800">
-          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold">NEXRENDER_API_URL לא מוגדר</p>
-            <p className="text-sm mt-0.5">כדי לאפשר רינדור וידאו After Effects, יש להגדיר את משתנה הסביבה <code className="bg-amber-100 px-1 rounded">NEXRENDER_API_URL</code> עם כתובת ה-nexrender server שלכם.</p>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800">
+            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">מנוע After Effects (Nexrender) לא מוגדר</p>
+              <p className="text-sm mt-0.5">כל תבניות ה-AE חסומות למשתמשים. להפעלת הרינדור יש להגדיר שרת nexrender ולהוסיף את המשתנה <code className="bg-amber-100 px-1 rounded font-mono">NEXRENDER_API_URL</code>.</p>
+            </div>
+          </div>
+
+          <div className="bg-card border border-primary/10 rounded-xl p-5 space-y-4 text-sm" dir="rtl">
+            <h3 className="font-bold text-base flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">!</span>
+              מדריך הגדרת שרת Nexrender
+            </h3>
+
+            <div className="space-y-3">
+              {[
+                {
+                  step: "1",
+                  title: "הכן שרת Windows",
+                  items: [
+                    "Windows 10/11 או Windows Server",
+                    "Adobe After Effects מותקן ומופעל",
+                    "Node.js LTS מותקן",
+                    "FFmpeg מותקן ובנתיב ה-PATH",
+                    "פונטים בעברית מותקנים",
+                  ],
+                },
+                {
+                  step: "2",
+                  title: "התקן Nexrender",
+                  items: [
+                    "npm install -g @nexrender/server @nexrender/worker",
+                    "nexrender-server --port 3000 --secret YOUR_SECRET",
+                    "nexrender-worker --host http://localhost:3000 --secret YOUR_SECRET",
+                  ],
+                  code: true,
+                },
+                {
+                  step: "3",
+                  title: "הגדר משתני סביבה באתר (Secrets)",
+                  items: [
+                    "NEXRENDER_API_URL = https://render.yourdomain.com",
+                    "NEXRENDER_SECRET = (אותה סיסמה שהגדרת בשרת)",
+                    "STRIPE_WEBHOOK_SECRET = (מ-Stripe Dashboard → Webhooks)",
+                  ],
+                  code: true,
+                },
+                {
+                  step: "4",
+                  title: "הגדר Stripe Webhook",
+                  items: [
+                    "פתח Stripe Dashboard → Developers → Webhooks",
+                    `הוסף Endpoint: https://yourdomain.com/api/hadar/webhook`,
+                    "בחר אירוע: checkout.session.completed",
+                    "העתק את ה-Signing Secret → הוסף כ-STRIPE_WEBHOOK_SECRET",
+                  ],
+                },
+                {
+                  step: "5",
+                  title: "מבנה תבנית AE חובה",
+                  items: [
+                    "שם קומפוזיציה ראשית: MAIN_COMP",
+                    "שכבות טקסט עם שמות באנגלית: GROOM_NAME, BRIDE_NAME, EVENT_DATE, LOCATION, TITLE",
+                    "כל הנכסים אסופים עם הפרויקט",
+                    "אל תמיר טקסט עריך לצורות",
+                  ],
+                },
+              ].map(({ step, title, items, code }) => (
+                <div key={step} className="flex gap-3">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">{step}</div>
+                  <div className="flex-1">
+                    <p className="font-semibold mb-1">{title}</p>
+                    <ul className="space-y-0.5">
+                      {items.map((item, i) => (
+                        <li key={i} className={`text-muted-foreground flex items-start gap-1.5 ${code ? "font-mono text-xs bg-muted/40 px-2 py-0.5 rounded" : ""}`} dir="ltr">
+                          {!code && <span className="mt-1 w-1 h-1 rounded-full bg-muted-foreground/50 shrink-0" />}
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-xs">
+              <strong>הזרימה המלאה לאחר ההגדרה:</strong> משתמש ממלא שדות → משלם → Stripe Webhook → עבודה בתור → Nexrender מרנדר → MP4 מוכן → אימייל עם קישור הורדה
+            </div>
           </div>
         </div>
       )}

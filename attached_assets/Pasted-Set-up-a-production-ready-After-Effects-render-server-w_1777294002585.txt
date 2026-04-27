@@ -1,0 +1,110 @@
+Set up a production-ready After Effects render server with Nexrender.
+
+Goal:
+The website must render After Effects templates automatically after payment.
+
+Required setup:
+
+1. Render Server
+Use a separate Windows server/VPS with:
+- Windows 10/11 or Windows Server
+- Adobe After Effects installed and activated
+- Adobe Media Encoder optional
+- Node.js LTS
+- FFmpeg installed
+- Nexrender installed
+- Hebrew fonts installed
+- Enough disk space for temporary renders
+
+2. Nexrender Server
+Install and run:
+- @nexrender/server
+- @nexrender/worker
+
+Expose the Nexrender API on a stable URL:
+http://SERVER_IP:3000
+or
+https://render.mydomain.com
+
+3. Environment Variable
+In the website backend, set:
+
+NEXRENDER_API_URL=https://render.mydomain.com
+
+This must be configured in production environment variables, not hardcoded.
+
+4. Security
+- Protect the Nexrender server with API key / secret
+- Do not expose open public render endpoint
+- Allow requests only from the website backend
+- Add firewall rules if possible
+
+5. AE Template Rules
+Every AE template must follow this structure:
+- Main composition name: MAIN
+- Text layers must have clear English names:
+  GROOM_NAME
+  BRIDE_NAME
+  EVENT_DATE
+  LOCATION
+  TITLE
+- Do not convert editable text to shapes
+- Use fonts installed on the render server
+- Keep all assets collected with the project
+
+6. Admin Panel
+For each AE template, admin must define:
+- renderType: After Effects / Nexrender
+- AE project file
+- composition name
+- editable user fields
+- mapping:
+  user field → AE layer name
+
+Example:
+groom_name → GROOM_NAME
+bride_name → BRIDE_NAME
+event_date → EVENT_DATE
+
+7. Render Flow
+User fills fields → pays →
+Stripe webhook confirms payment →
+create render job →
+send job to Nexrender →
+replace AE text layers →
+render MP4 →
+upload final file to storage →
+mark job ready →
+send email with download link.
+
+8. Job Statuses
+Use:
+pending_payment
+paid
+queued
+rendering
+ready
+failed
+
+9. Reliability
+- Add queue system
+- Limit concurrent AE renders to 1–2
+- Add retry button for failed jobs
+- Save full error logs
+- Add timeout handling
+- Clean temp files after render
+
+10. Testing
+Do not mark complete until this full flow works:
+
+Admin uploads AE template →
+maps fields →
+user fills fields →
+Stripe test payment →
+Nexrender renders MP4 →
+Hebrew text appears correctly →
+file downloads →
+email link works.
+
+Expected result:
+After Effects rendering works end-to-end through Nexrender with stable server connection, secure environment variables, mapped text fields, Hebrew support, payment verification, and download delivery.
